@@ -1,6 +1,6 @@
 {
   "name": "OrbitOPL-Toolbox",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.1-alpha.0",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
   "author": "Luden02",
