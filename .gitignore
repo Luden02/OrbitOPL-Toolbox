@@ -95,3 +95,7 @@ dist/
 
 .angular/.angular/
 .angular/.vscode/
+/.idea/.gitignore
+/.idea/modules.xml
+/.idea/OrbitOPL-Toolbox.iml
+/.idea/vcs.xml
