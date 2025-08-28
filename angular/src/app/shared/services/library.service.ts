@@ -260,6 +260,47 @@ export class LibraryService {
     gameId: string,
     gameName: string
   ) {
-    return;
+    this._logger.log('renameInvalidGameFile', 'Renaming ' + path);
+    this.setLoading(true);
+    this.setCurrentAction('Renaming ' + path + '...');
+    this._logger.verbose(
+      'renameInvalidGameFile',
+      `${path} -> ${gameId}, ${gameName}`
+    );
+    return window.libraryAPI
+      .renameGamefile(path, gameId, gameName)
+      .then((res) => {
+        this.setCurrentAction('');
+        this.setLoading(false);
+        this.refreshGamesFiles();
+      });
+  }
+
+  public downloadArtByGameId(gameId: string) {
+    this._logger.log(
+      'downloadArtByGameId',
+      'Triggered download of art for ' + gameId
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Downloading Art for ' + gameId + '...');
+    return window.libraryAPI
+      .downloadArtByGameId(`${this.currentDirectory}/ART`, gameId)
+      .then((res) => {
+        this.setCurrentAction('');
+        this.setLoading(false);
+        this.refreshGamesFiles();
+      });
+  }
+
+  public downloadAllArt() {
+    this._logger.log(
+      'downloadAllArt',
+      'Triggered downloading complete library art files...'
+    );
+    const games = this.librarySubject.getValue();
+    const downloadPromises = games.map((game) =>
+      this.downloadArtByGameId(game.gameId)
+    );
+    return Promise.all(downloadPromises);
   }
 }

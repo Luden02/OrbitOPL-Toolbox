@@ -1,6 +1,7 @@
 import { dialog } from "electron";
 import * as fs from "fs/promises";
 import path from "path";
+import https from "https";
 
 export async function openAskDirectory(options: any) {
   const defaultOptions = {
@@ -85,6 +86,72 @@ export async function getArtFolder(dirpath: string) {
         })
     );
     return { success: true, data: artFiles };
+  } catch (err) {
+    return { success: false, message: err };
+  }
+}
+
+export async function downloadArtByGameId(dirPath: string, gameId: string) {
+  const baseUrl =
+    "https://raw.githubusercontent.com/Luden02/psx-ps2-opl-art-database/refs/heads/main/PS2";
+  const types = ["COV", "ICO", "SCR"];
+  const results: any[] = [];
+
+  for (const type of types) {
+    const fileName = `${gameId}_${type}.png`;
+    const url = `${baseUrl}/${gameId}/${fileName}`;
+
+    try {
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        https
+          .get(url, (res) => {
+            if (res.statusCode !== 200) {
+              return reject(
+                new Error(`Failed to download ${fileName}: ${res.statusCode}`)
+              );
+            }
+            const data: Buffer[] = [];
+            res.on("data", (chunk) => data.push(chunk));
+            res.on("end", () => resolve(Buffer.concat(data)));
+          })
+          .on("error", reject);
+      });
+
+      const savePath = path.join(dirPath, `${gameId}_${type}.png`);
+      await fs.writeFile(savePath, buffer);
+      results.push({
+        name: gameId,
+        type,
+        url,
+        savedPath: savePath,
+      });
+    } catch (err: any) {
+      results.push({
+        name: gameId,
+        type,
+        url,
+        error: err.message,
+      });
+    }
+  }
+
+  return { success: true, data: results };
+}
+
+export async function renameGamefile(
+  dirpath: string,
+  gameId: string,
+  gameName: string
+) {
+  console.log(dirpath, gameId, gameName);
+  const ext = path.extname(dirpath);
+  const parentDir = path.dirname(dirpath);
+  const newFileName = `${gameId}.${gameName}${ext}`;
+  const newFilePath = path.join(parentDir, newFileName);
+
+  try {
+    await fs.rename(dirpath, newFilePath);
+    return { success: true, newPath: newFilePath };
   } catch (err) {
     return { success: false, message: err };
   }

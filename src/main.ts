@@ -3,9 +3,11 @@ import path from "path";
 import electronReloader from "electron-reloader";
 import PackageInfo from "../package.json";
 import {
+  downloadArtByGameId,
   getArtFolder,
   getGamesFiles,
   openAskDirectory,
+  renameGamefile,
 } from "./library.service";
 
 const size = { minWidth: 1024, minHeight: 600 };
@@ -97,3 +99,17 @@ ipcMain.handle("get-games-files", async (event, dirPath: string) => {
 ipcMain.handle("get-art-folder", async (event, dirPath: string) => {
   return getArtFolder(dirPath);
 });
+
+ipcMain.handle(
+  "rename-gamefile",
+  async (event, dirPath: string, gameId: string, gameName: string) => {
+    return renameGamefile(dirPath, gameId, gameName);
+  }
+);
+
+ipcMain.handle(
+  "download-art-by-gameid",
+  async (event, dirPath: string, gameId: string) => {
+    return downloadArtByGameId(dirPath, gameId);
+  }
+);

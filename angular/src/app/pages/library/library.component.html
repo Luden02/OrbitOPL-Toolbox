@@ -2,7 +2,11 @@
   <div class="headline">Library</div>
   <div>
     <clr-button-group class="btn-group btn-primary">
-      <clr-button>Download GameART for all the games!</clr-button>
+      <clr-button
+        [disabled]="!(_libraryService.currentDirectory$ | async)"
+        (click)="_libraryService.downloadAllArt()"
+        >Download GameART for all the games!</clr-button
+      >
     </clr-button-group>
   </div>
 </div>
