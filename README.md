@@ -1,9 +1,4 @@
-![Logo](assets/logo.svg)
-
-![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
-![Electron.js](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white)
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![Chakra](https://img.shields.io/badge/chakra-%234ED1C5.svg?style=for-the-badge&logo=chakraui&logoColor=white)
+![Logo](angular/public/logo.svg)
 
 OrbitOPL Toolbox – A modern, cross-platform way to manage your OPL game collection.
 
@@ -19,10 +14,9 @@ The goal isn’t to replace OPLManager, but to offer an alternative — one that
 ## ✅ Current
 
 - Cross-Platform: Windows, macOS, and Linux support
-- Game Library Management: View your OPL collection and rename your files.
-- Modern UI: Built with React + Chakra UI for a clean, user-friendly experience
-- Game artwork: "Auto-Import-from-Web" Functionality
-- Rename: Game Name or GameId Renaming
+- ISO files Support
+- Modern UI: Built with Electron for a clean, user-friendly experience
+- Game artwork: "Single/Bulk GameArt Download" Functionality
 
 ## 🚧 Roadmap
 
@@ -68,15 +62,14 @@ Grab the latest release from the Releases page. [Releases](https://github.com/St
 
 1. Download the `setup.exe`.
 2. Run it — after some loading time, you'll find the app on your **Desktop**.  
-   _(A fully portable `.exe` is not available yet.)_
+   _(A fully portable `.exe` might not be available yet.)_
 
 ## 🚀 Getting Started
 
-1. Launch OrbitOPL
+1. Launch OrbitOPL-Toolbox
 2. Select your OPL Library root folder (internal directory or external drive)
 3. Use the interface to see, and manage your game collection
-4. Rename your files or grab your artwork!
-5. Enjoy!
+4. Enjoy!
 
 # 📜 License
 
