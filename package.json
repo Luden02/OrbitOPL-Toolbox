@@ -44,7 +44,7 @@
       "output": "build"
     },
     "win": {
-      "icon": "assets/applogo/icon_256x256.png",
+      "icon": "assets/applogo/icon_256x256.ico",
       "target": [
         {
           "target": "portable",
@@ -55,10 +55,14 @@
       ]
     },
     "mac": {
-      "icon": "assets/applogo/icon_512x512.png",
+      "icon": "assets/applogo/icon_512x512.icns",
       "target": [
         {
-          "target": "dmg"
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "hardenedRuntime": true
@@ -76,10 +80,15 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Utility",
-      "icon": "assets/applogo/icon_512x512.png",
       "maintainer": "Luden02 <47905649+Luden02@users.noreply.github.com>",
       "vendor": "Luden02"
     }
