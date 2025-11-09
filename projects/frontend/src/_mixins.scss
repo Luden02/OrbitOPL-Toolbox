@@ -1,0 +1,23 @@
+@mixin s-query() {
+  @media only screen and (max-width: 760px) {
+    @content;
+  }
+}
+
+@mixin m-query() {
+  @media only screen and (max-width: 1000px) {
+    @content;
+  }
+}
+
+@mixin l-query() {
+  @media only screen and (max-width: 1250px) {
+    @content;
+  }
+}
+
+@mixin xl-query() {
+  @media only screen and (max-width: 1400px) {
+    @content;
+  }
+}

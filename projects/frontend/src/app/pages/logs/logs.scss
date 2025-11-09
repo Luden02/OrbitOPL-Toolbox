@@ -1,0 +1,16 @@
+.logs-viewer {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  textarea {
+    width: 98%;
+    height: calc(100vh - 72px);
+    font-family: monospace;
+    font-size: 14px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: none;
+  }
+}

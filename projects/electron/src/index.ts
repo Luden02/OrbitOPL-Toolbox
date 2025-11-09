@@ -3,7 +3,7 @@ import path from 'path';
 
 let mainWindow: BrowserWindow | null;
 
-const size = { minWidth: 1024, minHeight: 600 };
+const size = { minWidth: 1280, minHeight: 720 };
 
 const createWindow = (): void => {
   // Create the browser window.
@@ -19,7 +19,6 @@ const createWindow = (): void => {
       nodeIntegration: false,
     },
   });
-
   mainWindow.removeMenu();
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
@@ -35,7 +34,7 @@ const createWindow = (): void => {
           },
         ],
       },
-    ]),
+    ])
   );
 
   const startURL = app.isPackaged
@@ -43,6 +42,8 @@ const createWindow = (): void => {
     : `http://localhost:4200`;
 
   mainWindow.loadURL(startURL);
+  // Open the DevTools.
+  mainWindow.webContents.openDevTools();
 };
 
 app.on('ready', () => {
