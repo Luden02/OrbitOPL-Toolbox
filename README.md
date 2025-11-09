@@ -1,4 +1,4 @@
-![Logo](angular/public/logo.svg)
+![Logo](assets/logo.svg)
 
 OrbitOPL Toolbox – A modern, cross-platform way to manage your OPL game collection.
 
