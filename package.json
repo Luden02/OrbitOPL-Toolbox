@@ -1,96 +1,56 @@
 {
-  "name": "OrbitOPL-Toolbox",
-  "version": "0.2.0-alpha.0",
-  "description": "A modern, cross-platform way to manage your OPL game collection. ",
-  "main": "dist/src/main.js",
-  "author": "Luden02",
-  "email": "github.com.overtime522@passmail.com",
-  "license": "MIT",
+  "name": "orbitopl-toolbox",
+  "version": "1.0.0",
+  "main": "dist/index.js",
   "scripts": {
-    "postinstall": "electron-builder install-app-deps",
-    "build": "tsc",
-    "build:watch": "tsc -w",
-    "app:serve": "concurrently \"npm run angular:serve\" \"npm run build:watch\" \"wait-on http://localhost:4200 && npm run electron:serve\"",
-    "angular:serve": "cd angular && ng serve",
-    "electron:serve": "electron ./dist/src/main.js --serve",
-    "start": "npm run build && electron ./dist/src/main.js",
-    "package:win": "npm run remove && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --win",
-    "package:mac": "npm run remove && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --mac",
-    "package:linux": "npm run remove && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --linux",
-    "remove": "rimraf -rf ./dist && rimraf -rf ./build",
-    "electron": "electron"
+    "ng": "ng",
+    "serve-frontend": "ng serve frontend",
+    "build-frontend": "ng build",
+    "build-electron": "tsc --project projects/electron/tsconfig.json",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "start": "concurrently \"npm run build-electron --watch\" \"npm run serve-frontend\" \"wait-on http://localhost:4200 && electron .\""
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^20.3.0",
+    "@angular/compiler": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/forms": "^20.3.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@angular/router": "^20.3.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "7zip-bin": "^5.2.0",
-    "concurrently": "^9.2.0",
-    "electron": "^34.0.0",
-    "electron-builder": "^25.1.8",
+    "@angular/build": "^20.3.9",
+    "@angular/cli": "^20.3.8",
+    "@angular/compiler-cli": "^20.3.0",
+    "@types/jasmine": "~5.1.0",
+    "concurrently": "^9.2.1",
+    "electron": "^39.1.1",
+    "electron-builder": "^26.0.12",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3",
-    "wait-on": "^8.0.4"
-  },
-  "dependencies": {
-    "electron-reloader": "^1.2.3",
-    "npm-run-all": "^4.1.5",
-    "rimraf": "^6.0.1"
-  },
-  "build": {
-    "productName": "OrbitOPLToolbox",
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "build"
-    },
-    "win": {
-      "icon": "assets/applogo/icon_256x256.ico",
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "mac": {
-      "icon": "assets/applogo/icon_512x512.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "hardenedRuntime": true
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Utility",
-      "maintainer": "Luden02 <47905649+Luden02@users.noreply.github.com>",
-      "vendor": "Luden02"
-    }
+    "typescript": "~5.9.2",
+    "wait-on": "^9.0.3"
   }
 }
