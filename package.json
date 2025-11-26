@@ -3,8 +3,8 @@
   "version": "0.2.0-alpha.0",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
-  "author": "Luden02",
-  "email": "github.com.overtime522@passmail.com",
+  "author": "Stefan Adrian Nita",
+  "email": "stefanadrian.nita@icloud.com",
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",

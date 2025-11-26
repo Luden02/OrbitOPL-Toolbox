@@ -1,25 +1,30 @@
-.clr-vertical-nav {
-  ::ng-deep .nav-content {
-    margin-top: 24px;
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+
+  .router-window {
+    flex: 1;
+    overflow: auto;
   }
 
-  .nav-box {
-    flex: 1;
-  }
-  .dir-box {
+  .footer {
+    height: 60px;
+    background-color: #f1f1f1;
+    border-top: 1px solid #ccc;
     display: flex;
     flex-direction: column;
-    align-content: center;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 12px;
 
-    .dir-text {
-      margin-bottom: 8px;
-      max-width: 20ch;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .loading {
+      height: 4px;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+      font-size: 14px;
     }
   }
 }

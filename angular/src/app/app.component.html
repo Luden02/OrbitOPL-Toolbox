@@ -1,80 +1,13 @@
-<div class="main-container">
-  <div class="content-container">
-    <clr-vertical-nav>
-      <div class="nav-box">
-        <a clrVerticalNavLink routerLink="/library" routerLinkActive="active"
-          ><cds-icon clrVerticalNavIcon shape="hard-drive"></cds-icon>Library</a
-        >
-        <a
-          clrVerticalNavLink
-          routerLink="/invalid-files"
-          routerLinkActive="active"
-          ><cds-icon clrVerticalNavIcon shape="unknown-status"></cds-icon
-          >Invalid Files</a
-        >
-        <div class="nav-divider"></div>
-        <a clrVerticalNavLink routerLink="/logs" routerLinkActive="active"
-          ><cds-icon clrVerticalNavIcon shape="resistor"></cds-icon>Logs</a
-        >
-      </div>
-      <div class="dir-box">
-        <div
-          class="dir-text"
-          [title]="
-            (this._libraryService.currentDirectory$ | async) ||
-            'Currently no directory open.'
-          "
-        >
-          {{
-            (this._libraryService.currentDirectory$ | async) ||
-              "Currently no directory open."
-          }}
-        </div>
-        <div>
-          <clr-button-group class="btn-group btn-outline-primary btn-sm">
-            <clr-button
-              (click)="_libraryService.openAskDirectory()"
-              [disabled]="_libraryService.hasCurrentDirectory$ | async"
-              >Open Directory</clr-button
-            >
-            <clr-button
-              (click)="_libraryService.disconnectCurrentDirectory()"
-              [clrInMenu]="true"
-              [disabled]="!(_libraryService.hasCurrentDirectory$ | async)"
-              >Close directory</clr-button
-            >
-            <clr-button
-              [clrInMenu]="true"
-              (click)="_libraryService.refreshGamesFiles()"
-              [disabled]="!(_libraryService.hasCurrentDirectory$ | async)"
-              >Refresh parsed files</clr-button
-            >
-          </clr-button-group>
-        </div>
-      </div>
-      <div class="progress-block">
-        <div class="progress-group">
-          <div class="clr-row">
-            @if(_libraryService.loading$ | async) {
-            <div class="clr-col-12">
-              {{ _libraryService.currentAction$ | async }}
-            </div>
-            } @else {
-            <div class="clr-col-6">.</div>
-            }
-          </div>
-          <div class="progress">
-            @if(_libraryService.loading$ | async) {
-            <clr-progress-bar clrValue="0" clrLoop></clr-progress-bar>
-            } @else {
-            <clr-progress-bar clrValue="0"></clr-progress-bar>
-            }
-          </div>
-        </div>
-      </div>
-    </clr-vertical-nav>
-    <div class="content-area">
-      <router-outlet></router-outlet>
+<div class="app-container">
+  <div class="router-window"><router-outlet></router-outlet></div>
+  <div class="footer">
+    <div class="loading">
+      @if(_libraryService.loading$ | async) {
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      }
+    </div>
+    <div class="content">
+      <button mat-button="filled">Basic</button>
     </div>
   </div>
 </div>

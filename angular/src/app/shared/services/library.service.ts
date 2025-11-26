@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { LogService } from '@cds/core/internal';
 import { LogsService } from './logs.service';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { Game, RawGameFile } from '../types/game.type';
