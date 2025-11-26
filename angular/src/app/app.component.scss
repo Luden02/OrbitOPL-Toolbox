@@ -5,11 +5,37 @@
 
   .router-window {
     flex: 1;
-    overflow: auto;
+    flex-direction: row;
+    display: flex;
+
+    .sidebar {
+      width: 140px;
+      height: 100%;
+      border-right: 1px solid #ccc;
+
+      .sidenav-container {
+        height: 100%;
+
+        .sidenav {
+          background-color: #f9f9f9;
+          height: 100%;
+
+          mat-nav-list {
+            a {
+              width: 120px;
+              margin: 8px;
+              &.active-link {
+                background-color: #e0e0e0;
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   .footer {
-    height: 60px;
+    height: 55px;
     background-color: #f1f1f1;
     border-top: 1px solid #ccc;
     display: flex;
@@ -22,9 +48,27 @@
     .content {
       flex: 1;
       display: flex;
+      margin: 0 16px;
       align-items: center;
       justify-content: start;
       font-size: 14px;
+
+      .left,
+      .center,
+      .right {
+        flex: 1;
+      }
+
+      .center {
+        text-align: center;
+      }
+      .right {
+        text-align: right;
+      }
     }
   }
+}
+
+.danger-button {
+  color: var(--danger-600);
 }

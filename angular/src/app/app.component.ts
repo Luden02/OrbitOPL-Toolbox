@@ -13,7 +13,7 @@ import { SharedModule } from './shared/shared/shared.module';
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
-  public currentDirectory = 'None';
+  public PackageInfo = PackageInfo;
   constructor(
     private readonly _logger: LogsService,
     public readonly _libraryService: LibraryService

@@ -1,5 +1,32 @@
 <div class="app-container">
-  <div class="router-window"><router-outlet></router-outlet></div>
+  <div class="router-window">
+    <div class="sidebar">
+      <mat-sidenav-container class="sidenav-container">
+        <mat-sidenav mode="side" opened class="sidenav">
+          <mat-nav-list>
+            <a
+              mat-list-item
+              routerLink="/library"
+              routerLinkActive="active-link"
+              >Library</a
+            >
+            <a mat-list-item routerLink="/logs" routerLinkActive="active-link"
+              >Logs</a
+            >
+            <a
+              mat-list-item
+              routerLink="/settings"
+              routerLinkActive="active-link"
+              >Settings</a
+            >
+          </mat-nav-list>
+        </mat-sidenav>
+      </mat-sidenav-container>
+    </div>
+    <div class="main-window">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
   <div class="footer">
     <div class="loading">
       @if(_libraryService.loading$ | async) {
@@ -7,7 +34,41 @@
       }
     </div>
     <div class="content">
-      <button mat-button="filled">Basic</button>
+      <div class="left">
+        @if (this._libraryService.currentDirectory$ | async ) {
+        <span>
+          {{ (this._libraryService.currentDirectory$ | async)?.substring(0, 30)
+          }}{{
+            ((this._libraryService.currentDirectory$ | async)?.length ?? 0) > 30
+              ? "..."
+              : ""
+          }}</span
+        >
+        } @else {
+        <span style="color: grey">No Directory Mounted</span>
+        }
+      </div>
+      <div class="center">
+        <span style="color: grey">{{
+          _libraryService.currentAction$ | async
+        }}</span>
+      </div>
+      <div class="right">
+        @if(_libraryService.hasCurrentDirectory$ | async ) {
+        <button
+          class="danger-button"
+          mat-button
+          (click)="this._libraryService.disconnectCurrentDirectory()"
+        >
+          Unmount Directory
+        </button>
+        } @else {<button
+          mat-button
+          (click)="this._libraryService.openAskDirectory()"
+        >
+          Mount Directory</button
+        >}
+      </div>
     </div>
   </div>
 </div>
