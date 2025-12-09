@@ -2,6 +2,13 @@
   <div class="content-container">
     <clr-vertical-nav>
       <div class="nav-box">
+        <div>
+          <img
+            src="logo.svg"
+            class="app-logo"
+            style="width: 210px; padding-left: 20px; margin-bottom: 20px"
+          />
+        </div>
         <a clrVerticalNavLink routerLink="/library" routerLinkActive="active"
           ><cds-icon clrVerticalNavIcon shape="hard-drive"></cds-icon>Library</a
         >
@@ -11,6 +18,10 @@
           routerLinkActive="active"
           ><cds-icon clrVerticalNavIcon shape="unknown-status"></cds-icon
           >Invalid Files</a
+        >
+        <a clrVerticalNavLink routerLink="/import" routerLinkActive="active"
+          ><cds-icon clrVerticalNavIcon shape="upload-cloud"></cds-icon
+          >Import</a
         >
         <div class="nav-divider"></div>
         <a clrVerticalNavLink routerLink="/logs" routerLinkActive="active"

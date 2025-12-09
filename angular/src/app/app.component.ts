@@ -16,6 +16,7 @@ import {
   resistorIcon,
   unknownStatusIcon,
   disconnectIcon,
+  uploadCloudIcon,
 } from '@cds/core/icon';
 import { LibraryService } from './shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
@@ -46,7 +47,8 @@ export class AppComponent {
       hardDriveIcon,
       unknownStatusIcon,
       resistorIcon,
-      disconnectIcon
+      disconnectIcon,
+      uploadCloudIcon
     );
     const os = window.navigator.platform;
 

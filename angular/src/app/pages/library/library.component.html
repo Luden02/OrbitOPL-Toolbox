@@ -1,12 +1,18 @@
 <div class="action-row">
   <div class="headline">Library</div>
   <div>
-    <clr-button-group class="btn-group btn-primary">
+    <clr-button-group class="btn-group btn-outline-primary">
+      <clr-button
+        [disabled]="!(_libraryService.currentDirectory$ | async)"
+        (click)="_libraryService.refreshGamesFiles()"
+        ><cds-icon shape="refresh"></cds-icon>Refresh</clr-button
+      >
       <clr-button
         [disabled]="!(_libraryService.currentDirectory$ | async)"
         (click)="_libraryService.downloadAllArt()"
-        >Download GameART for all the games!</clr-button
-      >
+        ><cds-icon shape="download-cloud"></cds-icon>
+        Download All Art
+      </clr-button>
     </clr-button-group>
   </div>
 </div>

@@ -1,7 +1,12 @@
 import { Component, Input } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 import { ClarityModule } from '@clr/angular';
-import { ClarityIcons, unknownStatusIcon } from '@cds/core/icon';
+import {
+  ClarityIcons,
+  downloadCloudIcon,
+  trashIcon,
+  unknownStatusIcon,
+} from '@cds/core/icon';
 import { LibraryService } from '../../../../shared/services/library.service';
 
 @Component({
@@ -17,7 +22,7 @@ export class GamecardComponent {
 
   public coverArt: gameArt | undefined;
   ngOnInit() {
-    ClarityIcons.addIcons(unknownStatusIcon);
+    ClarityIcons.addIcons(trashIcon, downloadCloudIcon);
     if (this.game && Array.isArray(this.game.art)) {
       this.coverArt = this.game.art.find((a) => a.type === 'COV');
     }

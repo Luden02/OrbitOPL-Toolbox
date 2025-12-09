@@ -3,6 +3,7 @@ import { GamecardComponent } from './components/gamecard/gamecard.component';
 import { LibraryService } from '../../shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
 import { ClarityModule } from '@clr/angular';
+import { ClarityIcons, downloadCloudIcon, refreshIcon } from '@cds/core/icon';
 
 @Component({
   selector: 'app-library',
@@ -12,4 +13,8 @@ import { ClarityModule } from '@clr/angular';
 })
 export class LibraryComponent {
   constructor(public readonly _libraryService: LibraryService) {}
+
+  ngOnInit() {
+    ClarityIcons.addIcons(refreshIcon, downloadCloudIcon);
+  }
 }

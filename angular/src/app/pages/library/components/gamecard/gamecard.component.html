@@ -20,14 +20,20 @@
     </div>
     <div class="game-buttons">
       <clr-button-group class="btn-group btn-outline-primary btn-sm">
-        <clr-button [disabled]="true">Edit gameinfo</clr-button>
-        <clr-button [disabled]="true" class="btn-outline-danger"
-          >delete</clr-button
+        <clr-button
+          [clrInMenu]="true"
+          [disabled]="true"
+          class="btn-outline-danger"
+        >
+          <clr-icon shape="trash"></clr-icon>
+          Delete</clr-button
         >
         <clr-button
           [clrInMenu]="true"
           (click)="_libraryService.downloadArtByGameId(game.gameId)"
-          >Download available GameART for this game</clr-button
+        >
+          <clr-icon shape="download"></clr-icon>
+          Download game art</clr-button
         >
       </clr-button-group>
     </div>
