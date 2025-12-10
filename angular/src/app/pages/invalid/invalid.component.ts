@@ -1,23 +1,12 @@
 import { Component } from '@angular/core';
-import {
-  ClarityModule,
-  ClrButtonModule,
-  ClrDatagridModule,
-} from '@clr/angular';
+
 import { LibraryService } from '../../shared/services/library.service';
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-invalid',
-  imports: [
-    ClarityModule,
-    AsyncPipe,
-    ClrButtonModule,
-    ClrDatagridModule,
-    CommonModule,
-    FormsModule,
-  ],
+  imports: [AsyncPipe, CommonModule, FormsModule],
   templateUrl: './invalid.component.html',
   styleUrl: './invalid.component.scss',
 })

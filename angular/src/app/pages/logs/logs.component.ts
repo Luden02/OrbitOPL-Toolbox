@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { LogEntry, LogsService } from '../../shared/services/logs.service';
 import { CommonModule } from '@angular/common';
-import { ClrCheckboxModule, ClarityModule } from '@clr/angular';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-logs',
-  imports: [CommonModule, ClrCheckboxModule, FormsModule, ClarityModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './logs.component.html',
   styleUrl: './logs.component.scss',
 })

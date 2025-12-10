@@ -1,56 +1,3 @@
-:root {
-  --grey-25: #f6f6f6;
-  --grey-50: #ececec;
-  --grey-100: #e0e0e0;
-  --grey-200: #cccccc;
-  --grey-300: #b3b3b3;
-  --grey-400: #999999;
-  --grey-500: #808080;
-  --grey-600: #666666;
-  --grey-700: #4d4d4d;
-  --grey-800: #333333;
-  --grey-900: #1a1a1a;
-
-  --accent-blue-25: #e6eaf6;
-  --accent-blue-50: #ccd5ed;
-  --accent-blue-100: #b3c1e5;
-  --accent-blue-200: #99acdc;
-  --accent-blue-300: #8097d3;
-  --accent-blue-400: #6682cb;
-  --accent-blue-500: #4d6dc2;
-  --accent-blue-600: #3358b9;
-  --accent-blue-700: #1a43b0;
-  --accent-blue-800: #002e97;
-  --accent-blue-900: #0033a0;
-
-  --accent-red-25: #fbeaea;
-  --accent-red-50: #f6cccc;
-  --accent-red-100: #f0adad;
-  --accent-red-200: #eb8f8f;
-  --accent-red-300: #e57070;
-  --accent-red-400: #e05252;
-  --accent-red-500: #db3333;
-  --accent-red-600: #c42e2e;
-  --accent-red-700: #ad2929;
-  --accent-red-800: #962424;
-  --accent-red-900: #801f1f;
-}
-
-:root {
-  --palette-white: #fcfcfc;
-  --palette-purple-25: #f3f0fa;
-  --palette-purple-50: #e7def6;
-  --palette-purple-100: #d9c9f0;
-  --palette-purple-200: #cbb3ea;
-  --palette-purple-300: #bca0e3;
-  --palette-purple-400: #ad8cdd;
-  --palette-purple-500: #9e79d7;
-  --palette-purple-600: #8a63c4;
-  --palette-purple-700: #754eb0;
-  --palette-purple-800: #60399c;
-  --palette-purple-900: #4c2588;
-}
-
 html,
 body {
   height: 100%;
@@ -60,5 +7,4 @@ body {
   -webkit-user-select: none;
   -webkit-app-region: drag;
   overflow: hidden;
-  background-color: var(--grey-50);
 }

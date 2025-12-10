@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
-import { ClrTabsModule } from '@clr/angular';
 
 @Component({
   selector: 'app-import',
-  imports: [ClrTabsModule],
+  imports: [],
   templateUrl: './import.component.html',
   styleUrl: './import.component.scss',
 })
