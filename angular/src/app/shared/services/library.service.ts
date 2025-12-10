@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { LogService } from '@cds/core/internal';
 import { LogsService } from './logs.service';
-import { BehaviorSubject, map, Observable } from 'rxjs';
+import { BehaviorSubject, lastValueFrom, map, Observable } from 'rxjs';
 import { Game, RawGameFile } from '../types/game.type';
 
 @Injectable({
@@ -11,6 +11,18 @@ export class LibraryService {
   private librarySubject = new BehaviorSubject<Game[]>([]);
   public get library$(): Observable<Game[]> {
     return this.librarySubject.asObservable();
+  }
+
+  public get totalCdTypeCd$(): Observable<number> {
+    return this.countGamesByCdType$('CD');
+  }
+
+  public get totalCdTypeDvd$(): Observable<number> {
+    return this.countGamesByCdType$('DVD');
+  }
+
+  public get totalInvalidFiles$(): Observable<number> {
+    return this.invalidFilesCount();
   }
 
   private invalidFilesSubject = new BehaviorSubject<any[]>([]);
@@ -44,6 +56,15 @@ export class LibraryService {
     return this.currentDirectorySubject.asObservable();
   }
 
+  public get librarySizeGb$(): Observable<number> {
+    return this.library$.pipe(
+      map((games) =>
+        games.reduce((total, game) => total + this.parseSizeToGb(game.size), 0)
+      ),
+      map((size) => Number(size.toFixed(2)))
+    );
+  }
+
   public get hasCurrentDirectory$(): Observable<boolean> {
     return this.currentDirectorySubject
       .asObservable()
@@ -56,6 +77,10 @@ export class LibraryService {
   }
 
   constructor(private readonly _logger: LogsService) {}
+
+  private invalidFilesCount(): Observable<number> {
+    return this.invalidFiles$.pipe(map((files) => Math.min(files.length, 99)));
+  }
 
   public disconnectCurrentDirectory() {
     this._logger.log(
@@ -146,6 +171,40 @@ export class LibraryService {
     const i = Math.floor(Math.log(size) / Math.log(1024));
     const value = size / Math.pow(1024, i);
     return `${value.toFixed(1)}${units[i]}`;
+  }
+
+  private parseSizeToGb(sizeLabel: string | undefined): number {
+    if (!sizeLabel) {
+      return 0;
+    }
+    const match = sizeLabel.match(/([\d.]+)\s*(B|KB|MB|GB|TB)/i);
+    if (!match) {
+      return 0;
+    }
+    const value = parseFloat(match[1]);
+    if (Number.isNaN(value)) {
+      return 0;
+    }
+    const unit = match[2].toUpperCase();
+    const factors: Record<string, number> = {
+      B: 1 / Math.pow(1024, 3),
+      KB: 1 / Math.pow(1024, 2),
+      MB: 1 / 1024,
+      GB: 1,
+      TB: 1024,
+    };
+    return value * (factors[unit] ?? 0);
+  }
+
+  private countGamesByCdType$(expectedType: string): Observable<number> {
+    return this.library$.pipe(
+      map(
+        (games) =>
+          games.filter(
+            (game) => game.cdType?.toUpperCase() === expectedType.toUpperCase()
+          ).length
+      )
+    );
   }
 
   private mapGameIdToRegion(gameId: string) {
@@ -302,5 +361,52 @@ export class LibraryService {
       this.downloadArtByGameId(game.gameId)
     );
     return Promise.all(downloadPromises);
+  }
+
+  public tryDetermineGameIdFromHex(filepath: string) {
+    this._logger.log(
+      'tryDetermineGameIdFromHex',
+      'Trying to determine Game ID from hex data: ' + filepath
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Determining Game ID from hex data...');
+    return window.libraryAPI.tryDetermineGameIdFromHex(filepath).then((res) => {
+      this.setCurrentAction('');
+      this.setLoading(false);
+      console.log(res);
+      return res;
+    });
+  }
+
+  public async bulkAutoCorrection(fetchArtwork: boolean) {
+    this._logger.log(
+      'bulkAutoCorrection',
+      'Triggered bulk auto-correction of invalid game files...'
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Auto-correcting invalid game files...');
+
+    const invalidFiles = this.invalidFiles$.subscribe(async (files) => {
+      for (const file of files) {
+        this.setLoading(true);
+        this.setCurrentAction('Processing ' + file.name + '...');
+
+        const result = await this.tryDetermineGameIdFromHex(file.path);
+        if (result.success) {
+          await this.renameInvalidGameFile(
+            file.path,
+            result.gameId,
+            result.gameName || ''
+          );
+          if (fetchArtwork) {
+            await this.downloadArtByGameId(result.gameId);
+          }
+        }
+      }
+      invalidFiles.unsubscribe();
+    });
+
+    this.setCurrentAction('');
+    this.setLoading(false);
   }
 }

@@ -2,10 +2,12 @@ import { Component, Input } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
+import { LucideAngularModule } from 'lucide-angular';
+import { SlicePipe } from '@angular/common';
 
 @Component({
   selector: 'app-gamecard',
-  imports: [],
+  imports: [LucideAngularModule, SlicePipe],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })

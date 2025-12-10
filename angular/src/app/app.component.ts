@@ -2,13 +2,20 @@ import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LogsService } from './shared/services/logs.service';
 import PackageInfo from '../../../package.json';
-
 import { LibraryService } from './shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
+import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AsyncPipe],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    AsyncPipe,
+    LucideAngularModule,
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })

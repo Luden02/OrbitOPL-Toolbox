@@ -8,9 +8,10 @@ import {
   getGamesFiles,
   openAskDirectory,
   renameGamefile,
+  tryDetermineGameIdFromHex,
 } from "./library.service";
 
-const size = { minWidth: 1024, minHeight: 600 };
+const size = { minWidth: 1280, minHeight: 720 };
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -111,5 +112,13 @@ ipcMain.handle(
   "download-art-by-gameid",
   async (event, dirPath: string, gameId: string) => {
     return downloadArtByGameId(dirPath, gameId);
+  }
+);
+
+ipcMain.handle(
+  "try-determine-gameid-from-hex",
+  async (event, filepath: string) => {
+    const result = await tryDetermineGameIdFromHex(filepath);
+    return result;
   }
 );

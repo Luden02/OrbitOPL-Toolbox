@@ -11,4 +11,6 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("rename-gamefile", dirPath, gameId, gameName),
   downloadArtByGameId: (dirPath: string, gameId: string) =>
     ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId),
+  tryDetermineGameIdFromHex: (filepath: string) =>
+    ipcRenderer.invoke("try-determine-gameid-from-hex", filepath),
 });

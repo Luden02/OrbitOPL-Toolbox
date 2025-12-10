@@ -1,0 +1,60 @@
+<div class="card card-side bg-base-100 shadow-sm">
+  <figure>
+    @if(coverArt) {<img
+      [src]="'data:image/png;base64,' + coverArt?.base64"
+      alt="cover-art"
+    />} @else{
+    <div
+      class="w-32 h-48 mr-1 flex items-center justify-center bg-gray-200 text-gray-400"
+    >
+      <i-lucide name="image-off" size="48"></i-lucide>
+    </div>
+    }
+  </figure>
+  <div class="card-body gap-0 pb-0">
+    @if(game && game?.title){
+    <h2 class="card-title">
+      {{
+        game?.title && (game?.title?.length ?? 0) > 25
+          ? (game?.title | slice : 0 : 25) + "..."
+          : game?.title
+      }}
+    </h2>
+    }
+    <span class="font-mono"
+      ><span class="font-bold">GameID:</span> {{ game?.gameId }}</span
+    >
+    <span class="font-mono"
+      ><span class="font-bold">Region:</span> {{ game?.region }}</span
+    >
+    <span class="font-mono"
+      ><span class="font-bold">Size:</span> {{ game?.size }}</span
+    >
+
+    <div class="card-actions justify-end mt-5">
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn m-1">
+          <i-lucide name="ellipsis"></i-lucide>
+        </div>
+        <ul
+          tabindex="-1"
+          class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+        >
+          <li>
+            <a class="text-gray-300"
+              ><i-lucide name="trash" [size]="16"></i-lucide>Delete</a
+            >
+          </li>
+          <li>
+            <a
+              (click)="
+                game && this._libraryService.downloadArtByGameId(game.gameId)
+              "
+              ><i-lucide name="download" [size]="16"></i-lucide>Fetch Artwork</a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

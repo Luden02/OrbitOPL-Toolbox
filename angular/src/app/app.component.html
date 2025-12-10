@@ -1,0 +1,91 @@
+<div class="main-view flex">
+  <div class="sidebar">
+    <ul class="menu bg-base-200 rounded-r-lg w-50 h-[calc(100vh-64px)]">
+      <li class="pt-2 pb-2">
+        <a routerLink="/library"
+          ><i-lucide name="Library" size="18"></i-lucide>Library</a
+        >
+      </li>
+      <li class="pt-2 pb-2">
+        <a routerLink="/invalid-files"
+          ><i-lucide name="bug" size="18"></i-lucide>Invalid Files
+          @if((this._libraryService.totalInvalidFiles$ | async)) {
+          <span class="badge badge-xs">{{
+            (this._libraryService.totalInvalidFiles$ | async) === 99
+              ? "99+"
+              : (this._libraryService.totalInvalidFiles$ | async)
+          }}</span>
+          }</a
+        >
+      </li>
+      <li class="pt-2 pb-2">
+        <a routerLink="/import"
+          ><i-lucide name="disc-3" size="18"></i-lucide>Import Games</a
+        >
+      </li>
+      <li class="pt-2 pb-2 border-t border-base-300">
+        <a routerLink="/logs"
+          ><i-lucide name="Code" size="18"></i-lucide>Logs</a
+        >
+      </li>
+    </ul>
+  </div>
+  <div class="main-content w-full h-full p-4">
+    <router-outlet></router-outlet>
+  </div>
+</div>
+<div class="navbar bg-base-200 shadow-sm fixed bottom-0 left-0 right-0">
+  @if(this._libraryService.hasCurrentDirectory$ | async) {
+  <div class="flex-1 px-4">
+    <button
+      class="btn btn-error mr-2"
+      (click)="this._libraryService.disconnectCurrentDirectory()"
+    >
+      @if(this._libraryService.loading$ | async) {
+      <span class="loading loading-spinner"></span>
+      } @else {
+      <i-lucide name="unplug" size="18"></i-lucide>
+      } Unmount Directory
+    </button>
+    <span class="font-mono text-gray-600 text-sm">{{
+      this._libraryService.currentDirectory$ | async
+    }}</span>
+  </div>
+  <div class="flex px-4 flex space-x-6">
+    <div class="pr-4 border-r border-gray-400">
+      <span class="font-bold">DVDs: </span
+      ><span class="font-mono text-gray-500">{{
+        this._libraryService.totalCdTypeDvd$ | async
+      }}</span>
+    </div>
+    <div class="pr-4 border-r border-gray-400">
+      <span class="font-bold">CDs: </span
+      ><span class="font-mono text-gray-500">{{
+        this._libraryService.totalCdTypeCd$ | async
+      }}</span>
+    </div>
+    <div>
+      <span class="font-bold">Total size: </span>
+      <span class="font-mono text-gray-500"
+        >{{ this._libraryService.librarySizeGb$ | async }} GB</span
+      >
+    </div>
+  </div>
+  } @else {
+  <div class="flex-1 px-4 pl-0">
+    <button
+      class="btn btn-primary mr-2"
+      (click)="this._libraryService.openAskDirectory()"
+    >
+      @if(this._libraryService.loading$ | async) {
+      <span class="loading loading-spinner"></span>
+      } @else {
+      <i-lucide name="folder" size="18"></i-lucide>
+      } Mount Directory</button
+    ><span class="text-gray-300 text-sm">No directory mounted</span>
+  </div>
+  } @if(this._libraryService.loading$ | async) {
+  <progress class="progress w-20"></progress>} @else {
+  <progress class="progress w-20" value="0" max="100"></progress>
+  }
+</div>

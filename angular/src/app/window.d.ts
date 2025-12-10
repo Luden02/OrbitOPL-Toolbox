@@ -9,5 +9,6 @@ declare interface Window {
       gameName: string
     ) => Promise<any>;
     downloadArtByGameId: (dirPath: string, gameId: string) => Promise<any>;
+    tryDetermineGameIdFromHex: (filepath: string) => Promise<any>;
   };
 }

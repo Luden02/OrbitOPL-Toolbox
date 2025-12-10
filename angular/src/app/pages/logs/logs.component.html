@@ -1,0 +1,10 @@
+<div
+  class="header h-15 flex items-center justify-between px-4 mb-4 border-b border-base-300"
+>
+  <div class="text-4xl">Logs</div>
+</div>
+<textarea
+  class="textarea w-full h-[calc(100vh-180px)] resize-none"
+  disabled
+  [value]="getFormattedLogs()"
+></textarea>

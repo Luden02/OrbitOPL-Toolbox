@@ -28,4 +28,13 @@ export class LogsComponent {
   toggleVerboseMode() {
     this._logger.toggleVerboseMode();
   }
+
+  getFormattedLogs(): string {
+    return this.logs
+      .map(
+        (log) =>
+          `[${log.timestamp}] [${log.type}] [${log.location}] ${log.message}`
+      )
+      .join('\n');
+  }
 }

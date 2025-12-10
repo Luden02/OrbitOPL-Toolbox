@@ -1,0 +1,133 @@
+<div class="main-section">
+  <div
+    class="header h-15 flex items-center justify-between px-4 border-b border-base-300"
+  >
+    <div class="text-4xl">Invalid Files</div>
+    <div>
+      <button
+        [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
+        class="btn"
+        (click)="this._libraryService.refreshGamesFiles()"
+      >
+        <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
+      </button>
+      <button
+        [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
+        class="btn ml-2"
+        (click)="this.openBulkAutoCorrection()"
+      >
+        <i-lucide name="folder-pen" size="18"></i-lucide>Bulk Auto-Correction
+      </button>
+    </div>
+  </div>
+  <div class="p-4 flex flex-col space-y-4">
+    <span class="text-sm text-gray-600"
+      >Here you can find the games that have not been properly recognized or
+      categorized caused by a wrong filename.</span
+    >
+  </div>
+  <div>
+    <div
+      class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100"
+    >
+      <table class="table">
+        <!-- head -->
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th>Size</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (file of this._libraryService.invalidFiles$ | async; track file)
+          {
+          <tr>
+            <td>
+              {{
+                file.path.length > 30
+                  ? (file.path | slice : 0 : 30) + "..."
+                  : file.path
+              }}
+            </td>
+            <td>
+              {{ (file.stats.size / (1024 * 1024 * 1024)).toFixed(2) }} GBs
+            </td>
+            <td>
+              <button
+                class="btn btn-sm btn-primary"
+                (click)="openRenameTool(file.path)"
+              >
+                <i-lucide name="file-pen-line" size="16"></i-lucide>Open Rename
+                Tool
+              </button>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<dialog id="rename_tool" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Game File Rename Tool</h3>
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Game ID</legend>
+      <input
+        type="text"
+        class="input"
+        placeholder="SCES_111.22"
+        [(ngModel)]="renameGameId"
+      />
+    </fieldset>
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Game Name</legend>
+      <input
+        type="text"
+        class="input"
+        placeholder="SCES_111.22"
+        [(ngModel)]="renameGameName"
+      />
+    </fieldset>
+    <div class="pt-2">
+      <input
+        type="checkbox"
+        checked="checked"
+        class="toggle"
+        [(ngModel)]="fetchArtwork"
+      />
+      <span class="text-sm pl-2">Fetch Artwork While Correcting GameFile</span>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-primary" (click)="sendRenaming()">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="bulk_auto_tool" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Bulk Auto-Correction Tool</h3>
+    <p class="py-4">
+      This tool will attempt to automatically correct all invalid game files by
+      analyzing their internal hex values. It will rename the files and fetch
+      missing artwork where possible.
+    </p>
+    <div class="pt-2">
+      <input
+        type="checkbox"
+        checked="checked"
+        class="toggle"
+        [(ngModel)]="fetchArtwork"
+      />
+      <span class="text-sm pl-2">Fetch Artwork While Correcting GameFiles</span>
+    </div>
+    <div class="modal-action">
+      <button class="btn btn-primary" (click)="startBulkAutoCorrection()">
+        Start Bulk Auto-Correction
+      </button>
+    </div>
+  </div>
+</dialog>

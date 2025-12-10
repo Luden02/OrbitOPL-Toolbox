@@ -3,6 +3,91 @@ import * as fs from "fs/promises";
 import path from "path";
 import https from "https";
 
+const PS2_GAME_ID_PREFIXES = [
+  "SLUS",
+  "SCUS",
+  "SLES",
+  "SCES",
+  "SLPM",
+  "SLPS",
+  "SCPS",
+  "SCPM",
+  "SLAJ",
+  "SCAJ",
+  "SLKA",
+  "SCKA",
+  "SCED",
+  "SCCS",
+];
+
+const PS2_GAME_ID_REGEX = new RegExp(
+  `(?:${PS2_GAME_ID_PREFIXES.join("|")})_[0-9]{3}\\.[0-9]{2}(?:;1)?`,
+  "g"
+);
+
+const FILE_SCAN_CHUNK_BYTES = 1024 * 1024; // 1 MB chunks keep memory usage predictable.
+const FILE_SCAN_OVERLAP_BYTES = 64; // Overlap to catch IDs spanning chunk boundaries.
+const PS2_GAMES_LIST_CANDIDATE_PATHS = [
+  path.resolve(__dirname, "../assets/ps2-gameslist.txt"),
+  path.resolve(__dirname, "../../assets/ps2-gameslist.txt"),
+  path.resolve(process.cwd(), "assets/ps2-gameslist.txt"),
+];
+
+let cachedPs2GamesList: Map<string, string> | null = null;
+let attemptedToLoadPs2GamesList = false;
+
+function normaliseGameIdForLookup(rawId: string) {
+  return rawId.replace("_", "-").replace(/\./g, "").toUpperCase();
+}
+
+async function loadPs2GamesList() {
+  if (attemptedToLoadPs2GamesList) {
+    return cachedPs2GamesList;
+  }
+
+  attemptedToLoadPs2GamesList = true;
+
+  for (const candidate of PS2_GAMES_LIST_CANDIDATE_PATHS) {
+    try {
+      const content = await fs.readFile(candidate, "utf-8");
+      const map = new Map<string, string>();
+
+      content.split(/\r?\n/).forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return;
+        }
+
+        const [id, ...nameParts] = trimmed.split(/\s+/);
+        if (!id || nameParts.length === 0) {
+          return;
+        }
+
+        map.set(id.toUpperCase(), nameParts.join(" "));
+      });
+
+      if (map.size > 0) {
+        cachedPs2GamesList = map;
+        return cachedPs2GamesList;
+      }
+    } catch (err) {
+      // Intentionally ignore missing file/location attempts.
+    }
+  }
+
+  cachedPs2GamesList = null;
+  return cachedPs2GamesList;
+}
+
+async function findPs2GameName(gameId: string) {
+  const list = await loadPs2GamesList();
+  if (!list) {
+    return undefined;
+  }
+
+  return list.get(gameId.toUpperCase());
+}
+
 export async function openAskDirectory(options: any) {
   const defaultOptions = {
     properties: ["openDirectory"],
@@ -154,5 +239,75 @@ export async function renameGamefile(
     return { success: true, newPath: newFilePath };
   } catch (err) {
     return { success: false, message: err };
+  }
+}
+
+export async function tryDetermineGameIdFromHex(filepath: string) {
+  let fileHandle: fs.FileHandle | undefined;
+
+  try {
+    fileHandle = await fs.open(filepath, "r");
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || "Unable to open file.",
+    };
+  }
+
+  try {
+    const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
+    let position = 0;
+    let carry = "";
+
+    while (true) {
+      const { bytesRead } = await fileHandle.read(
+        buffer,
+        0,
+        FILE_SCAN_CHUNK_BYTES,
+        position
+      );
+
+      if (bytesRead === 0) {
+        break;
+      }
+
+      position += bytesRead;
+
+      const chunk = carry + buffer.subarray(0, bytesRead).toString("latin1");
+      PS2_GAME_ID_REGEX.lastIndex = 0;
+      const matches = chunk.match(PS2_GAME_ID_REGEX);
+
+      if (matches && matches.length > 0) {
+        const gameId = matches[0].replace(/;1$/, "");
+        const lookupId = normaliseGameIdForLookup(gameId);
+        const gameName = await findPs2GameName(lookupId);
+
+        return {
+          success: true,
+          gameId,
+          formattedGameId: lookupId,
+          ...(gameName ? { gameName } : {}),
+        };
+      }
+
+      carry =
+        chunk.length > FILE_SCAN_OVERLAP_BYTES
+          ? chunk.slice(-FILE_SCAN_OVERLAP_BYTES)
+          : chunk;
+    }
+
+    return {
+      success: false,
+      message: "Could not locate a PS2 game ID inside the provided file.",
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || "Failed while reading file contents.",
+    };
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close();
+    }
   }
 }
