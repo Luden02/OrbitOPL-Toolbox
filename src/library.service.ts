@@ -435,10 +435,7 @@ export async function moveFile(
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
         console.log(`File copied successfully: ${sizeMB} MB in ${duration}s`);
-        console.log("Removing original file...");
-
-        await fs.unlink(sourcePath);
-        console.log("Original file removed, move complete");
+        console.log("move complete");
         return { success: true, newPath: targetPath };
       } catch (copyErr: any) {
         return { success: false, message: copyErr?.message || String(copyErr) };
