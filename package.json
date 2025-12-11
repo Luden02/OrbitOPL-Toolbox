@@ -1,10 +1,10 @@
 {
-  "name": "OrbitOPL-Toolbox",
-  "version": "0.2.0-alpha.0",
+  "name": "orbitopl-toolbox",
+  "version": "0.1.0-beta",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
   "author": "Luden02",
-  "email": "github.com.overtime522@passmail.com",
+  "email": "",
   "license": "MIT",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
