@@ -38,7 +38,8 @@
     "productName": "OrbitOPLToolbox",
     "files": [
       "dist/**/*",
-      "package.json"
+      "package.json",
+      "assets"
     ],
     "directories": {
       "output": "build"
