@@ -7,23 +7,24 @@ OrbitOPL Toolbox – A modern, cross-platform way to manage your OPL game collec
 OrbitOPL Toolbox is an open-source and cross-platform application for organizing your PlayStation 2 game library.
 
 It was created to fill the gap left by OPLManager, which lacks macOS and Linux support.
-The goal isn’t to replace OPLManager, but to offer an alternative — one that’s modern, intuitive, and built with technologies familiar to JavaScript developers.
+The goal isn’t to replace OPLManager, but to offer an alternative, one that’s modern, intuitive, and built with technologies familiar to JavaScript developers.
 
 # ✨ Features
 
 ## ✅ Current
 
 - Cross-Platform: Windows, macOS, and Linux support
-- ISO files Support
+- Reading ISO Games in Library
+- Importing ISO Games with Auto-Discovery + Artwork fetching
 - Modern UI: Built with Electron for a clean, user-friendly experience
-- Game artwork: "Single/Bulk GameArt Download" Functionality
+- Artwork download: on single game or full library fetch
 
 ## 🚧 Roadmap
 
 ### Short Term
 
-- Single-file & batch game import (.iso / .bin.cue)
-- Auto-rename imports to pattern-based .iso
+- Multiple game imports
+- .bin/.cue auto conversion to .iso during import
 - Search & filter games
 
 ### Long Term
@@ -41,7 +42,7 @@ Grab the latest release from the Releases page. [Releases](https://github.com/St
 
 ### 🐧 Linux
 
-1. Download the **Linux `.zip`** file.
+1. Download the **Linux `.zip` / `.appImage` / `.deb`** file (based on your distro and preference).
 2. Extract it.
 3. Run the `OrbitOPL-Toolbox` file.
 
@@ -60,9 +61,8 @@ Grab the latest release from the Releases page. [Releases](https://github.com/St
 
 ### 🪟 Windows
 
-1. Download the `setup.exe`.
-2. Run it — after some loading time, you'll find the app on your **Desktop**.  
-   _(A fully portable `.exe` might not be available yet.)_
+1. Download the `.exe`.
+2. Run it.
 
 ## 🚀 Getting Started
 
@@ -85,26 +85,6 @@ Contributions are welcome! Here's how you can help improve OrbitOPL Toolbox:
 - **Feature Requests**: Have an idea for improvement? Submit a feature request
 - **Code Contributions**: Submit pull requests for bug fixes or new features
 - **Testing**: Test new releases and provide feedback
-
-## Development Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Luden02/OrbitOPL-Toolbox.git
-   cd OrbitOPL-Toolbox
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run start
-   ```
 
 ## Pull Request Process
 
