@@ -10,5 +10,17 @@ declare interface Window {
     ) => Promise<any>;
     downloadArtByGameId: (dirPath: string, gameId: string) => Promise<any>;
     tryDetermineGameIdFromHex: (filepath: string) => Promise<any>;
+    convertBinToIso: (cueFilePath: string, outputDir: string) => Promise<any>;
+    openAskGameFile: (isGameCd: boolean, isGameDvd: boolean) => Promise<any>;
+    moveFile: (sourcePath: string, destPath: string) => Promise<any>;
+    onMoveFileProgress: (
+      callback: (progress: {
+        percent: number;
+        copiedMB: number;
+        totalMB: number;
+        elapsed: number;
+      }) => void
+    ) => void;
+    removeAllMoveFileProgressListeners: () => void;
   };
 }

@@ -2,12 +2,16 @@
   <div class="sidebar">
     <ul class="menu bg-base-200 rounded-r-lg w-50 h-[calc(100vh-64px)]">
       <li class="pt-2 pb-2">
-        <a routerLink="/library"
+        <a
+          routerLink="/library"
+          [class.pointer-events-none]="this._libraryService.loading$ | async"
           ><i-lucide name="Library" size="18"></i-lucide>Library</a
         >
       </li>
       <li class="pt-2 pb-2">
-        <a routerLink="/invalid-files"
+        <a
+          routerLink="/invalid-files"
+          [class.pointer-events-none]="this._libraryService.loading$ | async"
           ><i-lucide name="bug" size="18"></i-lucide>Invalid Files
           @if((this._libraryService.totalInvalidFiles$ | async)) {
           <span class="badge badge-xs">{{
@@ -19,12 +23,16 @@
         >
       </li>
       <li class="pt-2 pb-2">
-        <a routerLink="/import"
+        <a
+          routerLink="/import"
+          [class.pointer-events-none]="this._libraryService.loading$ | async"
           ><i-lucide name="disc-3" size="18"></i-lucide>Import Games</a
         >
       </li>
       <li class="pt-2 pb-2 border-t border-base-300">
-        <a routerLink="/logs"
+        <a
+          routerLink="/logs"
+          [class.pointer-events-none]="this._libraryService.loading$ | async"
           ><i-lucide name="Code" size="18"></i-lucide>Logs</a
         >
       </li>
@@ -53,22 +61,9 @@
   </div>
   <div class="flex px-4 flex space-x-6">
     <div class="pr-4 border-r border-gray-400">
-      <span class="font-bold">DVDs: </span
-      ><span class="font-mono text-gray-500">{{
-        this._libraryService.totalCdTypeDvd$ | async
+      <span class="font-mono text-gray-500">{{
+        this._libraryService.currentAction$ | async
       }}</span>
-    </div>
-    <div class="pr-4 border-r border-gray-400">
-      <span class="font-bold">CDs: </span
-      ><span class="font-mono text-gray-500">{{
-        this._libraryService.totalCdTypeCd$ | async
-      }}</span>
-    </div>
-    <div>
-      <span class="font-bold">Total size: </span>
-      <span class="font-mono text-gray-500"
-        >{{ this._libraryService.librarySizeGb$ | async }} GB</span
-      >
     </div>
   </div>
   } @else {

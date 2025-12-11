@@ -332,6 +332,7 @@ export class LibraryService {
         this.setCurrentAction('');
         this.setLoading(false);
         this.refreshGamesFiles();
+        return res;
       });
   }
 
@@ -408,5 +409,199 @@ export class LibraryService {
 
     this.setCurrentAction('');
     this.setLoading(false);
+  }
+
+  openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {
+    this._logger.verbose(
+      'libraryService',
+      'Triggered game file selection pop-up...'
+    );
+    this.setLoading(true);
+    this.setCurrentAction('User choosing game file...');
+    return window.libraryAPI
+      .openAskGameFile(isGameCd, isGameDvd)
+      .then(async (data: any) => {
+        if (!data.canceled) {
+          this._logger.log(
+            'libraryService',
+            `Game file has been chosen by user: ${data.filePaths[0]}`
+          );
+          this.setLoading(false);
+          this.setCurrentAction('');
+          return data.filePaths[0];
+        } else {
+          this._logger.error(
+            'libraryService',
+            `Game file selection has been cancelled by user.`
+          );
+          this.setLoading(false);
+          this.setCurrentAction('');
+          return null;
+        }
+      });
+  }
+
+  convertBinToIso(cueFilePath: string, outputDir: string) {
+    this._logger.log(
+      'convertBinToIso',
+      `Triggered conversion of BIN/CUE to ISO: ${cueFilePath} -> ${outputDir}`
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Converting BIN/CUE to ISO...');
+
+    console.log(cueFilePath, outputDir);
+    return window.libraryAPI
+      .convertBinToIso(cueFilePath, outputDir)
+      .then((res) => {
+        this.setCurrentAction('');
+        this.setLoading(false);
+        return res;
+      });
+  }
+
+  moveFile(sourcePath: string, destPath: string) {
+    this._logger.log(
+      'moveFile',
+      `Triggered moving file: ${sourcePath} -> ${destPath}`
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Moving file...');
+
+    // Set up progress listener
+    window.libraryAPI.onMoveFileProgress((progress) => {
+      const progressText = `Moving file... ${progress.percent}% (${progress.copiedMB}/${progress.totalMB} MB)`;
+      this.setCurrentAction(progressText);
+      console.log(`File transfer progress: ${progress.percent}%`);
+    });
+
+    return window.libraryAPI
+      .moveFile(sourcePath, destPath)
+      .then((res) => {
+        console.log('movefile:', res);
+        window.libraryAPI.removeAllMoveFileProgressListeners();
+        this.setCurrentAction('');
+        this.setLoading(false);
+        return res;
+      })
+      .catch((err) => {
+        window.libraryAPI.removeAllMoveFileProgressListeners();
+        this.setCurrentAction('');
+        this.setLoading(false);
+        throw err;
+      });
+  }
+
+  async importGameFile(
+    gamePath: string,
+    gameId: string,
+    gameName: string,
+    downloadArtwork: boolean
+  ) {
+    this._logger.log(
+      'importGameFile',
+      `Triggered import of game file: ${gamePath} with ID: ${gameId}`
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Importing game file...');
+
+    const dirPath = this.currentDirectory;
+
+    if (!dirPath || !gamePath) {
+      this._logger.error(
+        'importGameFile',
+        'Missing directory path or game path'
+      );
+      this.setCurrentAction('');
+      this.setLoading(false);
+      return;
+    }
+
+    const destinationDir = `${dirPath}/DVD`;
+    const normaliseErrorMessage = (value: any, fallback: string) => {
+      if (!value) return fallback;
+      if (typeof value === 'string') return value;
+      if (value?.message) return value.message;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return fallback;
+      }
+    };
+
+    try {
+      this._logger.verbose(
+        'importGameFile',
+        `Moving file to: ${destinationDir}`
+      );
+      this.setCurrentAction(`Moving file to ${destinationDir}...`);
+
+      // Set up progress listener for import
+      window.libraryAPI.onMoveFileProgress((progress) => {
+        const progressText = `Importing... ${progress.percent}% (${progress.copiedMB}/${progress.totalMB} MB)`;
+        this.setCurrentAction(progressText);
+      });
+
+      const moveResult: any = await window.libraryAPI.moveFile(
+        gamePath,
+        destinationDir
+      );
+
+      window.libraryAPI.removeAllMoveFileProgressListeners();
+
+      if (!moveResult?.success) {
+        throw new Error(
+          normaliseErrorMessage(
+            moveResult?.message,
+            'Failed to move game file.'
+          )
+        );
+      }
+
+      const fallbackMovedPath = `${destinationDir}/${gamePath
+        .split(/[\\/]/)
+        .pop()}`;
+      const movedPath = moveResult.newPath || fallbackMovedPath;
+
+      this._logger.verbose(
+        'importGameFile',
+        `Renaming moved file: ${movedPath}`
+      );
+      this.setCurrentAction(`Renaming ${movedPath}...`);
+      const renameResult: any = await window.libraryAPI.renameGamefile(
+        movedPath,
+        gameId,
+        gameName
+      );
+
+      if (!renameResult?.success) {
+        throw new Error(
+          normaliseErrorMessage(
+            renameResult?.message,
+            'Failed to rename moved game file.'
+          )
+        );
+      }
+
+      const finalPath = renameResult.newPath || movedPath;
+
+      this._logger.log(
+        'importGameFile',
+        `Game file imported successfully: ${finalPath}`
+      );
+      this.refreshGamesFiles();
+
+      if (downloadArtwork) {
+        this._logger.verbose(
+          'importGameFile',
+          `Downloading artwork for: ${gameId}`
+        );
+        this.downloadArtByGameId(gameId);
+      }
+    } catch (error: any) {
+      this._logger.error('importGameFile', `Error: ${error?.message || error}`);
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+    }
   }
 }

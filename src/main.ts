@@ -3,10 +3,13 @@ import path from "path";
 import electronReloader from "electron-reloader";
 import PackageInfo from "../package.json";
 import {
+  convertBinToIso,
   downloadArtByGameId,
   getArtFolder,
   getGamesFiles,
+  moveFile,
   openAskDirectory,
+  openAskGameFile,
   renameGamefile,
   tryDetermineGameIdFromHex,
 } from "./library.service";
@@ -120,5 +123,29 @@ ipcMain.handle(
   async (event, filepath: string) => {
     const result = await tryDetermineGameIdFromHex(filepath);
     return result;
+  }
+);
+
+ipcMain.handle(
+  "convert-bin-to-iso",
+  async (event, cueFilePath: string, outputDir: string) => {
+    return convertBinToIso(cueFilePath, outputDir);
+  }
+);
+
+ipcMain.handle(
+  "open-ask-game-file",
+  async (event, isGameCd: boolean, isGameDvd: boolean) => {
+    return openAskGameFile(isGameCd, isGameDvd);
+  }
+);
+
+ipcMain.handle(
+  "move-file",
+  async (event, sourcePath: string, destPath: string) => {
+    return moveFile(sourcePath, destPath, (progress) => {
+      // Send progress updates to the renderer process
+      event.sender.send("move-file-progress", progress);
+    });
   }
 );

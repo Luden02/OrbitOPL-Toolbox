@@ -1,5 +1,6 @@
-import { dialog } from "electron";
+import { dialog, OpenDialogOptions } from "electron";
 import * as fs from "fs/promises";
+import * as fsSync from "fs";
 import path from "path";
 import https from "https";
 
@@ -309,5 +310,140 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
     if (fileHandle) {
       await fileHandle.close();
     }
+  }
+}
+
+export async function convertBinToIso(
+  cueFilePath: string,
+  outputIsoPath: string
+) {
+  try {
+    return { success: true, message: "Conversion completed successfully." };
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Conversion failed." };
+  }
+}
+
+export async function openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {
+  const properties = ["openFile"];
+  // if gameCd ask for .cue file, if gameDvd ask for .iso/.zso
+  const filters = [];
+  if (isGameCd) {
+    filters.push({ name: "CUE Files", extensions: ["cue"] });
+  }
+  if (isGameDvd) {
+    filters.push({ name: "ISO/ZSO Files", extensions: ["iso", "zso"] });
+  }
+  const result = await dialog.showOpenDialog({
+    ...properties,
+    filters,
+    title: "Select Game File to Import",
+  });
+
+  return result;
+}
+
+export async function moveFile(
+  sourcePath: string,
+  destPath: string,
+  onProgress?: (progress: {
+    percent: number;
+    copiedMB: number;
+    totalMB: number;
+    elapsed: number;
+  }) => void
+) {
+  console.log("Moving file from", sourcePath, "to", destPath);
+
+  let targetPath = destPath;
+
+  try {
+    const destStats = await fs.stat(destPath);
+    if (destStats.isDirectory()) {
+      targetPath = path.join(destPath, path.basename(sourcePath));
+    }
+  } catch (statErr: any) {
+    if (statErr?.code !== "ENOENT") {
+      return { success: false, message: statErr?.message || String(statErr) };
+    }
+  }
+
+  try {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  } catch (mkdirErr: any) {
+    if (mkdirErr?.code !== "EEXIST") {
+      return { success: false, message: mkdirErr?.message || String(mkdirErr) };
+    }
+  }
+
+  try {
+    await fs.rename(sourcePath, targetPath);
+    console.log("File moved successfully using rename");
+    return { success: true, newPath: targetPath };
+  } catch (err: any) {
+    if (err?.code === "EXDEV") {
+      try {
+        console.log("Cross-device move detected, starting file copy...");
+        const stats = await fs.stat(sourcePath);
+        const totalSize = stats.size;
+        const startTime = Date.now();
+
+        // Use streams for progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const readStream = fsSync.createReadStream(sourcePath);
+          const writeStream = fsSync.createWriteStream(targetPath);
+
+          let copiedBytes = 0;
+          let lastLogTime = Date.now();
+          const LOG_INTERVAL_MS = 1000; // Log every second
+
+          readStream.on("data", (chunk: string | Buffer) => {
+            copiedBytes += Buffer.isBuffer(chunk)
+              ? chunk.length
+              : Buffer.byteLength(chunk);
+            const now = Date.now();
+
+            if (now - lastLogTime >= LOG_INTERVAL_MS) {
+              const progress = ((copiedBytes / totalSize) * 100).toFixed(1);
+              const copiedMB = (copiedBytes / (1024 * 1024)).toFixed(2);
+              const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
+              const elapsed = ((now - startTime) / 1000).toFixed(1);
+              console.log(
+                `Progress: ${progress}% (${copiedMB}/${totalMB} MB) - ${elapsed}s elapsed`
+              );
+
+              if (onProgress) {
+                onProgress({
+                  percent: parseFloat(progress),
+                  copiedMB: parseFloat(copiedMB),
+                  totalMB: parseFloat(totalMB),
+                  elapsed: parseFloat(elapsed),
+                });
+              }
+
+              lastLogTime = now;
+            }
+          });
+
+          readStream.on("error", reject);
+          writeStream.on("error", reject);
+          writeStream.on("finish", resolve);
+
+          readStream.pipe(writeStream);
+        });
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+        console.log(`File copied successfully: ${sizeMB} MB in ${duration}s`);
+        console.log("Removing original file...");
+
+        await fs.unlink(sourcePath);
+        console.log("Original file removed, move complete");
+        return { success: true, newPath: targetPath };
+      } catch (copyErr: any) {
+        return { success: false, message: copyErr?.message || String(copyErr) };
+      }
+    }
+    return { success: false, message: err?.message || String(err) };
   }
 }

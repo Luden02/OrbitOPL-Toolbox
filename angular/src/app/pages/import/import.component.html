@@ -3,15 +3,83 @@
     class="header h-15 flex items-center justify-between px-4 border-b border-base-300"
   >
     <div class="text-4xl">Import Games</div>
-    <div>
-      <button
-        [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
-        class="btn"
-        (click)="this._libraryService.refreshGamesFiles()"
+  </div>
+  @if(_libraryService.hasCurrentDirectory$ | async) {
+  <div class="p-4 flex flex-col space-y-4">
+    <div class="pt-4 flex justify-start">
+      <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
+        >Choose the type of gamefile you're trying to import:</span
       >
-        <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
+      <div>
+        <input
+          type="radio"
+          disabled="true"
+          name="radio-gametype"
+          class="radio radio-primary"
+          (value)="(isGameCd)"
+          (change)="isGameCd = true; isGameDvd = false"
+        />
+        <span class="pl-2 pr-8">.bin/.cue</span>
+        <input
+          type="radio"
+          name="radio-gametype"
+          class="radio radio-primary"
+          checked="true"
+          (value)="(isGameDvd)"
+          (change)="isGameCd = false; isGameDvd = true"
+        /><span class="pl-2 pr-8">.iso</span>
+      </div>
+    </div>
+    <div>
+      <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
+        >Select the gamefile to import ({{
+          isGameCd ? "point to the .cue file" : ".iso"
+        }}):</span
+      >
+      <button class="btn btn-primary" (click)="askForGameFile()">
+        Select Gamefile
+      </button>
+    </div>
+    <div class="pt-8 flex">
+      <fieldset class="fieldset mr-4 w-50">
+        <legend class="fieldset-legend">GameID</legend>
+        <input
+          type="text"
+          class="input"
+          [disabled]="autoDiscoveredFile"
+          [value]="gameId"
+        />
+      </fieldset>
+      <fieldset class="fieldset w-90">
+        <legend class="fieldset-legend">Game Name</legend>
+        <input
+          type="text"
+          class="input"
+          [disabled]="autoDiscoveredFile"
+          [value]="gameName"
+        />
+      </fieldset>
+      <fieldset class="fieldset ml-4 flex-1">
+        <legend class="fieldset-legend">Download Artwork</legend>
+        <input
+          type="checkbox"
+          checked="checked"
+          class="toggle"
+          [value]="downloadArtwork"
+        />
+      </fieldset>
+    </div>
+    <div>
+      <button class="btn btn-success" (click)="startAutoImportAttempt()">
+        Start Import
       </button>
     </div>
   </div>
-  <div class="p-4 flex flex-col space-y-4"></div>
+  } @else {
+  <div class="p-4">
+    <span class="text-sm text-gray-600"
+      >Please mount a library directory before attempting to import games.</span
+    >
+  </div>
+  }
 </div>
