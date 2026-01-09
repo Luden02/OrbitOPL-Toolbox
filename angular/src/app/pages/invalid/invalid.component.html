@@ -43,7 +43,7 @@
           @for (file of this._libraryService.invalidFiles$ | async; track file)
           {
           <tr>
-            <td>
+            <td class="tooltip" [attr.data-tip]="file.path">
               {{
                 file.path.length > 30
                   ? (file.path | slice : 0 : 30) + "..."
