@@ -250,7 +250,7 @@ export class LibraryService {
     for (const file of gamefiles) {
       const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/);
       if (
-        file.extension === '.iso' &&
+        (file.extension === '.iso' || file.extension === '.zso') &&
         typeof file.name === 'string' &&
         typeof file.path === 'string' &&
         file.stats &&

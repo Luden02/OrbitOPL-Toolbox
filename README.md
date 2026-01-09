@@ -52,17 +52,19 @@ Grab the latest release from the Releases page. [Releases](https://github.com/St
 
 1. Download the `.dmg` file for your architecture:
    - **x64** (Intel Macs)
-   - **arm64** (Apple Silicon — _recommended and tested_)
+   - **arm64** (Apple Silicon - _recommended and tested_)
 2. Open the `.dmg` file.
 3. Drag **CrossOPL Toolbox** to your **Applications** folder.
-4. Run the app.
+4. Execute 'xattr -dr com.apple.quarantine ~/Applications/OrbitOPLToolbox.app' in your **terminal** (This is a **safety mesure** from Apple because the app is **unsigned** but **100% safe**)
+5. **Run** the **app**.
 
 ---
 
 ### 🪟 Windows
 
 1. Download the `.exe`.
-2. Run it.
+2. **Run it**.
+3. If **SmartScreen** appears, click the **"Run anyway"** button (The app is 100% safe)
 
 ## 🚀 Getting Started
 
