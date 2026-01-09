@@ -65,4 +65,8 @@ export class InvalidComponent {
         }
       });
   }
+
+  closeRenameTool() {
+    (document.getElementById('rename_tool') as HTMLDialogElement).close();
+  }
 }
