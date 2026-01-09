@@ -17,6 +17,7 @@
           name="radio-gametype"
           class="radio radio-primary"
           (value)="(isGameCd)"
+          [disabled]="_libraryService.loading$ | async"
           (change)="isGameCd = true; isGameDvd = false"
         />
         <span class="pl-2 pr-8">.bin/.cue</span>
@@ -25,6 +26,7 @@
           name="radio-gametype"
           class="radio radio-primary"
           checked="true"
+          [disabled]="_libraryService.loading$ | async"
           (value)="(isGameDvd)"
           (change)="isGameCd = false; isGameDvd = true"
         /><span class="pl-2 pr-8">.iso</span>
@@ -36,7 +38,11 @@
           isGameCd ? "point to the .cue file" : ".iso"
         }}):</span
       >
-      <button class="btn btn-primary" (click)="askForGameFile()">
+      <button
+        class="btn btn-primary"
+        (click)="askForGameFile()"
+        [disabled]="_libraryService.loading$ | async"
+      >
         Select Gamefile
       </button>
     </div>
@@ -63,14 +69,41 @@
         <legend class="fieldset-legend">Download Artwork</legend>
         <input
           type="checkbox"
+          [disabled]="_libraryService.loading$ | async"
           checked="checked"
           class="toggle"
           [value]="downloadArtwork"
         />
       </fieldset>
     </div>
+    <div
+      *ngIf="invalidFileDiscovered"
+      class="p-4 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md"
+    >
+      <i-lucide
+        name="alert-triangle"
+        size="16"
+        class="inline-block mr-2"
+      ></i-lucide>
+      <span class="text-sm"
+        >The selected file appears to be invalid. Please double-check the file
+        and try again.</span
+      >
+    </div>
     <div>
-      <button class="btn btn-success" (click)="startAutoImportAttempt()">
+      <button
+        class="btn btn-success"
+        (click)="startAutoImportAttempt()"
+        [disabled]="
+          !gamePath ||
+          gamePath.length === 0 ||
+          !gameId ||
+          gameId.length === 0 ||
+          !gameName ||
+          gameName.length === 0 ||
+          (_libraryService.loading$ | async)
+        "
+      >
         Start Import
       </button>
     </div>

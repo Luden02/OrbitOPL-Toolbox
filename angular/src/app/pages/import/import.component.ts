@@ -16,6 +16,7 @@ export class ImportComponent {
   isGameDvd: boolean = true;
 
   autoDiscoveredFile: boolean = false;
+  invalidFileDiscovered: boolean = false;
   gamePath: string = '';
   gameName: string = '';
   gameId: string = '';
@@ -38,6 +39,17 @@ export class ImportComponent {
                   this.autoDiscoveredFile = true;
                   this.gameId = result.gameId;
                   this.gameName = result.gameName;
+                }
+                if (!result.success) {
+                  this.autoDiscoveredFile = false;
+                  this.invalidFileDiscovered = true;
+                  this.gamePath = '';
+                  this.gameId = '';
+                  this.gameName = '';
+
+                  setTimeout(() => {
+                    this.invalidFileDiscovered = false;
+                  }, 10000);
                 }
               });
           }
