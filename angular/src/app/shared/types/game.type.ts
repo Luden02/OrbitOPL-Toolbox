@@ -1,3 +1,5 @@
+export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL';
+
 export type Game = {
   filename: string;
   size?: string;
@@ -8,6 +10,7 @@ export type Game = {
   path: string;
   extension: string;
   parentPath: string;
+  format?: GameFormat;
   art?: gameArt[];
 };
 

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { LogService } from '@cds/core/internal';
 import { LogsService } from './logs.service';
 import { BehaviorSubject, lastValueFrom, map, Observable } from 'rxjs';
-import { Game, RawGameFile } from '../types/game.type';
+import { Game, GameFormat, RawGameFile } from '../types/game.type';
 
 @Injectable({
   providedIn: 'root',
@@ -132,24 +132,37 @@ export class LibraryService {
     this._logger.log('libraryService', 'Started game files retrieval...');
 
     if (currentDirectory) {
-      return window.libraryAPI
-        .getGamesFiles(currentDirectory)
-        .then(async (files) => {
-          if (files.success) {
+      return Promise.all([
+        window.libraryAPI.getGamesFiles(currentDirectory),
+        window.libraryAPI.getULGames(currentDirectory),
+      ]).then(async ([files, ulResult]) => {
+        if (files.success) {
+          this._logger.log(
+            'libraryService',
+            `Grabbed ${files.data.length} game files, now parsing...`
+          );
+          this.setCurrentAction('');
+          this.setLoading(false);
+
+          const ulGames =
+            ulResult?.success && ulResult.data
+              ? this.parseULGamesToLibrary(ulResult.data)
+              : [];
+
+          if (ulGames.length > 0) {
             this._logger.log(
               'libraryService',
-              `Grabbed ${files.data.length} game files, now parsing...`
+              `Found ${ulGames.length} UL format games`
             );
-            this.setCurrentAction('');
-            this.setLoading(false);
-
-            this.parseGameFilesToLibrary(files.data);
-          } else {
-            this._logger.error('libraryService', files.message);
-            this.setCurrentAction('');
-            this.setLoading(false);
           }
-        });
+
+          await this.parseGameFilesToLibrary(files.data, ulGames);
+        } else {
+          this._logger.error('libraryService', files.message);
+          this.setCurrentAction('');
+          this.setLoading(false);
+        }
+      });
     } else {
       this._logger.error(
         'libraryService',
@@ -235,7 +248,44 @@ export class LibraryService {
     return 'UNKNOWN';
   }
 
-  private async parseGameFilesToLibrary(gamefiles: RawGameFile[]) {
+  private extensionToFormat(ext: string): GameFormat {
+    switch (ext) {
+      case '.zso':
+        return 'ZSO';
+      case '.vcd':
+        return 'VCD';
+      default:
+        return 'ISO';
+    }
+  }
+
+  private parseULGamesToLibrary(
+    ulEntries: {
+      name: string;
+      gameId: string;
+      numParts: number;
+      mediaType: string;
+      totalSize: number;
+    }[]
+  ): Game[] {
+    return ulEntries.map((entry) => ({
+      filename: `ul.${entry.gameId}.${entry.name}`,
+      title: entry.name,
+      cdType: entry.mediaType,
+      gameId: entry.gameId,
+      region: this.mapGameIdToRegion(entry.gameId),
+      path: '',
+      extension: 'UL',
+      parentPath: '',
+      format: 'UL' as GameFormat,
+      size: entry.totalSize > 0 ? this.formatFileSize(entry.totalSize) : '??',
+    }));
+  }
+
+  private async parseGameFilesToLibrary(
+    gamefiles: RawGameFile[],
+    ulGames: Game[] = []
+  ) {
     this.setLoading(true);
     this.setCurrentAction('Mapping gamefiles to Game Objects...');
     this._logger.verbose(
@@ -250,7 +300,7 @@ export class LibraryService {
     for (const file of gamefiles) {
       const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/);
       if (
-        (file.extension === '.iso' || file.extension === '.zso') &&
+        (file.extension === '.iso' || file.extension === '.zso' || file.extension === '.vcd') &&
         typeof file.name === 'string' &&
         typeof file.path === 'string' &&
         file.stats &&
@@ -276,12 +326,16 @@ export class LibraryService {
           path: file.path,
           extension: file.extension,
           parentPath: file.parentPath,
+          format: this.extensionToFormat(file.extension),
           size: this.formatFileSize(file.stats.size) || '??',
         });
       } else {
         invalidFiles.push(file);
       }
     }
+
+    // Merge UL games
+    validGames.push(...ulGames);
 
     if (this.currentDirectory) {
       const artFiles = await this.parseArtFiles(this.currentDirectory);

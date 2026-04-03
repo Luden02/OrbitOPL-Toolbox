@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   openAskDirectory: () => ipcRenderer.invoke("open-ask-directory"),
   getGamesFiles: (dirPath: string) =>
     ipcRenderer.invoke("get-games-files", dirPath),
+  getULGames: (dirPath: string) =>
+    ipcRenderer.invoke("get-ul-games", dirPath),
   getArtFolder: (dirPath: string) =>
     ipcRenderer.invoke("get-art-folder", dirPath),
   renameGamefile: (dirPath: string, gameId: string, gameName: string) =>

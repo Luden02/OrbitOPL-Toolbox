@@ -7,6 +7,7 @@ import {
   downloadArtByGameId,
   getArtFolder,
   getGamesFiles,
+  getULGames,
   moveFile,
   openAskDirectory,
   openAskGameFile,
@@ -98,6 +99,10 @@ ipcMain.handle("open-ask-directory", async (options) => {
 
 ipcMain.handle("get-games-files", async (event, dirPath: string) => {
   return getGamesFiles(dirPath);
+});
+
+ipcMain.handle("get-ul-games", async (event, dirPath: string) => {
+  return getULGames(dirPath);
 });
 
 ipcMain.handle("get-art-folder", async (event, dirPath: string) => {

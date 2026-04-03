@@ -105,9 +105,10 @@ export async function openAskDirectory(options: any) {
 
 export async function getGamesFiles(dirPath: string) {
   try {
-    const [items_cd, items_dvd] = await Promise.all([
-      fs.readdir(path.join(dirPath, "CD"), { withFileTypes: true }),
-      fs.readdir(path.join(dirPath, "DVD"), { withFileTypes: true }),
+    const [items_cd, items_dvd, items_vcd] = await Promise.all([
+      fs.readdir(path.join(dirPath, "CD"), { withFileTypes: true }).catch(() => []),
+      fs.readdir(path.join(dirPath, "DVD"), { withFileTypes: true }).catch(() => []),
+      fs.readdir(path.join(dirPath, "VCD"), { withFileTypes: true }).catch(() => []),
     ]);
     // Only include files, skip directories
     const items = [
@@ -117,11 +118,14 @@ export async function getGamesFiles(dirPath: string) {
       ...items_dvd.map((item) =>
         Object.assign(item, { parentDir: dirPath + "/DVD" })
       ),
+      ...items_vcd.map((item) =>
+        Object.assign(item, { parentDir: dirPath + "/VCD" })
+      ),
     ].filter(
       (item) =>
         item.isFile() &&
         !item.name.startsWith(".") &&
-        (item.name.endsWith(".iso") || item.name.endsWith(".zso"))
+        (item.name.endsWith(".iso") || item.name.endsWith(".zso") || item.name.endsWith(".vcd"))
     );
 
     const files = [];
@@ -140,6 +144,121 @@ export async function getGamesFiles(dirPath: string) {
       files.push(itemInfo);
     }
     return { success: true, data: files };
+  } catch (err) {
+    return { success: false, message: err };
+  }
+}
+
+// CRC32 lookup table for UL fragment filename matching
+const CRC32_TABLE = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let crc = i;
+  for (let j = 0; j < 8; j++) {
+    crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  CRC32_TABLE[i] = crc;
+}
+
+function crc32(str: string): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < str.length; i++) {
+    crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ str.charCodeAt(i)) & 0xff];
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+export async function getULGames(dirPath: string) {
+  try {
+    const ulCfgPath = path.join(dirPath, "ul.cfg");
+
+    // Check if ul.cfg exists
+    try {
+      await fs.access(ulCfgPath);
+    } catch {
+      return { success: true, data: [] };
+    }
+
+    const buffer = await fs.readFile(ulCfgPath);
+    const RECORD_SIZE = 64;
+
+    if (buffer.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    const recordCount = Math.floor(buffer.length / RECORD_SIZE);
+    const entries: {
+      name: string;
+      gameId: string;
+      numParts: number;
+      mediaType: string;
+      totalSize: number;
+    }[] = [];
+
+    // Read all files in the root directory once for fragment matching
+    const rootFiles = await fs
+      .readdir(dirPath, { withFileTypes: true })
+      .catch(() => []);
+    const ulFiles = rootFiles.filter(
+      (f) => f.isFile() && f.name.startsWith("ul.")
+    );
+
+    for (let i = 0; i < recordCount; i++) {
+      const offset = i * RECORD_SIZE;
+      const record = buffer.subarray(offset, offset + RECORD_SIZE);
+
+      // Bytes 0-31: game name (null-terminated ASCII)
+      const nameRaw = record.subarray(0, 32);
+      const nameEnd = nameRaw.indexOf(0);
+      const name = nameRaw
+        .subarray(0, nameEnd === -1 ? 32 : nameEnd)
+        .toString("ascii")
+        .trim();
+
+      // Bytes 32-46: game ID (null-terminated ASCII)
+      const idRaw = record.subarray(32, 47);
+      const idEnd = idRaw.indexOf(0);
+      const gameIdRaw = idRaw
+        .subarray(0, idEnd === -1 ? 15 : idEnd)
+        .toString("ascii")
+        .trim();
+
+      if (!name || !gameIdRaw) {
+        continue;
+      }
+
+      // Normalize game ID to XXXX_###.## format
+      const gameId = gameIdRaw.replace(/\./g, "").replace(
+        /^([A-Z]{4})(\d{3})(\d{2})$/,
+        "$1_$2.$3"
+      );
+
+      // Byte 47: number of parts
+      const numParts = record[47];
+
+      // Bytes 48-51: media type (little-endian uint32)
+      const mediaTypeRaw = record.readUInt32LE(48);
+      const mediaType = mediaTypeRaw === 0x12 ? "CD" : "DVD";
+
+      // Match fragment files using CRC32 of the game name
+      const hash = crc32(name).toString(16).padStart(8, "0").toUpperCase();
+      const fragmentPrefix = `ul.${hash}`;
+
+      let totalSize = 0;
+      for (const f of ulFiles) {
+        if (f.name.startsWith(fragmentPrefix)) {
+          try {
+            const stat = await fs.stat(path.join(dirPath, f.name));
+            totalSize += stat.size;
+          } catch {
+            // Fragment file inaccessible, skip
+          }
+        }
+      }
+
+      entries.push({ name, gameId, numParts, mediaType, totalSize });
+    }
+
+    return { success: true, data: entries };
   } catch (err) {
     return { success: false, message: err };
   }
