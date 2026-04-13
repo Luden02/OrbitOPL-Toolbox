@@ -1,0 +1,111 @@
+<div
+  class="header h-15 flex items-center justify-between px-4 mb-4 border-b border-base-300"
+>
+  <div class="text-4xl">About</div>
+</div>
+
+<div class="overflow-y-auto h-[calc(100vh-180px)] px-4">
+  <div class="flex flex-col items-center text-center mb-8">
+    <img
+      src="logo.svg"
+      alt="OrbitOPL Toolbox"
+      class="w-[28rem] h-auto mb-4 drop-shadow-xl"
+    />
+    <p class="text-base-content/70 mt-1 max-w-xl">
+      A modern, cross-platform way to manage your Open PS2 Loader game
+      collection.
+    </p>
+
+    <div class="flex flex-wrap gap-2 justify-center mt-4">
+      <span class="badge badge-primary badge-outline gap-1">
+        <i-lucide name="tag" size="14"></i-lucide> v{{ version }}
+      </span>
+      <span class="badge badge-secondary badge-outline gap-1">
+        <i-lucide name="git-commit-horizontal" size="14"></i-lucide>
+        build {{ buildNumber }}
+      </span>
+      <span class="badge badge-accent badge-outline gap-1">
+        <i-lucide name="calendar" size="14"></i-lucide> {{ buildDate }}
+      </span>
+      <span class="badge badge-ghost gap-1">
+        <i-lucide name="user" size="14"></i-lucide> {{ author }}
+      </span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+    <div class="card bg-base-200 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i-lucide name="heart" size="20"></i-lucide> Free &amp; Open Source
+        </h2>
+        <p class="text-sm">
+          Built in the open, by the community, for the community. No telemetry,
+          no ads, no nonsense — just a tool that does its job and respects your
+          machine.
+        </p>
+      </div>
+    </div>
+
+    <div class="card bg-base-200 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i-lucide name="scale" size="20"></i-lucide> Licensed under GPLv3
+        </h2>
+        <p class="text-sm">
+          You're free to use, study, share, and modify this software. If you
+          improve it, share the improvements with everyone else too.
+        </p>
+        <a
+          href="#"
+          (click)="openExternal(licenseUrl, $event)"
+          class="link link-primary text-sm mt-1"
+          >Read the license →</a
+        >
+      </div>
+    </div>
+
+    <div class="card bg-base-200 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i-lucide name="github" size="20"></i-lucide> Source Code
+        </h2>
+        <p class="text-sm">
+          Found a bug? Got an idea? Pull requests and issues are warmly
+          welcomed.
+        </p>
+        <a
+          href="#"
+          (click)="openExternal(repoUrl, $event)"
+          class="link link-primary text-sm mt-1 break-all"
+          >github.com/Luden02/OrbitOPL-Toolbox →</a
+        >
+      </div>
+    </div>
+
+    <div class="card bg-base-200 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i-lucide name="image" size="20"></i-lucide> Artwork Database
+        </h2>
+        <p class="text-sm">
+          Game covers, icons and screenshots are pulled from a separate
+          community-maintained art repository.
+        </p>
+        <a
+          href="#"
+          (click)="openExternal(artRepoUrl, $event)"
+          class="link link-primary text-sm mt-1 break-all"
+          >psx-ps2-opl-art-database →</a
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center text-xs text-base-content/50 mt-8 mb-4">
+    Made with
+    <i-lucide name="heart" size="12" class="inline align-middle"></i-lucide> by
+    {{ author }} · Not affiliated with Sony Interactive Entertainment or the
+    Open PS2 Loader project.
+  </div>
+</div>

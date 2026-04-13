@@ -101,3 +101,6 @@ dist/
 /.idea/vcs.xml
 CLAUDE.md
 /.claude
+
+# Auto-generated build info
+angular/src/app/shared/build-info.ts

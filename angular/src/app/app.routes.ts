@@ -3,6 +3,7 @@ import { LibraryComponent } from './pages/library/library.component';
 import { LogsComponent } from './pages/logs/logs.component';
 import { InvalidComponent } from './pages/invalid/invalid.component';
 import { ImportComponent } from './pages/import/import.component';
+import { InfoComponent } from './pages/info/info.component';
 import { loadingGuard } from './shared/guards/loading.guard';
 
 export const routes: Routes = [
@@ -30,5 +31,9 @@ export const routes: Routes = [
     path: 'import',
     component: ImportComponent,
     canActivate: [loadingGuard],
+  },
+  {
+    path: 'info',
+    component: InfoComponent,
   },
 ];

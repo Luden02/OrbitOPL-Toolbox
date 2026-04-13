@@ -60,6 +60,19 @@
           ><i-lucide name="Code" size="18"></i-lucide>Logs</a
         >
       </li>
+      <li
+        class="pt-2 pb-2"
+        [class.menu-disabled]="this._libraryService.loading$ | async"
+      >
+        <a
+          routerLink="/info"
+          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
+          [class.pointer-events-none]="this._libraryService.loading$ | async"
+          [class.opacity-40]="this._libraryService.loading$ | async"
+          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
+          ><i-lucide name="info" size="18"></i-lucide>About</a
+        >
+      </li>
     </ul>
   </div>
   <div class="main-content w-full h-full p-4">
