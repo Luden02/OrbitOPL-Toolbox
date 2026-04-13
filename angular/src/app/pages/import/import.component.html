@@ -13,29 +13,46 @@
       <div>
         <input
           type="radio"
-          disabled="true"
           name="radio-gametype"
           class="radio radio-primary"
-          (value)="(isGameCd)"
+          [checked]="importMode === 'ps2-dvd'"
           [disabled]="_libraryService.loading$ | async"
-          (change)="isGameCd = true; isGameDvd = false"
-        />
-        <span class="pl-2 pr-8">.bin/.cue</span>
+          (change)="importMode = 'ps2-dvd'; resetImportState()"
+        /><span class="pl-2 pr-8">PS2 (.iso/.zso)</span>
         <input
           type="radio"
           name="radio-gametype"
           class="radio radio-primary"
-          checked="true"
+          [checked]="importMode === 'ps2-cd'"
           [disabled]="_libraryService.loading$ | async"
-          (value)="(isGameDvd)"
-          (change)="isGameCd = false; isGameDvd = true"
-        /><span class="pl-2 pr-8">.iso</span>
+          (change)="importMode = 'ps2-cd'; resetImportState()"
+        /><span class="pl-2 pr-8">PS2 CD (.bin/.cue)</span>
+        <input
+          type="radio"
+          name="radio-gametype"
+          class="radio radio-primary"
+          [checked]="importMode === 'ps1'"
+          [disabled]="_libraryService.loading$ | async"
+          (change)="importMode = 'ps1'; resetImportState()"
+        /><span class="pl-2 pr-8">PS1 / POPS (.cue)</span>
       </div>
     </div>
+    @if(isGamePsx) {
+    <div class="p-3 bg-info/10 border border-info/30 rounded-md">
+      <i-lucide
+        name="info"
+        size="16"
+        class="inline-block mr-2 text-info"
+      ></i-lucide>
+      <span class="text-sm"
+        >PS1 import will automatically convert BIN/CUE to VCD format, detect the game ID, and place it in the POPS directory.</span
+      >
+    </div>
+    }
     <div>
       <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
         >Select the gamefile to import ({{
-          isGameCd ? "point to the .cue file" : ".iso"
+          isGameCd || isGamePsx ? "point to the .cue file" : ".iso/.zso"
         }}):</span
       >
       <button
@@ -46,14 +63,16 @@
         Select Gamefile
       </button>
     </div>
+    @if(!isGamePsx) {
     <div class="pt-8 flex">
       <fieldset class="fieldset mr-4 w-50">
         <legend class="fieldset-legend">GameID</legend>
         <input
           type="text"
           class="input"
-          [disabled]="autoDiscoveredFile"
+          [disabled]="autoDiscoveredId"
           [value]="gameId"
+          (input)="gameId = $any($event.target).value"
         />
       </fieldset>
       <fieldset class="fieldset w-90">
@@ -61,8 +80,9 @@
         <input
           type="text"
           class="input"
-          [disabled]="autoDiscoveredFile"
+          [disabled]="autoDiscoveredName"
           [value]="gameName"
+          (input)="gameName = $any($event.target).value"
         />
       </fieldset>
       <fieldset class="fieldset ml-4 flex-1">
@@ -70,12 +90,59 @@
         <input
           type="checkbox"
           [disabled]="_libraryService.loading$ | async"
-          checked="checked"
+          [checked]="downloadArtwork"
           class="toggle"
-          [value]="downloadArtwork"
+          (change)="downloadArtwork = $any($event.target).checked"
         />
       </fieldset>
     </div>
+    }
+    @if(isGamePsx) {
+    <div class="pt-8 flex">
+      <fieldset class="fieldset mr-4 w-50">
+        <legend class="fieldset-legend">GameID</legend>
+        <input
+          type="text"
+          class="input"
+          [disabled]="autoDiscoveredId"
+          [value]="gameId"
+          (input)="gameId = $any($event.target).value"
+        />
+      </fieldset>
+      <fieldset class="fieldset w-90">
+        <legend class="fieldset-legend">Game Name</legend>
+        <input
+          type="text"
+          class="input"
+          [disabled]="autoDiscoveredName"
+          [value]="gameName"
+          (input)="gameName = $any($event.target).value"
+        />
+      </fieldset>
+    </div>
+    <div class="flex">
+      <fieldset class="fieldset mr-4 flex-1">
+        <legend class="fieldset-legend">Download Artwork</legend>
+        <input
+          type="checkbox"
+          [disabled]="_libraryService.loading$ | async"
+          [checked]="downloadArtwork"
+          class="toggle"
+          (change)="downloadArtwork = $any($event.target).checked"
+        />
+      </fieldset>
+      <fieldset class="fieldset flex-1">
+        <legend class="fieldset-legend">Update conf_apps.cfg</legend>
+        <input
+          type="checkbox"
+          [disabled]="_libraryService.loading$ | async"
+          [checked]="updateConfApps"
+          class="toggle"
+          (change)="updateConfApps = $any($event.target).checked"
+        />
+      </fieldset>
+    </div>
+    }
     <div
       *ngIf="invalidFileDiscovered"
       class="p-4 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md"

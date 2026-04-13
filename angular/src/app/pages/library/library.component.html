@@ -31,14 +31,30 @@
       }
     </div>
   </div>
+  <div role="tablist" class="tabs tabs-border px-4 pt-2">
+    <a
+      role="tab"
+      class="tab"
+      [class.tab-active]="isActive('PS2')"
+      (click)="setTab('PS2')"
+      >PS2 <span class="badge badge-sm ml-2">{{ ps2Count$ | async }}</span></a
+    >
+    <a
+      role="tab"
+      class="tab"
+      [class.tab-active]="isActive('PS1')"
+      (click)="setTab('PS1')"
+      >PS1 <span class="badge badge-sm ml-2">{{ ps1Count$ | async }}</span></a
+    >
+  </div>
   <div
     class="body p-4 overflow-y-scroll grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-x-4 gap-y-5"
     style="
-      height: calc(100vh - 64px - 60px - 32px);
+      height: calc(100vh - 64px - 60px - 32px - 40px);
       grid-auto-rows: minmax(auto, 200px);
     "
   >
-    @for (item of this._libraryService.library$ | async; track item) {
+    @for (item of visibleGames$ | async; track item) {
     <app-gamecard [game]="item" class="h-full max-h-[200px]"></app-gamecard>
     }
   </div>

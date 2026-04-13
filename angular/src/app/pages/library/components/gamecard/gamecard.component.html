@@ -33,6 +33,9 @@
     <span class="font-mono"
       ><span class="font-bold">Format:</span> {{ game?.format || game?.extension }}</span
     >
+    @if(game?.system === 'PS1') {
+    <span class="badge badge-sm badge-accent mt-1">PS1</span>
+    }
 
     <div class="card-actions justify-end mt-5">
       <div class="dropdown dropdown-end">
@@ -44,14 +47,14 @@
           class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
         >
           <li>
-            <a class="text-gray-300"
+            <a (click)="confirmDelete()"
               ><i-lucide name="trash" [size]="16"></i-lucide>Delete</a
             >
           </li>
           <li>
             <a
               (click)="
-                game && this._libraryService.downloadArtByGameId(game.gameId)
+                game && this._libraryService.downloadArtByGameId(game.gameId, game.system)
               "
               ><i-lucide name="download" [size]="16"></i-lucide>Fetch Artwork</a
             >

@@ -17,6 +17,15 @@ export class LogsService {
   constructor() {
     const stored = localStorage.getItem('verboseMode');
     this.verboseMode = stored === 'true';
+
+    // Forward main process logs into the in-app log viewer
+    if (window.libraryAPI?.onMainLog) {
+      window.libraryAPI.onMainLog((entry) => {
+        const type =
+          entry.level === 'ERR' ? 'ERR' : entry.level === 'VRB' ? 'VRB' : 'INF';
+        this.addLog('main-process', entry.message, type);
+      });
+    }
   }
 
   get isVerboseMode(): boolean {

@@ -36,6 +36,13 @@ export class LibraryService {
   }
   public setLoading(isLoading: boolean) {
     this.loadingSubject.next(isLoading);
+    // Keep the Electron main process in sync so it can guard window close
+    // against in-progress actions.
+    try {
+      window.libraryAPI?.setLoadingState?.(isLoading);
+    } catch {
+      // Ignore — setLoading may run before the preload bridge is ready.
+    }
   }
 
   private currentActionSubject = new BehaviorSubject<string | undefined>(
@@ -249,7 +256,7 @@ export class LibraryService {
   }
 
   private extensionToFormat(ext: string): GameFormat {
-    switch (ext) {
+    switch (ext?.toLowerCase()) {
       case '.zso':
         return 'ZSO';
       case '.vcd':
@@ -298,9 +305,10 @@ export class LibraryService {
     const invalidFiles: any[] = [];
 
     for (const file of gamefiles) {
-      const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/);
+      const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/i);
+      const ext = file.extension?.toLowerCase();
       if (
-        (file.extension === '.iso' || file.extension === '.zso' || file.extension === '.vcd') &&
+        (ext === '.iso' || ext === '.zso' || ext === '.vcd') &&
         typeof file.name === 'string' &&
         typeof file.path === 'string' &&
         file.stats &&
@@ -317,16 +325,22 @@ export class LibraryService {
         const gameId = gameIdMatch[1];
         const title = gameIdMatch[2];
 
+        const dirName = file.parentPath?.split(/[\\/]/).pop() || '';
+        const isPops = dirName === 'POPS';
+        const isVcd = dirName === 'VCD';
+        const isPs1 = isPops || isVcd;
+
         validGames.push({
           filename: file.name + file.extension,
           title: title,
-          cdType: file.parentPath?.split(/[\\/]/).pop() || '',
+          cdType: isPops ? 'POPS' : dirName,
           gameId: gameId,
           region: this.mapGameIdToRegion(gameId),
           path: file.path,
           extension: file.extension,
           parentPath: file.parentPath,
-          format: this.extensionToFormat(file.extension),
+          format: isPops ? 'POPS' : this.extensionToFormat(file.extension),
+          system: isPs1 ? 'PS1' : 'PS2',
           size: this.formatFileSize(file.stats.size) || '??',
         });
       } else {
@@ -390,7 +404,7 @@ export class LibraryService {
       });
   }
 
-  public downloadArtByGameId(gameId: string) {
+  public downloadArtByGameId(gameId: string, system?: 'PS1' | 'PS2') {
     this._logger.log(
       'downloadArtByGameId',
       'Triggered download of art for ' + gameId
@@ -398,7 +412,7 @@ export class LibraryService {
     this.setLoading(true);
     this.setCurrentAction('Downloading Art for ' + gameId + '...');
     return window.libraryAPI
-      .downloadArtByGameId(`${this.currentDirectory}/ART`, gameId)
+      .downloadArtByGameId(`${this.currentDirectory}/ART`, gameId, system)
       .then((res) => {
         this.setCurrentAction('');
         this.setLoading(false);
@@ -433,6 +447,23 @@ export class LibraryService {
     });
   }
 
+  public tryDeterminePs1GameIdFromHex(filepath: string) {
+    this._logger.log(
+      'tryDeterminePs1GameIdFromHex',
+      'Trying to determine PS1 Game ID from hex data: ' + filepath
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Determining PS1 Game ID from hex data...');
+    return window.libraryAPI
+      .tryDeterminePs1GameIdFromHex(filepath)
+      .then((res) => {
+        this.setCurrentAction('');
+        this.setLoading(false);
+        console.log(res);
+        return res;
+      });
+  }
+
   public async bulkAutoCorrection(fetchArtwork: boolean) {
     this._logger.log(
       'bulkAutoCorrection',
@@ -463,6 +494,134 @@ export class LibraryService {
 
     this.setCurrentAction('');
     this.setLoading(false);
+  }
+
+  public async importPs2CdGame(
+    cueFilePath: string,
+    gameId: string | undefined,
+    gameName: string | undefined,
+    downloadArtwork: boolean
+  ) {
+    this._logger.log('importPs2CdGame', `Triggered PS2 CD import: ${cueFilePath}`);
+    this.setLoading(true);
+    this.setCurrentAction('Importing PS2 CD game...');
+
+    window.libraryAPI.onPs2CdImportProgress((progress) => {
+      this.setCurrentAction(`${progress.stage}... ${progress.percent}%`);
+    });
+
+    try {
+      const result = await window.libraryAPI.importPs2CdGame(
+        cueFilePath,
+        this.currentDirectory!,
+        gameId,
+        gameName,
+        downloadArtwork
+      );
+
+      window.libraryAPI.removeAllPs2CdImportProgressListeners();
+
+      if (result?.success) {
+        this._logger.log(
+          'importPs2CdGame',
+          `PS2 CD game imported successfully: ${result.gameId} - ${result.gameName}`
+        );
+        this.refreshGamesFiles();
+      } else {
+        this._logger.error(
+          'importPs2CdGame',
+          `Import failed: ${result?.message}`
+        );
+      }
+
+      return result;
+    } catch (error: any) {
+      window.libraryAPI.removeAllPs2CdImportProgressListeners();
+      this._logger.error('importPs2CdGame', `Error: ${error?.message || error}`);
+      return { success: false, message: error?.message || String(error) };
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+    }
+  }
+
+  public async importPs1Game(
+    cueFilePath: string,
+    updateConfApps: boolean,
+    downloadArtwork: boolean
+  ) {
+    this._logger.log(
+      'importPs1Game',
+      `Triggered PS1 import: ${cueFilePath}`
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Importing PS1 game...');
+
+    window.libraryAPI.onPs1ImportProgress((progress) => {
+      this.setCurrentAction(
+        `${progress.stage}... ${progress.percent}%`
+      );
+    });
+
+    try {
+      const result = await window.libraryAPI.importPs1Game(
+        cueFilePath,
+        this.currentDirectory!,
+        updateConfApps,
+        downloadArtwork
+      );
+
+      window.libraryAPI.removeAllPs1ImportProgressListeners();
+
+      if (result.success) {
+        this._logger.log(
+          'importPs1Game',
+          `PS1 game imported successfully: ${result.gameId} - ${result.gameName}`
+        );
+        this.refreshGamesFiles();
+      } else {
+        this._logger.error('importPs1Game', `Import failed: ${result.message}`);
+      }
+
+      return result;
+    } catch (error: any) {
+      window.libraryAPI.removeAllPs1ImportProgressListeners();
+      this._logger.error(
+        'importPs1Game',
+        `Error: ${error?.message || error}`
+      );
+      return { success: false, message: error?.message || String(error) };
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+    }
+  }
+
+  public async deleteGame(game: Game) {
+    this._logger.log('deleteGame', `Deleting game: ${game.gameId} (${game.title})`);
+    this.setLoading(true);
+    this.setCurrentAction(`Deleting ${game.title || game.gameId}...`);
+
+    try {
+      const artDir = `${this.currentDirectory}/ART`;
+      const result = await window.libraryAPI.deleteGameAndRelatedFiles(
+        game.path,
+        artDir,
+        game.gameId
+      );
+
+      if (result.success) {
+        this._logger.log('deleteGame', `Successfully deleted ${game.gameId}`);
+        this.refreshGamesFiles();
+      } else {
+        this._logger.error('deleteGame', `Failed to delete: ${result.message}`);
+      }
+    } catch (error: any) {
+      this._logger.error('deleteGame', `Error: ${error?.message || error}`);
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+    }
   }
 
   openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {

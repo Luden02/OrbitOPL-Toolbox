@@ -1,17 +1,29 @@
 <div class="main-view flex">
   <div class="sidebar">
     <ul class="menu bg-base-200 rounded-r-lg w-50 h-[calc(100vh-64px)]">
-      <li class="pt-2 pb-2">
+      <li
+        class="pt-2 pb-2"
+        [class.menu-disabled]="this._libraryService.loading$ | async"
+      >
         <a
           routerLink="/library"
+          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
           [class.pointer-events-none]="this._libraryService.loading$ | async"
+          [class.opacity-40]="this._libraryService.loading$ | async"
+          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
           ><i-lucide name="Library" size="18"></i-lucide>Library</a
         >
       </li>
-      <li class="pt-2 pb-2">
+      <li
+        class="pt-2 pb-2"
+        [class.menu-disabled]="this._libraryService.loading$ | async"
+      >
         <a
           routerLink="/invalid-files"
+          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
           [class.pointer-events-none]="this._libraryService.loading$ | async"
+          [class.opacity-40]="this._libraryService.loading$ | async"
+          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
           ><i-lucide name="bug" size="18"></i-lucide>Invalid Files
           @if((this._libraryService.totalInvalidFiles$ | async)) {
           <span class="badge badge-xs">{{
@@ -22,17 +34,29 @@
           }</a
         >
       </li>
-      <li class="pt-2 pb-2">
+      <li
+        class="pt-2 pb-2"
+        [class.menu-disabled]="this._libraryService.loading$ | async"
+      >
         <a
           routerLink="/import"
+          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
           [class.pointer-events-none]="this._libraryService.loading$ | async"
+          [class.opacity-40]="this._libraryService.loading$ | async"
+          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
           ><i-lucide name="disc-3" size="18"></i-lucide>Import Games</a
         >
       </li>
-      <li class="pt-2 pb-2 border-t border-base-300">
+      <li
+        class="pt-2 pb-2 border-t border-base-300"
+        [class.menu-disabled]="this._libraryService.loading$ | async"
+      >
         <a
           routerLink="/logs"
+          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
           [class.pointer-events-none]="this._libraryService.loading$ | async"
+          [class.opacity-40]="this._libraryService.loading$ | async"
+          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
           ><i-lucide name="Code" size="18"></i-lucide>Logs</a
         >
       </li>

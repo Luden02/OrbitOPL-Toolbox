@@ -4,6 +4,84 @@ import * as fsSync from "fs";
 import path from "path";
 import https from "https";
 
+const PS1_GAME_ID_PREFIXES = [
+  "SCUS",
+  "SLUS",
+  "SCES",
+  "SLES",
+  "SCPS",
+  "SLPS",
+  "SLPM",
+  "SIPS",
+  "SCAJ",
+  "PAPX",
+  "PCPX",
+  "SCED",
+  "SLED",
+];
+
+const PS1_GAME_ID_REGEX = new RegExp(
+  `(?:${PS1_GAME_ID_PREFIXES.join("|")})[_-][0-9]{3}\\.[0-9]{2}`,
+  "g"
+);
+
+const PS1_GAMES_LIST_CANDIDATE_PATHS = [
+  path.resolve(__dirname, "../assets/ps1-gameslist.txt"),
+  path.resolve(__dirname, "../../assets/ps1-gameslist.txt"),
+  path.resolve(process.cwd(), "assets/ps1-gameslist.txt"),
+];
+
+let cachedPs1GamesList: Map<string, string> | null = null;
+let attemptedToLoadPs1GamesList = false;
+
+async function loadPs1GamesList() {
+  if (attemptedToLoadPs1GamesList) {
+    return cachedPs1GamesList;
+  }
+
+  attemptedToLoadPs1GamesList = true;
+
+  for (const candidate of PS1_GAMES_LIST_CANDIDATE_PATHS) {
+    try {
+      const content = await fs.readFile(candidate, "utf-8");
+      const map = new Map<string, string>();
+
+      content.split(/\r?\n/).forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return;
+        }
+
+        const [id, ...nameParts] = trimmed.split(/\s+/);
+        if (!id || nameParts.length === 0) {
+          return;
+        }
+
+        map.set(id.toUpperCase(), nameParts.join(" "));
+      });
+
+      if (map.size > 0) {
+        cachedPs1GamesList = map;
+        return cachedPs1GamesList;
+      }
+    } catch (err) {
+      // Intentionally ignore missing file/location attempts.
+    }
+  }
+
+  cachedPs1GamesList = null;
+  return cachedPs1GamesList;
+}
+
+async function findPs1GameName(gameId: string) {
+  const list = await loadPs1GamesList();
+  if (!list) {
+    return undefined;
+  }
+
+  return list.get(gameId.toUpperCase());
+}
+
 const PS2_GAME_ID_PREFIXES = [
   "SLUS",
   "SCUS",
@@ -105,10 +183,11 @@ export async function openAskDirectory(options: any) {
 
 export async function getGamesFiles(dirPath: string) {
   try {
-    const [items_cd, items_dvd, items_vcd] = await Promise.all([
+    const [items_cd, items_dvd, items_vcd, items_pops] = await Promise.all([
       fs.readdir(path.join(dirPath, "CD"), { withFileTypes: true }).catch(() => []),
       fs.readdir(path.join(dirPath, "DVD"), { withFileTypes: true }).catch(() => []),
       fs.readdir(path.join(dirPath, "VCD"), { withFileTypes: true }).catch(() => []),
+      fs.readdir(path.join(dirPath, "POPS"), { withFileTypes: true }).catch(() => []),
     ]);
     // Only include files, skip directories
     const items = [
@@ -121,12 +200,18 @@ export async function getGamesFiles(dirPath: string) {
       ...items_vcd.map((item) =>
         Object.assign(item, { parentDir: dirPath + "/VCD" })
       ),
-    ].filter(
-      (item) =>
-        item.isFile() &&
-        !item.name.startsWith(".") &&
-        (item.name.endsWith(".iso") || item.name.endsWith(".zso") || item.name.endsWith(".vcd"))
-    );
+      ...items_pops.map((item) =>
+        Object.assign(item, { parentDir: dirPath + "/POPS" })
+      ),
+    ].filter((item) => {
+      if (!item.isFile() || item.name.startsWith(".")) return false;
+      const lower = item.name.toLowerCase();
+      return (
+        lower.endsWith(".iso") ||
+        lower.endsWith(".zso") ||
+        lower.endsWith(".vcd")
+      );
+    });
 
     const files = [];
 
@@ -296,9 +381,12 @@ export async function getArtFolder(dirpath: string) {
   }
 }
 
-export async function downloadArtByGameId(dirPath: string, gameId: string) {
-  const baseUrl =
-    "https://raw.githubusercontent.com/Luden02/psx-ps2-opl-art-database/refs/heads/main/PS2";
+export async function downloadArtByGameId(
+  dirPath: string,
+  gameId: string,
+  system: "PS1" | "PS2" = "PS2"
+) {
+  const baseUrl = `https://raw.githubusercontent.com/Luden02/psx-ps2-opl-art-database/refs/heads/main/${system}`;
   const types = ["COV", "ICO", "SCR"];
   const results: any[] = [];
 
@@ -343,6 +431,42 @@ export async function downloadArtByGameId(dirPath: string, gameId: string) {
   return { success: true, data: results };
 }
 
+// Reserved device names on Windows that cannot be used as filenames (case-insensitive,
+// with or without an extension). Matched after sanitisation.
+const WINDOWS_RESERVED_NAMES = new Set([
+  "CON", "PRN", "AUX", "NUL",
+  "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+  "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+]);
+
+/**
+ * Strips characters from `name` that are illegal in filenames on Windows, macOS, or Linux.
+ * - Removes: < > : " / \ | ? * and ASCII control characters (0x00–0x1F)
+ * - Collapses whitespace and trims leading/trailing dots and spaces (Windows trims these silently)
+ * - Renames Windows reserved device names by appending an underscore
+ * - Returns an underscore if the result would otherwise be empty
+ *
+ * Intended for the *name* portion only — do not pass a full path, and re-append the extension yourself.
+ */
+export function sanitizeGameFilename(name: string): string {
+  if (!name) return "_";
+
+  let cleaned = name
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[.\s]+|[.\s]+$/g, "");
+
+  if (!cleaned) return "_";
+
+  const upper = cleaned.toUpperCase();
+  const baseUpper = upper.split(".")[0];
+  if (WINDOWS_RESERVED_NAMES.has(baseUpper)) {
+    cleaned = `${cleaned}_`;
+  }
+
+  return cleaned;
+}
+
 export async function renameGamefile(
   dirpath: string,
   gameId: string,
@@ -351,7 +475,8 @@ export async function renameGamefile(
   console.log(dirpath, gameId, gameName);
   const ext = path.extname(dirpath);
   const parentDir = path.dirname(dirpath);
-  const newFileName = `${gameId}.${gameName}${ext}`;
+  const safeName = sanitizeGameFilename(gameName);
+  const newFileName = `${gameId}.${safeName}${ext}`;
   const newFilePath = path.join(parentDir, newFileName);
 
   try {
@@ -363,10 +488,33 @@ export async function renameGamefile(
 }
 
 export async function tryDetermineGameIdFromHex(filepath: string) {
+  let scanPath = filepath;
+
+  // If a .cue was provided, resolve to its first BIN — the game ID lives in the disc image, not the cue sheet.
+  if (path.extname(filepath).toLowerCase() === ".cue") {
+    try {
+      const { parseCueSheet, getCueDirectory } = await import("./cue-parser");
+      const cueSheet = await parseCueSheet(filepath);
+      const firstFile = cueSheet.files[0]?.filename;
+      if (!firstFile) {
+        return {
+          success: false,
+          message: "CUE sheet does not reference any BIN files.",
+        };
+      }
+      scanPath = path.join(getCueDirectory(filepath), firstFile);
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || "Failed to parse CUE sheet.",
+      };
+    }
+  }
+
   let fileHandle: fs.FileHandle | undefined;
 
   try {
-    fileHandle = await fs.open(filepath, "r");
+    fileHandle = await fs.open(scanPath, "r");
   } catch (err: any) {
     return {
       success: false,
@@ -432,6 +580,101 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
   }
 }
 
+export async function tryDeterminePs1GameIdFromHex(filepath: string) {
+  let scanPath = filepath;
+
+  // If a .cue was provided, resolve it to its first BIN — the PS1 game ID lives in the disc image, not the cue sheet.
+  if (path.extname(filepath).toLowerCase() === ".cue") {
+    try {
+      const { parseCueSheet, getCueDirectory } = await import("./cue-parser");
+      const cueSheet = await parseCueSheet(filepath);
+      const firstFile = cueSheet.files[0]?.filename;
+      if (!firstFile) {
+        return {
+          success: false,
+          message: "CUE sheet does not reference any BIN files.",
+        };
+      }
+      scanPath = path.join(getCueDirectory(filepath), firstFile);
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || "Failed to parse CUE sheet.",
+      };
+    }
+  }
+
+  let fileHandle: fs.FileHandle | undefined;
+
+  try {
+    fileHandle = await fs.open(scanPath, "r");
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || "Unable to open file.",
+    };
+  }
+
+  try {
+    const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
+    let position = 0;
+    let carry = "";
+
+    while (true) {
+      const { bytesRead } = await fileHandle.read(
+        buffer,
+        0,
+        FILE_SCAN_CHUNK_BYTES,
+        position
+      );
+
+      if (bytesRead === 0) {
+        break;
+      }
+
+      position += bytesRead;
+
+      const chunk = carry + buffer.subarray(0, bytesRead).toString("latin1");
+      PS1_GAME_ID_REGEX.lastIndex = 0;
+      const matches = chunk.match(PS1_GAME_ID_REGEX);
+
+      if (matches && matches.length > 0) {
+        const rawId = matches[0];
+        // Normalize to underscore format: SCUS_123.45
+        const gameId = rawId.replace("-", "_");
+        const lookupId = normaliseGameIdForLookup(gameId);
+        const gameName = await findPs1GameName(lookupId);
+
+        return {
+          success: true,
+          gameId,
+          formattedGameId: lookupId,
+          ...(gameName ? { gameName } : {}),
+        };
+      }
+
+      carry =
+        chunk.length > FILE_SCAN_OVERLAP_BYTES
+          ? chunk.slice(-FILE_SCAN_OVERLAP_BYTES)
+          : chunk;
+    }
+
+    return {
+      success: false,
+      message: "Could not locate a PS1 game ID inside the provided file.",
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || "Failed while reading file contents.",
+    };
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close();
+    }
+  }
+}
+
 export async function convertBinToIso(
   cueFilePath: string,
   outputIsoPath: string
@@ -460,6 +703,36 @@ export async function openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {
   });
 
   return result;
+}
+
+export async function deleteGameAndRelatedFiles(
+  gamePath: string,
+  artDir: string,
+  gameId: string
+) {
+  try {
+    // Delete the game file
+    await fs.unlink(gamePath);
+
+    // Delete related artwork files (e.g., SLUS_123.45_COV.png)
+    try {
+      const artFiles = await fs.readdir(artDir);
+      const relatedArt = artFiles.filter((f) => f.startsWith(gameId + "_"));
+      for (const artFile of relatedArt) {
+        try {
+          await fs.unlink(path.join(artDir, artFile));
+        } catch {
+          // Ignore individual art file deletion failures
+        }
+      }
+    } catch {
+      // ART directory may not exist — that's fine
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, message: err?.message || String(err) };
+  }
 }
 
 export async function moveFile(

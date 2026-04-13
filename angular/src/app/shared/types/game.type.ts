@@ -1,4 +1,4 @@
-export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL';
+export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL' | 'POPS';
 
 export type Game = {
   filename: string;
@@ -11,6 +11,7 @@ export type Game = {
   extension: string;
   parentPath: string;
   format?: GameFormat;
+  system?: 'PS1' | 'PS2';
   art?: gameArt[];
 };
 

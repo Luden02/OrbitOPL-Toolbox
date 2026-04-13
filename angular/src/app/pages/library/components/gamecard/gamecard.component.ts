@@ -22,4 +22,14 @@ export class GamecardComponent {
       this.coverArt = this.game.art.find((a) => a.type === 'COV');
     }
   }
+
+  confirmDelete() {
+    if (!this.game) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${this.game.title || this.game.gameId}"?\nThis will also remove associated artwork.`
+    );
+    if (confirmed) {
+      this._libraryService.deleteGame(this.game);
+    }
+  }
 }
