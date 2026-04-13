@@ -1,6 +1,6 @@
 {
   "name": "orbitopl-toolbox",
-  "version": "0.2.1-beta",
+  "version": "0.2.2-beta",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
   "author": "Luden",
