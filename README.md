@@ -14,6 +14,8 @@ The goal isn’t to replace OPLManager, but to offer an alternative, one that’
 ## ✅ Current
 
 - Cross-Platform: Windows, macOS, and Linux support
+- .bin/.cue auto conversion to .iso during import ( ✅ Done in v0.2.2-beta)
+- PS1 support and .bin/.cue to VCD convertion ( ✅ Done in v0.2.2-beta)
 - Reading ISO Games in Library
 - Importing ISO Games with Auto-Discovery + Artwork fetching
 - Modern UI: Built with Electron for a clean, user-friendly experience
@@ -24,12 +26,12 @@ The goal isn’t to replace OPLManager, but to offer an alternative, one that’
 ### Short Term
 
 - Multiple game imports
-- .bin/.cue auto conversion to .iso during import
+- ~~.bin/.cue auto conversion to .iso during import~~ ( ✅ Done in v0.2.2-beta)
 - Search & filter games
 
 ### Long Term
 
-- PS1 and APPS support
+- ~~PS1 and APPS support~~ ( ✅ Done in v0.2.2-beta)
 - Cheats management
 - CFG support (TBD)
 - Additional community-requested features
