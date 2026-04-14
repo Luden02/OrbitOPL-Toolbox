@@ -365,12 +365,20 @@ export async function getArtFolder(dirpath: string) {
         .map(async (item) => {
           const filePath = path.join(artDir, item.name);
           const fileBuffer = await fs.readFile(filePath);
+          const baseName = path.parse(item.name).name;
+          // Art type (COV/ICO/SCR) is always the last _-separated segment
+          const lastUnderscoreIdx = baseName.lastIndexOf("_");
+          const type = lastUnderscoreIdx >= 0 ? baseName.slice(lastUnderscoreIdx + 1) : "";
+          const nameBeforeType = lastUnderscoreIdx >= 0 ? baseName.slice(0, lastUnderscoreIdx) : baseName;
+          // Extract gameId (XXXX_###.##) from the start of the filename
+          const idMatch = nameBeforeType.match(/^([A-Z]{4}_\d{3}\.\d{2})/i);
+          const gameId = idMatch ? idMatch[1] : nameBeforeType;
           return {
-            name: path.parse(item.name).name,
+            name: baseName,
             extension: path.extname(item.name),
             path: filePath,
-            gameId: item.name.split("_")[0] + "_" + item.name.split("_")[1],
-            type: item.name.split("_")[2]?.split(".")[0] || "",
+            gameId,
+            type,
             base64: fileBuffer.toString("base64"),
           };
         })
@@ -384,11 +392,13 @@ export async function getArtFolder(dirpath: string) {
 export async function downloadArtByGameId(
   dirPath: string,
   gameId: string,
-  system: "PS1" | "PS2" = "PS2"
+  system: "PS1" | "PS2" = "PS2",
+  saveAsName?: string
 ) {
   const baseUrl = `https://raw.githubusercontent.com/Luden02/psx-ps2-opl-art-database/refs/heads/main/${system}`;
   const types = ["COV", "ICO", "SCR"];
   const results: any[] = [];
+  const localName = saveAsName || gameId;
 
   for (const type of types) {
     const fileName = `${gameId}_${type}.png`;
@@ -410,17 +420,17 @@ export async function downloadArtByGameId(
           .on("error", reject);
       });
 
-      const savePath = path.join(dirPath, `${gameId}_${type}.png`);
+      const savePath = path.join(dirPath, `${localName}_${type}.png`);
       await fs.writeFile(savePath, buffer);
       results.push({
-        name: gameId,
+        name: localName,
         type,
         url,
         savedPath: savePath,
       });
     } catch (err: any) {
       results.push({
-        name: gameId,
+        name: localName,
         type,
         url,
         error: err.message,

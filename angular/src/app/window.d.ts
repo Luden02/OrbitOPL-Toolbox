@@ -21,7 +21,7 @@ declare interface Window {
     importPs1Game: (
       cueFilePath: string,
       oplRoot: string,
-      updateConfApps: boolean,
+      elfPrefix: string,
       downloadArtwork: boolean
     ) => Promise<any>;
     onPs1ImportProgress: (
