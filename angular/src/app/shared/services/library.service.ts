@@ -547,7 +547,7 @@ export class LibraryService {
 
   public async importPs1Game(
     cueFilePath: string,
-    updateConfApps: boolean,
+    elfPrefix: string,
     downloadArtwork: boolean
   ) {
     this._logger.log(
@@ -567,7 +567,7 @@ export class LibraryService {
       const result = await window.libraryAPI.importPs1Game(
         cueFilePath,
         this.currentDirectory!,
-        updateConfApps,
+        elfPrefix,
         downloadArtwork
       );
 

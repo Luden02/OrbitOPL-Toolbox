@@ -247,13 +247,13 @@ ipcMain.handle(
     event,
     cueFilePath: string,
     oplRoot: string,
-    updateConfApps: boolean,
+    elfPrefix: string,
     downloadArtwork: boolean
   ) => {
     return importPs1Game(
       cueFilePath,
       oplRoot,
-      updateConfApps,
+      elfPrefix,
       downloadArtwork,
       (percent, stage) => {
         event.sender.send("ps1-import-progress", { percent, stage });

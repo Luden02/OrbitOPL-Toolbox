@@ -21,7 +21,7 @@ export class ImportComponent {
   gameName: string = '';
   gameId: string = '';
   downloadArtwork: boolean = true;
-  updateConfApps: boolean = false;
+  elfPrefix: string = 'XX.';
 
   get isGameCd(): boolean {
     return this.importMode === 'ps2-cd';
@@ -85,7 +85,7 @@ export class ImportComponent {
       this._libraryService
         .importPs1Game(
           this.gamePath,
-          this.updateConfApps,
+          this.elfPrefix,
           this.downloadArtwork
         )
         .then((result) => {

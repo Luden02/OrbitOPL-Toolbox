@@ -27,14 +27,14 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   importPs1Game: (
     cueFilePath: string,
     oplRoot: string,
-    updateConfApps: boolean,
+    elfPrefix: string,
     downloadArtwork: boolean
   ) =>
     ipcRenderer.invoke(
       "import-ps1-game",
       cueFilePath,
       oplRoot,
-      updateConfApps,
+      elfPrefix,
       downloadArtwork
     ),
   importPs2CdGame: (

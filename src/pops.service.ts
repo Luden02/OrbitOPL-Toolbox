@@ -10,6 +10,24 @@ import {
   sanitizeGameFilename,
 } from "./library.service";
 
+const POPSTARTER_ELF_CANDIDATE_PATHS = [
+  path.resolve(__dirname, "../assets/POPSTARTER.ELF"),
+  path.resolve(__dirname, "../../assets/POPSTARTER.ELF"),
+  path.resolve(process.cwd(), "assets/POPSTARTER.ELF"),
+];
+
+async function findPopstarterElf(): Promise<string | null> {
+  for (const candidate of POPSTARTER_ELF_CANDIDATE_PATHS) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // Try next candidate
+    }
+  }
+  return null;
+}
+
 export interface ImportPs1Result {
   success: boolean;
   message?: string;
@@ -21,7 +39,7 @@ export interface ImportPs1Result {
 export async function importPs1Game(
   cueFilePath: string,
   oplRoot: string,
-  updateConfApps: boolean,
+  elfPrefix: string,
   downloadArtwork: boolean,
   onProgress?: (percent: number, stage: string) => void
 ): Promise<ImportPs1Result> {
@@ -98,17 +116,37 @@ export async function importPs1Game(
       }
     }
 
-    // Step 5: Update conf_apps.cfg if requested
-    if (updateConfApps) {
-      if (onProgress) onProgress(88, "Updating conf_apps.cfg");
-      await updateConfAppsCfg(oplRoot, vcdFilename, gameName);
+    // Step 5: Copy POPStarter ELF with XX. prefix
+    if (onProgress) onProgress(86, "Setting up Popstarter launcher");
+
+    const popstarterElf = await findPopstarterElf();
+    if (!popstarterElf) {
+      return {
+        success: false,
+        message:
+          "POPSTARTER.ELF not found in assets. Please place the Popstarter ELF file at assets/POPSTARTER.ELF.",
+      };
     }
 
-    // Step 6: Download artwork
+    const vcdBasename = vcdFilename.replace(/\.VCD$/i, "");
+    const elfFilename = elfPrefix
+      ? `${elfPrefix}${vcdBasename}.ELF`
+      : `${vcdBasename}.ELF`;
+    const appsFolderName = `POPS_${sanitizedName}`;
+    const appsGameDir = path.join(oplRoot, "APPS", appsFolderName);
+    await fs.mkdir(appsGameDir, { recursive: true });
+    await fs.copyFile(popstarterElf, path.join(appsGameDir, elfFilename));
+    await fs.writeFile(
+      path.join(appsGameDir, "title.cfg"),
+      `title=${gameName}\nboot=${elfFilename}\n`,
+      "utf-8"
+    );
+
+    // Step 7: Download artwork
     if (downloadArtwork) {
-      if (onProgress) onProgress(92, "Downloading artwork");
+      if (onProgress) onProgress(93, "Downloading artwork");
       try {
-        await downloadArtByGameId(artDir, gameId, "PS1");
+        await downloadArtByGameId(artDir, gameId, "PS1", vcdBasename);
       } catch {
         // Art download failure is non-critical
       }
@@ -130,42 +168,3 @@ export async function importPs1Game(
   }
 }
 
-async function updateConfAppsCfg(
-  oplRoot: string,
-  vcdFilename: string,
-  gameTitle: string
-): Promise<void> {
-  const cfgPath = path.join(oplRoot, "conf_apps.cfg");
-
-  // The entry format expected by OPL POPS
-  const entry = `${vcdFilename}=${gameTitle}`;
-
-  try {
-    let content = "";
-    try {
-      content = await fs.readFile(cfgPath, "utf-8");
-    } catch {
-      // File doesn't exist, start fresh
-    }
-
-    // Check if entry already exists
-    const lines = content.split(/\r?\n/);
-    const existingIndex = lines.findIndex((line) =>
-      line.startsWith(vcdFilename + "=")
-    );
-
-    if (existingIndex >= 0) {
-      lines[existingIndex] = entry;
-    } else {
-      // Add to end, ensure there's a newline before
-      if (content.length > 0 && !content.endsWith("\n")) {
-        lines.push("");
-      }
-      lines.push(entry);
-    }
-
-    await fs.writeFile(cfgPath, lines.join("\n"), "utf-8");
-  } catch (err: any) {
-    console.error("Failed to update conf_apps.cfg:", err?.message);
-  }
-}

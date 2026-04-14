@@ -4,182 +4,202 @@
   >
     <div class="text-4xl">Import Games</div>
   </div>
-  @if(_libraryService.hasCurrentDirectory$ | async) {
-  <div class="p-4 flex flex-col space-y-4">
-    <div class="pt-4 flex justify-start">
-      <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
-        >Choose the type of gamefile you're trying to import:</span
-      >
+  @if (_libraryService.hasCurrentDirectory$ | async) {
+    <div class="p-4 flex flex-col space-y-4">
+      <div class="pt-4 flex justify-start">
+        <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
+          >Choose the type of gamefile you're trying to import:</span
+        >
+        <div>
+          <input
+            type="radio"
+            name="radio-gametype"
+            class="radio radio-primary"
+            [checked]="importMode === 'ps2-dvd'"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="importMode = 'ps2-dvd'; resetImportState()"
+          /><span class="pl-2 pr-8">PS2 (.iso/.zso)</span>
+          <input
+            type="radio"
+            name="radio-gametype"
+            class="radio radio-primary"
+            [checked]="importMode === 'ps2-cd'"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="importMode = 'ps2-cd'; resetImportState()"
+          /><span class="pl-2 pr-8">PS2 CD (.bin/.cue)</span>
+          <input
+            type="radio"
+            name="radio-gametype"
+            class="radio radio-primary"
+            [checked]="importMode === 'ps1'"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="importMode = 'ps1'; resetImportState()"
+          /><span class="pl-2 pr-8">PS1 / POPS (.cue)</span>
+        </div>
+      </div>
+      @if (isGamePsx) {
+        <div class="p-3 bg-info/10 border border-info/30 rounded-md">
+          <i-lucide
+            name="info"
+            size="16"
+            class="inline-block mr-2 text-info"
+          ></i-lucide>
+          <span class="text-sm"
+            >PS1 import will convert BIN/CUE to VCD format, detect the game ID,
+            place it in the VCD directory, and create the XX.GameName.ELF
+            Popstarter launcher inside the POPS folder.</span
+          >
+        </div>
+      }
       <div>
-        <input
-          type="radio"
-          name="radio-gametype"
-          class="radio radio-primary"
-          [checked]="importMode === 'ps2-dvd'"
+        <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
+          >Select the gamefile to import ({{
+            isGameCd || isGamePsx ? "point to the .cue file" : ".iso/.zso"
+          }}):</span
+        >
+        <button
+          class="btn btn-primary"
+          (click)="askForGameFile()"
           [disabled]="_libraryService.loading$ | async"
-          (change)="importMode = 'ps2-dvd'; resetImportState()"
-        /><span class="pl-2 pr-8">PS2 (.iso/.zso)</span>
-        <input
-          type="radio"
-          name="radio-gametype"
-          class="radio radio-primary"
-          [checked]="importMode === 'ps2-cd'"
-          [disabled]="_libraryService.loading$ | async"
-          (change)="importMode = 'ps2-cd'; resetImportState()"
-        /><span class="pl-2 pr-8">PS2 CD (.bin/.cue)</span>
-        <input
-          type="radio"
-          name="radio-gametype"
-          class="radio radio-primary"
-          [checked]="importMode === 'ps1'"
-          [disabled]="_libraryService.loading$ | async"
-          (change)="importMode = 'ps1'; resetImportState()"
-        /><span class="pl-2 pr-8">PS1 / POPS (.cue)</span>
+        >
+          Select Gamefile
+        </button>
+      </div>
+      @if (!isGamePsx) {
+        <div class="pt-8 flex">
+          <fieldset class="fieldset mr-4 w-50">
+            <legend class="fieldset-legend">GameID</legend>
+            <input
+              type="text"
+              class="input"
+              [disabled]="autoDiscoveredId"
+              [value]="gameId"
+              (input)="gameId = $any($event.target).value"
+            />
+          </fieldset>
+          <fieldset class="fieldset w-90">
+            <legend class="fieldset-legend">Game Name</legend>
+            <input
+              type="text"
+              class="input"
+              [disabled]="autoDiscoveredName"
+              [value]="gameName"
+              (input)="gameName = $any($event.target).value"
+            />
+          </fieldset>
+          <fieldset class="fieldset ml-4 flex-1">
+            <legend class="fieldset-legend">Download Artwork</legend>
+            <input
+              type="checkbox"
+              [disabled]="_libraryService.loading$ | async"
+              [checked]="downloadArtwork"
+              class="toggle"
+              (change)="downloadArtwork = $any($event.target).checked"
+            />
+          </fieldset>
+        </div>
+      }
+      @if (isGamePsx) {
+        <div class="pt-8 flex">
+          <fieldset class="fieldset mr-4 w-50">
+            <legend class="fieldset-legend">GameID</legend>
+            <input
+              type="text"
+              class="input"
+              [disabled]="autoDiscoveredId"
+              [value]="gameId"
+              (input)="gameId = $any($event.target).value"
+            />
+          </fieldset>
+          <fieldset class="fieldset w-90">
+            <legend class="fieldset-legend">Game Name</legend>
+            <input
+              type="text"
+              class="input"
+              [disabled]="autoDiscoveredName"
+              [value]="gameName"
+              (input)="gameName = $any($event.target).value"
+            />
+          </fieldset>
+        </div>
+        <div class="flex">
+          <fieldset class="fieldset mr-4 flex-1">
+            <legend class="fieldset-legend">Download Artwork</legend>
+            <input
+              type="checkbox"
+              [disabled]="_libraryService.loading$ | async"
+              [checked]="downloadArtwork"
+              class="toggle"
+              (change)="downloadArtwork = $any($event.target).checked"
+            />
+          </fieldset>
+        </div>
+        <div class="flex items-center">
+          <span class="pr-4 text-sm font-semibold">POPStarter prefix:</span>
+          <input
+            type="radio"
+            name="radio-elfprefix"
+            class="radio radio-primary"
+            [checked]="elfPrefix === 'XX.'"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="elfPrefix = 'XX.'"
+          /><span class="pl-2 pr-8">XX. (if in doubt leave this)</span>
+          <input
+            type="radio"
+            name="radio-elfprefix"
+            class="radio radio-primary"
+            [checked]="elfPrefix === 'SB.'"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="elfPrefix = 'SB.'"
+          /><span class="pl-2 pr-8">SB.</span>
+          <input
+            type="radio"
+            name="radio-elfprefix"
+            class="radio radio-primary"
+            [checked]="elfPrefix === ''"
+            [disabled]="_libraryService.loading$ | async"
+            (change)="elfPrefix = ''"
+          /><span class="pl-2">None</span>
+        </div>
+      }
+      <div
+        *ngIf="invalidFileDiscovered"
+        class="p-4 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md"
+      >
+        <i-lucide
+          name="alert-triangle"
+          size="16"
+          class="inline-block mr-2"
+        ></i-lucide>
+        <span class="text-sm"
+          >The selected file appears to be invalid. Please double-check the file
+          and try again.</span
+        >
+      </div>
+      <div>
+        <button
+          class="btn btn-success"
+          (click)="startAutoImportAttempt()"
+          [disabled]="
+            !gamePath ||
+            gamePath.length === 0 ||
+            !gameId ||
+            gameId.length === 0 ||
+            !gameName ||
+            gameName.length === 0 ||
+            (_libraryService.loading$ | async)
+          "
+        >
+          Start Import
+        </button>
       </div>
     </div>
-    @if(isGamePsx) {
-    <div class="p-3 bg-info/10 border border-info/30 rounded-md">
-      <i-lucide
-        name="info"
-        size="16"
-        class="inline-block mr-2 text-info"
-      ></i-lucide>
-      <span class="text-sm"
-        >PS1 import will automatically convert BIN/CUE to VCD format, detect the game ID, and place it in the POPS directory.</span
-      >
-    </div>
-    }
-    <div>
-      <span class="pr-4 text-sm font-semibold flex flex-col justify-center"
-        >Select the gamefile to import ({{
-          isGameCd || isGamePsx ? "point to the .cue file" : ".iso/.zso"
-        }}):</span
-      >
-      <button
-        class="btn btn-primary"
-        (click)="askForGameFile()"
-        [disabled]="_libraryService.loading$ | async"
-      >
-        Select Gamefile
-      </button>
-    </div>
-    @if(!isGamePsx) {
-    <div class="pt-8 flex">
-      <fieldset class="fieldset mr-4 w-50">
-        <legend class="fieldset-legend">GameID</legend>
-        <input
-          type="text"
-          class="input"
-          [disabled]="autoDiscoveredId"
-          [value]="gameId"
-          (input)="gameId = $any($event.target).value"
-        />
-      </fieldset>
-      <fieldset class="fieldset w-90">
-        <legend class="fieldset-legend">Game Name</legend>
-        <input
-          type="text"
-          class="input"
-          [disabled]="autoDiscoveredName"
-          [value]="gameName"
-          (input)="gameName = $any($event.target).value"
-        />
-      </fieldset>
-      <fieldset class="fieldset ml-4 flex-1">
-        <legend class="fieldset-legend">Download Artwork</legend>
-        <input
-          type="checkbox"
-          [disabled]="_libraryService.loading$ | async"
-          [checked]="downloadArtwork"
-          class="toggle"
-          (change)="downloadArtwork = $any($event.target).checked"
-        />
-      </fieldset>
-    </div>
-    }
-    @if(isGamePsx) {
-    <div class="pt-8 flex">
-      <fieldset class="fieldset mr-4 w-50">
-        <legend class="fieldset-legend">GameID</legend>
-        <input
-          type="text"
-          class="input"
-          [disabled]="autoDiscoveredId"
-          [value]="gameId"
-          (input)="gameId = $any($event.target).value"
-        />
-      </fieldset>
-      <fieldset class="fieldset w-90">
-        <legend class="fieldset-legend">Game Name</legend>
-        <input
-          type="text"
-          class="input"
-          [disabled]="autoDiscoveredName"
-          [value]="gameName"
-          (input)="gameName = $any($event.target).value"
-        />
-      </fieldset>
-    </div>
-    <div class="flex">
-      <fieldset class="fieldset mr-4 flex-1">
-        <legend class="fieldset-legend">Download Artwork</legend>
-        <input
-          type="checkbox"
-          [disabled]="_libraryService.loading$ | async"
-          [checked]="downloadArtwork"
-          class="toggle"
-          (change)="downloadArtwork = $any($event.target).checked"
-        />
-      </fieldset>
-      <fieldset class="fieldset flex-1">
-        <legend class="fieldset-legend">Update conf_apps.cfg</legend>
-        <input
-          type="checkbox"
-          [disabled]="_libraryService.loading$ | async"
-          [checked]="updateConfApps"
-          class="toggle"
-          (change)="updateConfApps = $any($event.target).checked"
-        />
-      </fieldset>
-    </div>
-    }
-    <div
-      *ngIf="invalidFileDiscovered"
-      class="p-4 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md"
-    >
-      <i-lucide
-        name="alert-triangle"
-        size="16"
-        class="inline-block mr-2"
-      ></i-lucide>
-      <span class="text-sm"
-        >The selected file appears to be invalid. Please double-check the file
-        and try again.</span
-      >
-    </div>
-    <div>
-      <button
-        class="btn btn-success"
-        (click)="startAutoImportAttempt()"
-        [disabled]="
-          !gamePath ||
-          gamePath.length === 0 ||
-          !gameId ||
-          gameId.length === 0 ||
-          !gameName ||
-          gameName.length === 0 ||
-          (_libraryService.loading$ | async)
-        "
-      >
-        Start Import
-      </button>
-    </div>
-  </div>
   } @else {
-  <div class="p-4">
-    <span class="text-sm text-gray-600"
-      >Please mount a library directory before attempting to import games.</span
-    >
-  </div>
+    <div class="p-4">
+      <span class="text-sm text-gray-600"
+        >Please mount a library directory before attempting to import
+        games.</span
+      >
+    </div>
   }
 </div>
