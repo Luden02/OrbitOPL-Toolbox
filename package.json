@@ -1,6 +1,6 @@
 {
   "name": "orbitopl-toolbox",
-  "version": "0.2.2-beta",
+  "version": "0.2.3-beta",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
   "author": "Luden",
@@ -18,6 +18,7 @@
     "package:win": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --win",
     "package:mac": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --mac",
     "package:linux": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --linux",
+    "package:all": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --win --mac --linux && node scripts/collect-distributables.js",
     "remove": "rimraf -rf ./dist && rimraf -rf ./build",
     "electron": "electron"
   },
