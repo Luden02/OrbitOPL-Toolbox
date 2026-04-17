@@ -371,7 +371,7 @@ export async function getArtFolder(dirpath: string) {
           const type = lastUnderscoreIdx >= 0 ? baseName.slice(lastUnderscoreIdx + 1) : "";
           const nameBeforeType = lastUnderscoreIdx >= 0 ? baseName.slice(0, lastUnderscoreIdx) : baseName;
           // Extract gameId (XXXX_###.##) from the start of the filename
-          const idMatch = nameBeforeType.match(/^([A-Z]{4}_\d{3}\.\d{2})/i);
+          const idMatch = nameBeforeType.match(/([A-Z]{4}_\d{3}\.\d{2})/i);
           const gameId = idMatch ? idMatch[1] : nameBeforeType;
           return {
             name: baseName,
@@ -393,10 +393,11 @@ export async function downloadArtByGameId(
   dirPath: string,
   gameId: string,
   system: "PS1" | "PS2" = "PS2",
-  saveAsName?: string
+  saveAsName?: string,
+  artTypes?: string[]
 ) {
   const baseUrl = `https://raw.githubusercontent.com/Luden02/psx-ps2-opl-art-database/refs/heads/main/${system}`;
-  const types = ["COV", "ICO", "SCR"];
+  const types = artTypes ?? ["COV", "ICO", "SCR"];
   const results: any[] = [];
   const localName = saveAsName || gameId;
 

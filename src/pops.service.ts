@@ -146,7 +146,7 @@ export async function importPs1Game(
     if (downloadArtwork) {
       if (onProgress) onProgress(93, "Downloading artwork");
       try {
-        await downloadArtByGameId(artDir, gameId, "PS1", vcdBasename);
+        await downloadArtByGameId(artDir, gameId, "PS1", elfFilename, ["COV"]);
       } catch {
         // Art download failure is non-critical
       }
