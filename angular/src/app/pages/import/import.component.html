@@ -134,32 +134,32 @@
             />
           </fieldset>
         </div>
-        <div class="flex items-center">
-          <span class="pr-4 text-sm font-semibold">POPStarter prefix:</span>
-          <input
-            type="radio"
-            name="radio-elfprefix"
-            class="radio radio-primary"
-            [checked]="elfPrefix === 'XX.'"
-            [disabled]="_libraryService.loading$ | async"
-            (change)="elfPrefix = 'XX.'"
-          /><span class="pl-2 pr-8">XX. (if in doubt leave this)</span>
-          <input
-            type="radio"
-            name="radio-elfprefix"
-            class="radio radio-primary"
-            [checked]="elfPrefix === 'SB.'"
-            [disabled]="_libraryService.loading$ | async"
-            (change)="elfPrefix = 'SB.'"
-          /><span class="pl-2 pr-8">SB.</span>
-          <input
-            type="radio"
-            name="radio-elfprefix"
-            class="radio radio-primary"
-            [checked]="elfPrefix === ''"
-            [disabled]="_libraryService.loading$ | async"
-            (change)="elfPrefix = ''"
-          /><span class="pl-2">None</span>
+        <div class="flex flex-col space-y-2">
+          <span class="text-sm font-semibold">POPStarter prefix (tells OPL which device holds the VCD):</span>
+          <div class="flex flex-wrap gap-x-6 gap-y-1 items-center">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="radio-elfprefix"
+                class="radio radio-primary"
+                [checked]="elfPrefix === 'XX.'"
+                [disabled]="_libraryService.loading$ | async"
+                (change)="elfPrefix = 'XX.'"
+              />
+              <span class="text-sm">XX. — USB / MX4SIO (MX4SIO requires extra drivers)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="radio-elfprefix"
+                class="radio radio-primary"
+                [checked]="elfPrefix === 'SB.'"
+                [disabled]="_libraryService.loading$ | async"
+                (change)="elfPrefix = 'SB.'"
+              />
+              <span class="text-sm">SB. — SMB network share</span>
+            </label>
+          </div>
         </div>
       }
       <div
