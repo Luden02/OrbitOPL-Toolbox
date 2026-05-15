@@ -266,6 +266,18 @@ export class LibraryService {
     }
   }
 
+  private estimateUlSize(entry: { totalSize: number; numParts: number; mediaType: string }): string {
+    if (entry.totalSize > 0) {
+      return this.formatFileSize(entry.totalSize);
+    }
+    // Fallback: estimate from number of parts (~1 GB per fragment)
+    if (entry.numParts > 0) {
+      const estimatedBytes = entry.numParts * 1073741824;
+      return `~${this.formatFileSize(estimatedBytes)}`;
+    }
+    return '??';
+  }
+
   private parseULGamesToLibrary(
     ulEntries: {
       name: string;
@@ -275,18 +287,30 @@ export class LibraryService {
       totalSize: number;
     }[]
   ): Game[] {
-    return ulEntries.map((entry) => ({
-      filename: `ul.${entry.gameId}.${entry.name}`,
-      title: entry.name,
-      cdType: entry.mediaType,
-      gameId: entry.gameId,
-      region: this.mapGameIdToRegion(entry.gameId),
-      path: '',
-      extension: 'UL',
-      parentPath: '',
-      format: 'UL' as GameFormat,
-      size: entry.totalSize > 0 ? this.formatFileSize(entry.totalSize) : '??',
-    }));
+    return ulEntries.map((entry) => {
+      // Normalize gameId to XXXX_###.## format (safety net)
+      // Strips leading "ul" prefix if present, then formats digits
+      let rawId = entry.gameId;
+      rawId = rawId.replace(/^ul[._-]?/i, '');
+      const cleaned = rawId.replace(/[^A-Za-z0-9]/g, '');
+      const idMatch = cleaned.match(/^([A-Za-z]{4})(\d{5})$/);
+      const gameId = idMatch
+        ? `${idMatch[1].toUpperCase()}_${idMatch[2].slice(0, 3)}.${idMatch[2].slice(3)}`
+        : rawId;
+
+      return {
+        filename: `ul.${gameId}.${entry.name}`,
+        title: entry.name,
+        cdType: entry.mediaType,
+        gameId: gameId,
+        region: this.mapGameIdToRegion(gameId),
+        path: '',
+        extension: 'UL',
+        parentPath: '',
+        format: 'UL' as GameFormat,
+        size: this.estimateUlSize(entry),
+      };
+    });
   }
 
   private async parseGameFilesToLibrary(
@@ -362,7 +386,6 @@ export class LibraryService {
 
     this.setLoading(true);
     this.setCurrentAction('Saving...');
-    console.log(validGames);
     this.librarySubject.next(validGames);
     this.invalidFilesSubject.next(invalidFiles);
     this.setCurrentAction('');

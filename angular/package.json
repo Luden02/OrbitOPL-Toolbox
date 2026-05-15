@@ -23,7 +23,7 @@
     "@cds/core": "^6.16.1",
     "@tailwindcss/postcss": "^4.1.17",
     "daisyui": "^5.5.11",
-    "lucide-angular": "^0.540.0",
+    "lucide-angular": "^1.0.0",
     "postcss": "^8.5.6",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.1.17",
