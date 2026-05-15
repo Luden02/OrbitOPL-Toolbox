@@ -312,10 +312,15 @@ export async function getULGames(dirPath: string) {
       }
 
       // Normalize game ID to XXXX_###.## format
-      const gameId = gameIdRaw.replace(/\./g, "").replace(
-        /^([A-Z]{4})(\d{3})(\d{2})$/,
-        "$1_$2.$3"
-      );
+      // Handles: SLUS12345, SLUS_12345, SLUS-12345, SLUS_123.45, SLUS-123.45
+      // Also strips leading "ul" prefix if present (e.g. ul.SLUS_12345 -> SLUS_123.45)
+      let normalized = gameIdRaw.trim();
+      normalized = normalized.replace(/^ul[._-]?/i, "");
+      const cleaned = normalized.replace(/[^A-Za-z0-9]/g, "");
+      const idMatch = cleaned.match(/^([A-Za-z]{4})(\d{5})$/);
+      const gameId = idMatch
+        ? `${idMatch[1].toUpperCase()}_${idMatch[2].slice(0, 3)}.${idMatch[2].slice(3)}`
+        : normalized;
 
       // Byte 47: number of parts
       const numParts = record[47];
@@ -324,13 +329,21 @@ export async function getULGames(dirPath: string) {
       const mediaTypeRaw = record.readUInt32LE(48);
       const mediaType = mediaTypeRaw === 0x12 ? "CD" : "DVD";
 
-      // Match fragment files using CRC32 of the game name
+      // Match fragment files using multiple naming conventions
+      // OPL format:   ul.<CRC32>.<GAMEID>.<PART>
+      // USBExtreme:   ul.<GAMEID>.<PART>
+      // PS2-ISO-Util: ul.<CRC32>.<GAMEID>.<PART>
       const hash = crc32(name).toString(16).padStart(8, "0").toUpperCase();
-      const fragmentPrefix = `ul.${hash}`;
+      const prefixByCrc = `ul.${hash}`;
+
+      // Normalise game ID for matching (strip dots: SLUS_123.45 -> SLUS_12345)
+      const gameIdNoDot = gameId.replace(/\./g, "").toUpperCase();
+      const prefixById = `ul.${gameIdNoDot}`;
 
       let totalSize = 0;
       for (const f of ulFiles) {
-        if (f.name.startsWith(fragmentPrefix)) {
+        const upperName = f.name.toUpperCase();
+        if (upperName.startsWith(prefixByCrc) || upperName.startsWith(prefixById)) {
           try {
             const stat = await fs.stat(path.join(dirPath, f.name));
             totalSize += stat.size;
