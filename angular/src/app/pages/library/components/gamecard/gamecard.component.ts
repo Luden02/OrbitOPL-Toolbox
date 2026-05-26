@@ -1,9 +1,11 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, SimpleChanges } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { SlicePipe } from '@angular/common';
+
+export type GamecardViewMode = 'grid' | 'list';
 
 @Component({
   selector: 'app-gamecard',
@@ -13,24 +15,36 @@ import { SlicePipe } from '@angular/common';
 })
 export class GamecardComponent implements OnChanges {
   @Input() game: Game | undefined;
+  @Input() viewMode: GamecardViewMode = 'grid';
 
   constructor(public readonly _libraryService: LibraryService) {}
 
-  public coverArt: gameArt | undefined;
+  public displayArt: gameArt | undefined;
+
   ngOnInit() {
-    this.updateCoverArt();
+    this.updateDisplayArt();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['game']) {
-      this.updateCoverArt();
+    if (changes['game'] || changes['viewMode']) {
+      this.updateDisplayArt();
     }
   }
 
-  private updateCoverArt() {
+  private updateDisplayArt() {
     if (this.game && Array.isArray(this.game.art)) {
-      this.coverArt = this.game.art.find((a) => a.type === 'COV');
+      const artType = this.viewMode === 'list' ? 'ICO' : 'COV';
+      this.displayArt = this.game.art.find(
+        (a) => a.type?.toUpperCase() === artType
+      );
+    } else {
+      this.displayArt = undefined;
     }
+  }
+
+  fetchArtwork() {
+    if (!this.game) return;
+    this._libraryService.downloadArtByGameId(this.game.gameId, this.game.system);
   }
 
   confirmDelete() {
