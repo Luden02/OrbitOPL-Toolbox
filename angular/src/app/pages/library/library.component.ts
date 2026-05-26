@@ -10,6 +10,7 @@ import { Game } from '../../shared/types/game.type';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 
 type SystemTab = 'PS2' | 'PS1';
+type SortMode = 'title-asc' | 'title-desc' | 'gameId-asc' | 'gameId-desc';
 
 @Component({
   selector: 'app-library',
@@ -22,7 +23,10 @@ export class LibraryComponent {
 
   private activeTabSubject = new BehaviorSubject<SystemTab>('PS2');
   public activeTab$ = this.activeTabSubject.asObservable();
+  private sortModeSubject = new BehaviorSubject<SortMode>('title-asc');
+  public sortMode$ = this.sortModeSubject.asObservable();
   public viewMode: GamecardViewMode = 'grid';
+  public sortMode: SortMode = 'title-asc';
 
   public ps2Games$: Observable<Game[]> | undefined;
   public ps1Games$: Observable<Game[]> | undefined;
@@ -42,12 +46,38 @@ export class LibraryComponent {
     this.ps2Count$ = this.ps2Games$.pipe(map((g) => g.length));
     this.ps1Count$ = this.ps1Games$.pipe(map((g) => g.length));
 
-    this.visibleGames$ = combineLatest([library$, this.activeTab$]).pipe(
-      map(([games, tab]) =>
-        games.filter((g) =>
+    this.visibleGames$ = combineLatest([
+      library$,
+      this.activeTab$,
+      this.sortMode$,
+    ]).pipe(
+      map(([games, tab, sortMode]) => {
+        const [field, direction] = sortMode.split('-') as [
+          'title' | 'gameId',
+          'asc' | 'desc'
+        ];
+        const multiplier = direction === 'asc' ? 1 : -1;
+
+        const filteredGames = games.filter((g) =>
           tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
-        )
-      )
+        );
+
+        return filteredGames.sort((a, b) => {
+          const getSortableValue = (game: Game) => {
+            if (field === 'title') {
+              return (game.title || game.gameId || '').toLocaleLowerCase();
+            }
+            return (game.gameId || '').toLocaleLowerCase();
+          };
+
+          return (
+            getSortableValue(a).localeCompare(getSortableValue(b), undefined, {
+              numeric: true,
+              sensitivity: 'base',
+            }) * multiplier
+          );
+        });
+      })
     );
   }
 
@@ -61,5 +91,23 @@ export class LibraryComponent {
 
   toggleViewMode() {
     this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
+  }
+
+  setSortMode(mode: string) {
+    if (!this.isSortMode(mode)) {
+      return;
+    }
+
+    this.sortMode = mode;
+    this.sortModeSubject.next(mode);
+  }
+
+  private isSortMode(mode: string): mode is SortMode {
+    return (
+      mode === 'title-asc' ||
+      mode === 'title-desc' ||
+      mode === 'gameId-asc' ||
+      mode === 'gameId-desc'
+    );
   }
 }

@@ -5,6 +5,7 @@
     <div class="text-4xl">Library</div>
     <div class="flex items-center gap-2">
       <button
+        type="button"
         [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
         class="btn"
         (click)="this._libraryService.refreshGamesFiles()"
@@ -12,6 +13,7 @@
         <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
       </button>
       <button
+        type="button"
         class="btn"
         [attr.aria-pressed]="viewMode === 'list'"
         [title]="viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'"
@@ -23,6 +25,15 @@
         ></i-lucide
         >{{ viewMode === "grid" ? "List View" : "Grid View" }}
       </button>
+      <label class="select select-bordered w-56">
+        <span class="label">Sort</span>
+        <select #sortSelect [value]="sortMode" (change)="setSortMode(sortSelect.value)">
+          <option value="title-asc">Game Name (A-Z)</option>
+          <option value="title-desc">Game Name (Z-A)</option>
+          <option value="gameId-asc">Game ID (A-Z)</option>
+          <option value="gameId-desc">Game ID (Z-A)</option>
+        </select>
+      </label>
       @if(this._libraryService.hasCurrentDirectory$ | async) {
       <div class="dropdown dropdown-end">
         <div tabindex="0" role="button" class="btn">
