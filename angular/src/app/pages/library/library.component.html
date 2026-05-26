@@ -54,7 +54,7 @@
       grid-auto-rows: minmax(auto, 200px);
     "
   >
-    @for (item of visibleGames$ | async; track item) {
+    @for (item of visibleGames$ | async; track item.gameId) {
     <app-gamecard [game]="item" class="h-full max-h-[200px]"></app-gamecard>
     }
   </div>

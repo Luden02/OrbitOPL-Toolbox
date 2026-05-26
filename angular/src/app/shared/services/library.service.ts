@@ -413,11 +413,35 @@ export class LibraryService {
     this.setCurrentAction('Downloading Art for ' + gameId + '...');
     return window.libraryAPI
       .downloadArtByGameId(`${this.currentDirectory}/ART`, gameId, system)
-      .then((res) => {
+      .then(async (res) => {
         this.setCurrentAction('');
         this.setLoading(false);
-        this.refreshGamesFiles();
+        // Update only the affected game's artwork instead of refreshing
+        // the entire library, which would reset the scroll position.
+        await this.updateArtForGame(gameId);
       });
+  }
+
+  /**
+   * Re-reads artwork for a single game and patches it into the current
+   * library state without replacing the whole list, preserving scroll position.
+   */
+  private async updateArtForGame(gameId: string) {
+    if (!this.currentDirectory) return;
+    const artFiles = await this.parseArtFiles(this.currentDirectory);
+    const currentLibrary = this.librarySubject.getValue();
+    const updatedLibrary = currentLibrary.map((game) => {
+      if (game.gameId === gameId) {
+        return {
+          ...game,
+          art: artFiles
+            .filter((art: any) => art.gameId === gameId)
+            .map((art: any) => art),
+        };
+      }
+      return game;
+    });
+    this.librarySubject.next(updatedLibrary);
   }
 
   public downloadAllArt() {
