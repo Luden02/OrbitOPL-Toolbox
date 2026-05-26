@@ -13,7 +13,7 @@ export type GamecardViewMode = 'grid' | 'list';
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })
-export class GamecardComponent {
+export class GamecardComponent implements OnChanges {
   @Input() game: Game | undefined;
   @Input() viewMode: GamecardViewMode = 'grid';
 

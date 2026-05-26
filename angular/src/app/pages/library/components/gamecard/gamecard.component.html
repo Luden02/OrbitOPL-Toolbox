@@ -53,13 +53,13 @@
     </div>
     }
   </figure>
-  <div class="card-body gap-0 pb-0">
+  <div class="card-body gap-1 p-4">
     @if(game && game?.title){
-    <h2 class="card-title">
+    <h2 class="card-title text-base">
       {{
-        game?.title && (game?.title?.length ?? 0) > 25
-          ? (game?.title | slice : 0 : 25) + "..."
-          : game?.title
+        game.title && game.title.length > 25
+          ? (game.title | slice : 0 : 25) + "..."
+          : game.title
       }}
     </h2>
     }
@@ -76,12 +76,12 @@
       ><span class="font-bold">Format:</span> {{ game?.format || game?.extension }}</span
     >
     @if(game?.system === 'PS1') {
-    <span class="badge badge-sm badge-accent mt-1">PS1</span>
+    <span class="badge badge-xs badge-accent mt-auto w-fit">PS1</span>
     }
 
-    <div class="card-actions justify-end mt-5">
-      <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn m-1">
+    <div class="card-actions justify-end mt-auto">
+      <div class="dropdown dropdown-top dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-sm btn-square">
           <i-lucide name="ellipsis"></i-lucide>
         </div>
         <ul
