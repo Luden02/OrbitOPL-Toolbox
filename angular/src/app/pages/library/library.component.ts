@@ -29,19 +29,24 @@ export class LibraryComponent {
   ngOnInit() {
     const library$ = this._libraryService.library$;
 
+    const sortByTitle = (games: Game[]) =>
+      [...games].sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''));
+
     this.ps2Games$ = library$.pipe(
-      map((games) => games.filter((g) => (g.system ?? 'PS2') === 'PS2'))
+      map((games) => sortByTitle(games.filter((g) => (g.system ?? 'PS2') === 'PS2')))
     );
     this.ps1Games$ = library$.pipe(
-      map((games) => games.filter((g) => g.system === 'PS1'))
+      map((games) => sortByTitle(games.filter((g) => g.system === 'PS1')))
     );
     this.ps2Count$ = this.ps2Games$.pipe(map((g) => g.length));
     this.ps1Count$ = this.ps1Games$.pipe(map((g) => g.length));
 
     this.visibleGames$ = combineLatest([library$, this.activeTab$]).pipe(
       map(([games, tab]) =>
-        games.filter((g) =>
-          tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
+        sortByTitle(
+          games.filter((g) =>
+            tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
+          )
         )
       )
     );
