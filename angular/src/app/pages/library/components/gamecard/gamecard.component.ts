@@ -1,4 +1,4 @@
-import { Component, Input, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
@@ -13,7 +13,7 @@ export type GamecardViewMode = 'grid' | 'list';
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })
-export class GamecardComponent implements OnChanges {
+export class GamecardComponent implements OnInit, OnChanges {
   @Input() game: Game | undefined;
   @Input() viewMode: GamecardViewMode = 'grid';
 
