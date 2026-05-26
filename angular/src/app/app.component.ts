@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { LogsService } from './shared/services/logs.service';
 import PackageInfo from '../../../package.json';
 import { LibraryService } from './shared/services/library.service';
@@ -12,7 +12,6 @@ import { lastValueFrom } from 'rxjs';
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     AsyncPipe,
     LucideAngularModule,
   ],
