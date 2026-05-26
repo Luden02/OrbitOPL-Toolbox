@@ -3,7 +3,7 @@
     class="header h-15 flex items-center justify-between px-4 border-b border-base-300"
   >
     <div class="text-4xl">Library</div>
-    <div>
+    <div class="flex items-center gap-2">
       <button
         [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
         class="btn"
@@ -11,9 +11,21 @@
       >
         <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
       </button>
+      <button
+        class="btn"
+        [attr.aria-pressed]="viewMode === 'list'"
+        [title]="viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'"
+        (click)="toggleViewMode()"
+      >
+        <i-lucide
+          [name]="viewMode === 'grid' ? 'list' : 'layout-grid'"
+          size="18"
+        ></i-lucide
+        >{{ viewMode === "grid" ? "List View" : "Grid View" }}
+      </button>
       @if(this._libraryService.hasCurrentDirectory$ | async) {
       <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn m-1">
+        <div tabindex="0" role="button" class="btn">
           <i-lucide name="ellipsis"></i-lucide>
         </div>
         <ul
@@ -48,14 +60,16 @@
     >
   </div>
   <div
-    class="body p-4 overflow-y-scroll grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-x-4 gap-y-5"
-    style="
-      height: calc(100vh - 64px - 60px - 32px - 40px);
-      grid-auto-rows: minmax(auto, 200px);
-    "
+    class="library-body p-4 overflow-y-scroll"
+    [class.library-grid]="viewMode === 'grid'"
+    [class.library-list]="viewMode === 'list'"
   >
-    @for (item of visibleGames$ | async; track item) {
-    <app-gamecard [game]="item" class="h-full max-h-[200px]"></app-gamecard>
+    @for (item of visibleGames$ | async; track item.gameId) {
+    <app-gamecard
+      [game]="item"
+      [viewMode]="viewMode"
+      [class.list-card]="viewMode === 'list'"
+    ></app-gamecard>
     }
   </div>
 </div>

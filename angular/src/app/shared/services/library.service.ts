@@ -427,7 +427,7 @@ export class LibraryService {
     );
     const games = this.librarySubject.getValue();
     const downloadPromises = games.map((game) =>
-      this.downloadArtByGameId(game.gameId)
+      this.downloadArtByGameId(game.gameId, game.system)
     );
     return Promise.all(downloadPromises);
   }
