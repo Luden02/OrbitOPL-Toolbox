@@ -21,8 +21,16 @@
   gap: 0.375rem;
 }
 
+.header .select {
+  min-width: 13rem;
+}
+
 @media (max-width: 720px) {
   .library-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header .select {
+    min-width: 10rem;
   }
 }
