@@ -1,7 +1,7 @@
 <div class="card card-side bg-base-100 shadow-sm">
   <figure>
     @if(coverArt) {<img
-      [src]="'data:image/png;base64,' + coverArt?.base64"
+      [src]="'data:image/png;base64,' + coverArt.base64"
       alt="cover-art"
     />} @else{
     <div
@@ -12,12 +12,12 @@
     }
   </figure>
   <div class="card-body gap-0 pb-0">
-    @if(game && game?.title){
+    @if(game && game.title){
     <h2 class="card-title">
       {{
-        game?.title && (game?.title?.length ?? 0) > 25
-          ? (game?.title | slice : 0 : 25) + "..."
-          : game?.title
+        game.title && game.title.length > 25
+          ? (game.title | slice : 0 : 25) + "..."
+          : game.title
       }}
     </h2>
     }
