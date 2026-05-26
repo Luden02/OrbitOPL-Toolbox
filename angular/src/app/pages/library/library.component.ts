@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
-import { GamecardComponent } from './components/gamecard/gamecard.component';
+import {
+  GamecardComponent,
+  GamecardViewMode,
+} from './components/gamecard/gamecard.component';
 import { LibraryService } from '../../shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
@@ -19,6 +22,7 @@ export class LibraryComponent {
 
   private activeTabSubject = new BehaviorSubject<SystemTab>('PS2');
   public activeTab$ = this.activeTabSubject.asObservable();
+  public viewMode: GamecardViewMode = 'grid';
 
   public ps2Games$: Observable<Game[]> | undefined;
   public ps1Games$: Observable<Game[]> | undefined;
@@ -53,5 +57,9 @@ export class LibraryComponent {
 
   isActive(tab: SystemTab): boolean {
     return this.activeTabSubject.getValue() === tab;
+  }
+
+  toggleViewMode() {
+    this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
   }
 }
