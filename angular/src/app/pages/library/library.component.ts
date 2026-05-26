@@ -25,14 +25,18 @@ export class LibraryComponent {
   public activeTab$ = this.activeTabSubject.asObservable();
   private sortModeSubject = new BehaviorSubject<SortMode>('title-asc');
   public sortMode$ = this.sortModeSubject.asObservable();
+  private searchSubject = new BehaviorSubject<string>('');
+  public search$ = this.searchSubject.asObservable();
   public viewMode: GamecardViewMode = 'grid';
   public sortMode: SortMode = 'title-asc';
+  public searchTerm = '';
 
   public ps2Games$: Observable<Game[]> | undefined;
   public ps1Games$: Observable<Game[]> | undefined;
   public visibleGames$: Observable<Game[]> | undefined;
   public ps2Count$: Observable<number> | undefined;
   public ps1Count$: Observable<number> | undefined;
+  public totalCount$: Observable<number> | undefined;
 
   ngOnInit() {
     const library$ = this._libraryService.library$;
@@ -48,22 +52,33 @@ export class LibraryComponent {
     );
     this.ps2Count$ = this.ps2Games$.pipe(map((g) => g.length));
     this.ps1Count$ = this.ps1Games$.pipe(map((g) => g.length));
+    this.totalCount$ = library$.pipe(map((g) => g.length));
 
     this.visibleGames$ = combineLatest([
       library$,
       this.activeTab$,
       this.sortMode$,
+      this.search$,
     ]).pipe(
-      map(([games, tab, sortMode]) => {
+      map(([games, tab, sortMode, search]) => {
         const [field, direction] = sortMode.split('-') as [
           'title' | 'gameId',
           'asc' | 'desc'
         ];
         const multiplier = direction === 'asc' ? 1 : -1;
+        const query = search.trim().toLocaleLowerCase();
 
-        const filteredGames = games.filter((g) =>
-          tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
-        );
+        const filteredGames = games
+          .filter((g) =>
+            tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
+          )
+          .filter((g) => {
+            if (!query) return true;
+            return (
+              (g.title ?? '').toLocaleLowerCase().includes(query) ||
+              (g.gameId ?? '').toLocaleLowerCase().includes(query)
+            );
+          });
 
         return filteredGames.sort((a, b) => {
           const getSortableValue = (game: Game) => {
@@ -94,6 +109,15 @@ export class LibraryComponent {
 
   toggleViewMode() {
     this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
+  }
+
+  setSearch(term: string) {
+    this.searchTerm = term;
+    this.searchSubject.next(term);
+  }
+
+  clearSearch() {
+    this.setSearch('');
   }
 
   setSortMode(mode: string) {

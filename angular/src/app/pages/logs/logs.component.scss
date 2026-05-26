@@ -1,37 +1,63 @@
 :host {
+  display: block;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.logs-container {
-  margin-top: 12px;
-  border: 1px solid var(--cds-alias-object-border-color);
-  overflow-x: wrap;
-  overflow-y: scroll;
-  flex: 1;
-
-  .log {
-    .verbose {
-      color: var(--cds-global-color-cool-gray-200);
-    }
-
-    .error {
-      color: var(--cds-alias-object-interaction-danger-hover);
-    }
-  }
 }
 
-.action-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--cds-alias-object-border-color);
+.console {
+  background: oklch(14% 0.035 262 / 0.85);
+  line-height: 1.6;
 }
 
-.headline {
-  font-size: var(--cds-global-typography-display-font-size);
-  font-weight: var(--cds-global-typography-display-font-weight);
-  line-height: var(--cds-global-typography-display-line-height);
-  letter-spacing: var(--cds-global-typography-display-letter-spacing);
+.log-line {
+  display: grid;
+  grid-template-columns: 5.5rem 2.4rem minmax(8rem, 14rem) 1fr;
+  gap: 0.6rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-line:hover {
+  background: oklch(60% 0.1 250 / 0.06);
+}
+
+.log-time {
+  color: oklch(70% 0.04 250 / 0.5);
+}
+
+.log-tag {
+  font-weight: 600;
+  text-align: center;
+  border-radius: 0.25rem;
+}
+
+.log-loc {
+  color: oklch(82% 0.13 212 / 0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-msg {
+  color: oklch(90% 0.02 250 / 0.85);
+}
+
+/* Severity colours */
+.log-INF .log-tag {
+  color: oklch(74% 0.13 230);
+}
+
+.log-VRB {
+  opacity: 0.6;
+}
+.log-VRB .log-tag {
+  color: oklch(70% 0.04 250 / 0.7);
+}
+
+.log-ERR .log-tag {
+  color: oklch(64% 0.22 22);
+}
+.log-ERR .log-msg {
+  color: oklch(72% 0.18 25);
 }

@@ -1,10 +1,45 @@
-<div
-  class="header h-15 flex items-center justify-between px-4 mb-4 border-b border-base-300"
->
-  <div class="text-4xl">Logs</div>
+<div class="page flex h-full flex-col fade-in">
+  <header class="page-header glass flex items-center justify-between gap-4 px-6">
+    <div class="flex items-center gap-3">
+      <i-lucide name="terminal" size="26" class="text-accent"></i-lucide>
+      <div>
+        <h1 class="section-title text-2xl">Logs</h1>
+        <p class="text-xs text-base-content/45">{{ visibleLogs.length }} entries</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          class="toggle toggle-sm toggle-primary"
+          [checked]="verboseMode"
+          (change)="toggleVerboseMode()"
+        />
+        Verbose
+      </label>
+      <button class="btn btn-sm" (click)="copyLogs()">
+        <i-lucide name="copy" size="15"></i-lucide>Copy
+      </button>
+      <button class="btn btn-sm btn-outline btn-error" (click)="clearLogs()">
+        <i-lucide name="trash-2" size="15"></i-lucide>Clear
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-hidden px-6 py-5">
+    <div class="console glass-strong h-full overflow-y-auto rounded-box p-3 font-mono text-xs">
+      @for (log of visibleLogs; track $index) {
+      <div class="log-line" [class]="'log-' + log.type">
+        <span class="log-time">{{ shortTime(log.timestamp) }}</span>
+        <span class="log-tag">{{ log.type }}</span>
+        <span class="log-loc">{{ log.location }}</span>
+        <span class="log-msg">{{ log.message }}</span>
+      </div>
+      } @empty {
+      <div class="flex h-full items-center justify-center text-base-content/30">
+        No log entries yet.
+      </div>
+      }
+    </div>
+  </div>
 </div>
-<textarea
-  class="textarea w-full h-[calc(100vh-180px)] resize-none"
-  disabled
-  [value]="getFormattedLogs()"
-></textarea>

@@ -1,65 +1,68 @@
-<div class="main-section">
-  <div
-    class="header h-15 flex items-center justify-between px-4 border-b border-base-300"
-  >
-    <div class="text-4xl">Invalid Files</div>
-    <div>
+<div class="page flex h-full flex-col fade-in">
+  <header class="page-header glass flex items-center justify-between gap-4 px-6">
+    <div class="flex items-center gap-3">
+      <i-lucide name="triangle-alert" size="26" class="text-warning"></i-lucide>
+      <div>
+        <h1 class="section-title text-2xl">Invalid Files</h1>
+        <p class="text-xs text-base-content/45">
+          {{ (this._libraryService.invalidFiles$ | async)?.length || 0 }} files need attention
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
       <button
         [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
-        class="btn"
+        class="btn btn-sm"
         (click)="this._libraryService.refreshGamesFiles()"
       >
-        <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
+        <i-lucide name="refresh-cw" size="16"></i-lucide>Refresh
       </button>
       <button
         [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
-        class="btn ml-2"
+        class="btn btn-sm btn-primary"
         (click)="this.openBulkAutoCorrection()"
       >
-        <i-lucide name="folder-pen" size="18"></i-lucide>Bulk Auto-Correction
+        <i-lucide name="wand-sparkles" size="16"></i-lucide>Bulk Auto-Correction
       </button>
     </div>
-  </div>
-  <div class="p-4 flex flex-col space-y-4">
-    <span class="text-sm text-gray-600"
-      >Here you can find the games that have not been properly recognized or
-      categorized caused by a wrong filename.</span
-    >
-  </div>
-  <div>
-    <div
-      class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100"
-    >
+  </header>
+
+  <div class="flex-1 overflow-y-auto px-6 py-5">
+    <p class="mb-4 flex items-center gap-2 text-sm text-base-content/55">
+      <i-lucide name="info" size="15" class="text-info"></i-lucide>
+      These games weren't recognised — usually because of a non-standard filename.
+      Use the rename tool to read the game ID from the disc itself.
+    </p>
+
+    @if((this._libraryService.invalidFiles$ | async)?.length) {
+    <div class="glass overflow-hidden rounded-box">
       <table class="table">
-        <!-- head -->
         <thead>
-          <tr>
+          <tr class="text-base-content/50">
             <th>Path</th>
             <th>Size</th>
-            <th>Actions</th>
+            <th class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (file of this._libraryService.invalidFiles$ | async; track file)
-          {
-          <tr>
-            <td class="tooltip" [attr.data-tip]="file.path">
+          @for (file of this._libraryService.invalidFiles$ | async; track file) {
+          <tr class="hover:bg-base-100/40">
+            <td class="tooltip font-mono text-sm" [attr.data-tip]="file.path">
               {{
-                file.path.length > 30
-                  ? (file.path | slice : 0 : 30) + "..."
+                file.path.length > 48
+                  ? "…" + (file.path | slice : file.path.length - 48)
                   : file.path
               }}
             </td>
-            <td>
-              {{ (file.stats.size / (1024 * 1024 * 1024)).toFixed(2) }} GBs
+            <td class="font-mono text-sm text-base-content/60">
+              {{ (file.stats.size / (1024 * 1024 * 1024)).toFixed(2) }} GB
             </td>
-            <td>
+            <td class="text-right">
               <button
                 class="btn btn-sm btn-primary"
                 (click)="openRenameTool(file.path)"
               >
-                <i-lucide name="file-pen-line" size="16"></i-lucide>Open Rename
-                Tool
+                <i-lucide name="file-pen-line" size="15"></i-lucide>Rename Tool
               </button>
             </td>
           </tr>
@@ -67,17 +70,26 @@
         </tbody>
       </table>
     </div>
+    } @else {
+    <div class="empty-state">
+      <div class="empty-orb"><i-lucide name="check-check" size="44"></i-lucide></div>
+      <h2 class="font-display mt-5 text-xl tracking-wide">All clean</h2>
+      <p class="mt-1 max-w-sm text-sm text-base-content/50">
+        No invalid files detected. Every game in your library is recognised.
+      </p>
+    </div>
+    }
   </div>
 </div>
 
 <dialog id="rename_tool" class="modal">
-  <div class="modal-box">
-    <h3 class="text-lg font-bold">Game File Rename Tool</h3>
+  <div class="modal-box glass-strong">
+    <h3 class="font-display text-lg font-semibold tracking-wide">Game File Rename Tool</h3>
     <fieldset class="fieldset">
       <legend class="fieldset-legend">Game ID</legend>
       <input
         type="text"
-        class="input"
+        class="input w-full"
         placeholder="SCES_111.22"
         [(ngModel)]="renameGameId"
       />
@@ -86,51 +98,53 @@
       <legend class="fieldset-legend">Game Name</legend>
       <input
         type="text"
-        class="input"
-        placeholder="SCES_111.22"
+        class="input w-full"
+        placeholder="Game title"
         [(ngModel)]="renameGameName"
       />
     </fieldset>
-    <div class="pt-2">
+    <label class="mt-3 flex cursor-pointer items-center gap-3">
       <input
         type="checkbox"
         checked="checked"
-        class="toggle"
+        class="toggle toggle-primary"
         [(ngModel)]="fetchArtwork"
       />
-      <span class="text-sm pl-2">Fetch Artwork While Correcting GameFile</span>
-    </div>
+      <span class="text-sm">Fetch artwork while correcting</span>
+    </label>
 
     <div class="modal-action">
-      <button class="btn btn-soft btn-secondary" (click)="closeRenameTool()">
-        Cancel
+      <button class="btn btn-ghost" (click)="closeRenameTool()">Cancel</button>
+      <button class="btn btn-primary" (click)="sendRenaming()">
+        <i-lucide name="check" size="16"></i-lucide>Confirm
       </button>
-      <button class="btn btn-primary" (click)="sendRenaming()">Confirm</button>
     </div>
   </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
 <dialog id="bulk_auto_tool" class="modal">
-  <div class="modal-box">
-    <h3 class="text-lg font-bold">Bulk Auto-Correction Tool</h3>
-    <p class="py-4">
-      This tool will attempt to automatically correct all invalid game files by
-      analyzing their internal hex values. It will rename the files and fetch
+  <div class="modal-box glass-strong">
+    <h3 class="font-display text-lg font-semibold tracking-wide">Bulk Auto-Correction</h3>
+    <p class="py-4 text-sm text-base-content/70">
+      This will attempt to automatically correct all invalid game files by
+      reading their internal hex values, renaming the files and fetching
       missing artwork where possible.
     </p>
-    <div class="pt-2">
+    <label class="flex cursor-pointer items-center gap-3">
       <input
         type="checkbox"
         checked="checked"
-        class="toggle"
+        class="toggle toggle-primary"
         [(ngModel)]="fetchArtwork"
       />
-      <span class="text-sm pl-2">Fetch Artwork While Correcting GameFiles</span>
-    </div>
+      <span class="text-sm">Fetch artwork while correcting</span>
+    </label>
     <div class="modal-action">
       <button class="btn btn-primary" (click)="startBulkAutoCorrection()">
-        Start Bulk Auto-Correction
+        <i-lucide name="wand-sparkles" size="16"></i-lucide>Start Bulk Auto-Correction
       </button>
     </div>
   </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>

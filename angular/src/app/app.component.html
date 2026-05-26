@@ -1,125 +1,139 @@
-<div class="main-view flex">
-  <div class="sidebar">
-    <ul class="menu bg-base-200 rounded-r-lg w-50 h-[calc(100vh-64px)]">
-      <li
-        class="pt-2 pb-2"
-        [class.menu-disabled]="this._libraryService.loading$ | async"
-      >
+<div class="flex h-full flex-col">
+  <div class="flex flex-1 min-h-0">
+    <!-- ── Navigation rail ─────────────────────────────────────── -->
+    <aside class="sidebar glass-strong flex w-60 flex-col">
+      <div class="brand flex items-center gap-3 px-5 pt-5 pb-4">
+        <img src="icon.svg" alt="" class="h-9 w-9 drop-shadow-[0_0_8px_rgba(80,180,255,0.5)]" />
+        <div class="leading-tight">
+          <div class="font-display text-lg font-semibold tracking-wide">OrbitOPL</div>
+          <div class="text-[0.62rem] uppercase tracking-[0.25em] text-base-content/40">Toolbox</div>
+        </div>
+      </div>
+      <div class="accent-line mx-4 h-px"></div>
+
+      <nav class="flex-1 overflow-y-auto py-3" [class.pointer-events-none]="this._libraryService.loading$ | async">
         <a
           routerLink="/library"
-          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
-          [class.pointer-events-none]="this._libraryService.loading$ | async"
-          [class.opacity-40]="this._libraryService.loading$ | async"
-          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
-          ><i-lucide name="Library" size="18"></i-lucide>Library</a
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
         >
-      </li>
-      <li
-        class="pt-2 pb-2"
-        [class.menu-disabled]="this._libraryService.loading$ | async"
-      >
+          <i-lucide name="library" size="19"></i-lucide>
+          <span>Library</span>
+        </a>
         <a
           routerLink="/invalid-files"
-          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
-          [class.pointer-events-none]="this._libraryService.loading$ | async"
-          [class.opacity-40]="this._libraryService.loading$ | async"
-          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
-          ><i-lucide name="bug" size="18"></i-lucide>Invalid Files
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
+        >
+          <i-lucide name="triangle-alert" size="19"></i-lucide>
+          <span>Invalid Files</span>
           @if((this._libraryService.totalInvalidFiles$ | async)) {
-          <span class="badge badge-xs">{{
+          <span class="badge badge-sm badge-warning ml-auto font-semibold">{{
             (this._libraryService.totalInvalidFiles$ | async) === 99
               ? "99+"
               : (this._libraryService.totalInvalidFiles$ | async)
           }}</span>
-          }</a
-        >
-      </li>
-      <li
-        class="pt-2 pb-2"
-        [class.menu-disabled]="this._libraryService.loading$ | async"
-      >
+          }
+        </a>
         <a
           routerLink="/import"
-          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
-          [class.pointer-events-none]="this._libraryService.loading$ | async"
-          [class.opacity-40]="this._libraryService.loading$ | async"
-          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
-          ><i-lucide name="disc-3" size="18"></i-lucide>Import Games</a
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
         >
-      </li>
-      <li
-        class="pt-2 pb-2 border-t border-base-300"
-        [class.menu-disabled]="this._libraryService.loading$ | async"
-      >
+          <i-lucide name="disc-3" size="19"></i-lucide>
+          <span>Import Games</span>
+        </a>
+
+        <div class="accent-line mx-4 my-3 h-px opacity-60"></div>
+
         <a
           routerLink="/logs"
-          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
-          [class.pointer-events-none]="this._libraryService.loading$ | async"
-          [class.opacity-40]="this._libraryService.loading$ | async"
-          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
-          ><i-lucide name="Code" size="18"></i-lucide>Logs</a
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
         >
-      </li>
-      <li
-        class="pt-2 pb-2"
-        [class.menu-disabled]="this._libraryService.loading$ | async"
-      >
+          <i-lucide name="terminal" size="19"></i-lucide>
+          <span>Logs</span>
+        </a>
         <a
           routerLink="/info"
-          [attr.tabindex]="(this._libraryService.loading$ | async) ? -1 : null"
-          [class.pointer-events-none]="this._libraryService.loading$ | async"
-          [class.opacity-40]="this._libraryService.loading$ | async"
-          [class.cursor-not-allowed]="this._libraryService.loading$ | async"
-          ><i-lucide name="info" size="18"></i-lucide>About</a
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
         >
-      </li>
-    </ul>
+          <i-lucide name="info" size="19"></i-lucide>
+          <span>About</span>
+        </a>
+      </nav>
+
+      <!-- Mount control lives at the foot of the rail. -->
+      <div class="border-t border-base-content/10 p-3">
+        @if(this._libraryService.hasCurrentDirectory$ | async) {
+        <div class="mb-2 flex items-center gap-2 px-1">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-success opacity-60"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+          </span>
+          <span class="truncate font-mono text-[0.68rem] text-base-content/55" [title]="this._libraryService.currentDirectory$ | async">{{
+            this._libraryService.currentDirectory$ | async
+          }}</span>
+        </div>
+        <button
+          class="btn btn-sm btn-block btn-outline btn-error"
+          [disabled]="this._libraryService.loading$ | async"
+          (click)="this._libraryService.disconnectCurrentDirectory()"
+        >
+          @if(this._libraryService.loading$ | async) {
+          <span class="loading loading-spinner loading-xs"></span>
+          } @else {
+          <i-lucide name="unplug" size="16"></i-lucide>
+          } Unmount
+        </button>
+        } @else {
+        <button
+          class="btn btn-sm btn-block btn-primary"
+          [disabled]="this._libraryService.loading$ | async"
+          (click)="this._libraryService.openAskDirectory()"
+        >
+          @if(this._libraryService.loading$ | async) {
+          <span class="loading loading-spinner loading-xs"></span>
+          } @else {
+          <i-lucide name="folder-open" size="16"></i-lucide>
+          } Mount Directory
+        </button>
+        }
+      </div>
+    </aside>
+
+    <!-- ── Routed content ──────────────────────────────────────── -->
+    <main class="min-w-0 flex-1 overflow-hidden">
+      <router-outlet></router-outlet>
+    </main>
   </div>
-  <div class="main-content w-full h-full p-4">
-    <router-outlet></router-outlet>
-  </div>
-</div>
-<div class="navbar bg-base-200 shadow-sm fixed bottom-0 left-0 right-0">
-  @if(this._libraryService.hasCurrentDirectory$ | async) {
-  <div class="flex-1 px-4">
-    <button
-      class="btn btn-error mr-2"
-      [disabled]="this._libraryService.loading$ | async"
-      (click)="this._libraryService.disconnectCurrentDirectory()"
-    >
+
+  <!-- ── Status bar ────────────────────────────────────────────── -->
+  <footer class="status-bar glass-strong flex h-9 items-center gap-4 px-4 text-xs">
+    <div class="flex items-center gap-2">
       @if(this._libraryService.loading$ | async) {
-      <span class="loading loading-spinner"></span>
-      } @else {
-      <i-lucide name="unplug" size="18"></i-lucide>
-      } Unmount Directory
-    </button>
-    <span class="font-mono text-gray-600 text-sm">{{
-      this._libraryService.currentDirectory$ | async
-    }}</span>
-  </div>
-  <div class="flex px-4 flex space-x-6">
-    <div class="pr-4 border-r border-gray-400">
-      <span class="font-mono text-gray-500">{{
-        this._libraryService.currentAction$ | async
+      <span class="loading loading-spinner loading-xs text-accent"></span>
+      <span class="font-mono text-accent">{{
+        (this._libraryService.currentAction$ | async) || "Working…"
       }}</span>
-    </div>
-  </div>
-  } @else {
-  <div class="flex-1 px-4 pl-0">
-    <button
-      class="btn btn-primary mr-2"
-      [disabled]="this._libraryService.loading$ | async"
-      (click)="this._libraryService.openAskDirectory()"
-    >
-      @if(this._libraryService.loading$ | async) {
-      <span class="loading loading-spinner"></span>
       } @else {
-      <i-lucide name="folder" size="18"></i-lucide>
-      } Mount Directory</button
-    ><span class="text-gray-300 text-sm">No directory mounted</span>
-  </div>
-  } @if(this._libraryService.loading$ | async) {
-  <progress class="progress w-20"></progress>} @else {
-  <progress class="progress w-20" value="0" max="100"></progress>
-  }
+      <i-lucide name="circle-check" size="13" class="text-success"></i-lucide>
+      <span class="font-mono text-base-content/50">Idle</span>
+      }
+    </div>
+
+    <div class="ml-auto flex items-center gap-4 text-base-content/45">
+      @if(this._libraryService.hasCurrentDirectory$ | async) {
+      <span class="font-mono">{{ this._libraryService.librarySizeGb$ | async }} GB</span>
+      <span class="opacity-40">·</span>
+      }
+      <span class="font-display tracking-wider text-base-content/35">OrbitOPL v{{ version }}</span>
+    </div>
+  </footer>
 </div>

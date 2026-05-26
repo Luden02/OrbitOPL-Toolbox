@@ -3,13 +3,12 @@ import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
 import { LucideAngularModule } from 'lucide-angular';
-import { SlicePipe } from '@angular/common';
 
 export type GamecardViewMode = 'grid' | 'list';
 
 @Component({
   selector: 'app-gamecard',
-  imports: [LucideAngularModule, SlicePipe],
+  imports: [LucideAngularModule],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })

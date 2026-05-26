@@ -1,11 +1,12 @@
 @if(viewMode === 'list') {
-<div class="game-row bg-base-100 shadow-sm">
+<!-- ── List row ──────────────────────────────────────────────── -->
+<div class="game-row row-item">
   <figure class="row-art">
     @if(displayArt) {
-    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="icon-art" />
-    } @else{
+    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="" />
+    } @else {
     <div class="row-no-art">
-      <i-lucide name="image-off" size="20"></i-lucide>
+      <i-lucide name="image-off" size="18"></i-lucide>
     </div>
     }
   </figure>
@@ -13,92 +14,80 @@
     {{ game?.title || game?.gameId }}
   </div>
   <span class="row-meta font-mono">{{ game?.gameId }}</span>
-  <span class="row-meta font-mono">{{ game?.region }}</span>
+  <span class="chip chip-region font-mono">{{ game?.region }}</span>
   <span class="row-meta font-mono">{{ game?.size }}</span>
-  <span class="row-meta font-mono">{{ game?.format || game?.extension }}</span>
-  @if(game?.system === 'PS1') {
-  <span class="badge badge-sm badge-accent">PS1</span>
-  } @else {
-  <span class="badge-placeholder"></span>
-  }
+  <span class="chip font-mono">{{ game?.format || game?.extension }}</span>
   <div class="dropdown dropdown-end row-actions">
-    <div tabindex="0" role="button" class="btn btn-sm btn-ghost">
-      <i-lucide name="ellipsis"></i-lucide>
+    <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
+      <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
     </div>
     <ul
       tabindex="-1"
-      class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+      class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
     >
       <li>
-        <a (click)="confirmDelete()"
-          ><i-lucide name="trash" [size]="16"></i-lucide>Delete</a
+        <a (click)="fetchArtwork()"
+          ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
         >
       </li>
       <li>
-        <a (click)="fetchArtwork()"
-          ><i-lucide name="download" [size]="16"></i-lucide>Fetch Artwork</a
+        <a class="text-error" (click)="confirmDelete()"
+          ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
         >
       </li>
     </ul>
   </div>
 </div>
 } @else {
-<div class="card card-side bg-base-100 shadow-sm">
-  <figure class="cover-art">
+<!-- ── Grid poster ───────────────────────────────────────────── -->
+<div class="tile poster">
+  <div class="poster-art">
     @if(displayArt) {
-    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="cover-art" />
-    } @else{
-    <div class="cover-no-art">
-      <i-lucide name="image-off" size="48"></i-lucide>
+    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="cover art" />
+    } @else {
+    <div class="poster-no-art">
+      <i-lucide name="image-off" size="40"></i-lucide>
+      <span class="font-mono text-xs">{{ game?.gameId }}</span>
     </div>
     }
-  </figure>
-  <div class="card-body gap-1 p-4">
-    @if(game && game.title){
-    <h2 class="card-title text-base">
-      {{
-        game.title && game.title.length > 25
-          ? (game.title | slice : 0 : 25) + "..."
-          : game.title
-      }}
-    </h2>
-    }
-    <span class="font-mono"
-      ><span class="font-bold">GameID:</span> {{ game?.gameId }}</span
-    >
-    <span class="font-mono"
-      ><span class="font-bold">Region:</span> {{ game?.region }}</span
-    >
-    <span class="font-mono"
-      ><span class="font-bold">Size:</span> {{ game?.size }}</span
-    >
-    <span class="font-mono"
-      ><span class="font-bold">Format:</span> {{ game?.format || game?.extension }}</span
-    >
-    @if(game?.system === 'PS1') {
-    <span class="badge badge-xs badge-accent mt-auto w-fit">PS1</span>
-    }
 
-    <div class="card-actions justify-end mt-auto">
-      <div class="dropdown dropdown-top dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-sm btn-square">
-          <i-lucide name="ellipsis"></i-lucide>
-        </div>
-        <ul
-          tabindex="-1"
-          class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-        >
-          <li>
-            <a (click)="confirmDelete()"
-              ><i-lucide name="trash" [size]="16"></i-lucide>Delete</a
-            >
-          </li>
-          <li>
-            <a (click)="fetchArtwork()"
-              ><i-lucide name="download" [size]="16"></i-lucide>Fetch Artwork</a
-            >
-          </li>
-        </ul>
+    <!-- top overlays -->
+    <span
+      class="poster-system"
+      [class.is-ps1]="game?.system === 'PS1'"
+      >{{ game?.system === "PS1" ? "PS1" : "PS2" }}</span
+    >
+
+    <div class="dropdown dropdown-end poster-menu">
+      <div tabindex="0" role="button" class="btn btn-xs btn-square glass-strong">
+        <i-lucide name="ellipsis" size="15"></i-lucide>
+      </div>
+      <ul
+        tabindex="-1"
+        class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
+      >
+        <li>
+          <a (click)="fetchArtwork()"
+            ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
+          >
+        </li>
+        <li>
+          <a class="text-error" (click)="confirmDelete()"
+            ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <!-- bottom gradient + title -->
+    <div class="poster-overlay">
+      <div class="poster-title" [title]="game?.title || game?.gameId || ''">
+        {{ game?.title || game?.gameId }}
+      </div>
+      <div class="poster-meta">
+        <span class="chip chip-region font-mono">{{ game?.region }}</span>
+        <span class="chip font-mono">{{ game?.format || game?.extension }}</span>
+        <span class="poster-size font-mono">{{ game?.size }}</span>
       </div>
     </div>
   </div>

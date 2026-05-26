@@ -1,86 +1,164 @@
-<div class="main-section">
-  <div
-    class="header h-15 flex items-center justify-between px-4 border-b border-base-300"
-  >
-    <div class="text-4xl">Library</div>
+<div class="page flex h-full flex-col fade-in">
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header class="page-header glass flex items-center justify-between gap-4 px-6">
+    <div class="flex items-center gap-3">
+      <i-lucide name="library" size="26" class="text-accent"></i-lucide>
+      <div>
+        <h1 class="section-title text-2xl">Library</h1>
+        <p class="text-xs text-base-content/45">
+          {{ totalCount$ | async }} games mounted
+        </p>
+      </div>
+    </div>
+
     <div class="flex items-center gap-2">
+      <!-- Search -->
+      <label class="input input-sm w-64 bg-base-100/60">
+        <i-lucide name="search" size="16" class="text-base-content/40"></i-lucide>
+        <input
+          type="text"
+          placeholder="Search games…"
+          [value]="searchTerm"
+          (input)="setSearch($any($event.target).value)"
+        />
+        @if(searchTerm) {
+        <button class="opacity-60 hover:opacity-100" (click)="clearSearch()">
+          <i-lucide name="x" size="15"></i-lucide>
+        </button>
+        }
+      </label>
+
+      <select
+        class="select select-sm w-40 bg-base-100/60"
+        [value]="sortMode"
+        (change)="setSortMode($any($event.target).value)"
+      >
+        <option value="title-asc">Name (A–Z)</option>
+        <option value="title-desc">Name (Z–A)</option>
+        <option value="gameId-asc">Game ID (A–Z)</option>
+        <option value="gameId-desc">Game ID (Z–A)</option>
+      </select>
+
+      <div class="join">
+        <button
+          class="btn btn-sm join-item"
+          [class.btn-primary]="viewMode === 'grid'"
+          title="Grid view"
+          (click)="viewMode = 'grid'"
+        >
+          <i-lucide name="layout-grid" size="16"></i-lucide>
+        </button>
+        <button
+          class="btn btn-sm join-item"
+          [class.btn-primary]="viewMode === 'list'"
+          title="List view"
+          (click)="viewMode = 'list'"
+        >
+          <i-lucide name="list" size="16"></i-lucide>
+        </button>
+      </div>
+
       <button
         type="button"
+        class="btn btn-sm"
         [disabled]="!(this._libraryService.hasCurrentDirectory$ | async)"
-        class="btn"
+        title="Refresh library"
         (click)="this._libraryService.refreshGamesFiles()"
       >
-        <i-lucide name="refresh-cw" size="18"></i-lucide>Refresh
+        <i-lucide name="refresh-cw" size="16"></i-lucide>
       </button>
-      <button
-        type="button"
-        class="btn"
-        [attr.aria-pressed]="viewMode === 'list'"
-        [title]="viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'"
-        (click)="toggleViewMode()"
-      >
-        <i-lucide
-          [name]="viewMode === 'grid' ? 'list' : 'layout-grid'"
-          size="18"
-        ></i-lucide
-        >{{ viewMode === "grid" ? "List View" : "Grid View" }}
-      </button>
-      <label class="select select-bordered w-56">
-        <span class="label">Sort</span>
-        <select #sortSelect [value]="sortMode" (change)="setSortMode(sortSelect.value)">
-          <option value="title-asc">Game Name (A-Z)</option>
-          <option value="title-desc">Game Name (Z-A)</option>
-          <option value="gameId-asc">Game ID (A-Z)</option>
-          <option value="gameId-desc">Game ID (Z-A)</option>
-        </select>
-      </label>
+
       @if(this._libraryService.hasCurrentDirectory$ | async) {
       <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn">
-          <i-lucide name="ellipsis"></i-lucide>
+        <div tabindex="0" role="button" class="btn btn-sm btn-square">
+          <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
         </div>
         <ul
           tabindex="-1"
-          class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+          class="dropdown-content menu glass-strong rounded-box z-10 mt-1 w-60 p-2 shadow-xl"
         >
           <li>
-            <a (click)="this._libraryService.downloadAllArt()"
-              ><i-lucide name="download" [size]="16"></i-lucide>Download Artwork
-              for All Games</a
-            >
+            <a (click)="this._libraryService.downloadAllArt()">
+              <i-lucide name="image-down" size="16"></i-lucide>Download artwork for all games
+            </a>
           </li>
         </ul>
       </div>
       }
     </div>
-  </div>
-  <div role="tablist" class="tabs tabs-border px-4 pt-2">
-    <a
-      role="tab"
-      class="tab"
-      [class.tab-active]="isActive('PS2')"
+  </header>
+
+  <!-- ── System tabs ─────────────────────────────────────────── -->
+  <div class="flex items-center gap-2 px-6 pt-4">
+    <button
+      class="seg-tab"
+      [class.active]="isActive('PS2')"
       (click)="setTab('PS2')"
-      >PS2 <span class="badge badge-sm ml-2">{{ ps2Count$ | async }}</span></a
     >
-    <a
-      role="tab"
-      class="tab"
-      [class.tab-active]="isActive('PS1')"
+      PlayStation 2
+      <span class="seg-count">{{ ps2Count$ | async }}</span>
+    </button>
+    <button
+      class="seg-tab"
+      [class.active]="isActive('PS1')"
       (click)="setTab('PS1')"
-      >PS1 <span class="badge badge-sm ml-2">{{ ps1Count$ | async }}</span></a
     >
+      PlayStation 1
+      <span class="seg-count">{{ ps1Count$ | async }}</span>
+    </button>
   </div>
-  <div
-    class="library-body p-4 overflow-y-scroll"
-    [class.library-grid]="viewMode === 'grid'"
-    [class.library-list]="viewMode === 'list'"
-  >
-    @for (item of visibleGames$ | async; track item.gameId) {
-    <app-gamecard
-      [game]="item"
-      [viewMode]="viewMode"
-      [class.list-card]="viewMode === 'list'"
-    ></app-gamecard>
+
+  <!-- ── Body ────────────────────────────────────────────────── -->
+  <div class="library-body flex-1 overflow-y-auto px-6 py-5">
+    @if(!(this._libraryService.hasCurrentDirectory$ | async)) {
+    <!-- Nothing mounted -->
+    <div class="empty-state">
+      <div class="empty-orb">
+        <i-lucide name="folder-open" size="44"></i-lucide>
+      </div>
+      <h2 class="font-display mt-5 text-xl tracking-wide">No directory mounted</h2>
+      <p class="mt-1 max-w-sm text-sm text-base-content/50">
+        Mount your OPL drive or folder to browse and manage your PlayStation
+        game collection.
+      </p>
+      <button
+        class="btn btn-primary mt-5"
+        [disabled]="this._libraryService.loading$ | async"
+        (click)="this._libraryService.openAskDirectory()"
+      >
+        <i-lucide name="folder-open" size="18"></i-lucide>Mount Directory
+      </button>
+    </div>
+    } @else if((visibleGames$ | async)?.length === 0) {
+    <!-- Mounted but empty / no matches -->
+    <div class="empty-state">
+      <div class="empty-orb">
+        <i-lucide [name]="searchTerm ? 'search-x' : 'gamepad-2'" size="44"></i-lucide>
+      </div>
+      <h2 class="font-display mt-5 text-xl tracking-wide">
+        {{ searchTerm ? "No matching games" : "No games here yet" }}
+      </h2>
+      <p class="mt-1 max-w-sm text-sm text-base-content/50">
+        {{
+          searchTerm
+            ? "Try a different search term or switch systems."
+            : "Import a game to get started, or switch to the other system."
+        }}
+      </p>
+    </div>
+    } @else {
+    <div
+      [class.library-grid]="viewMode === 'grid'"
+      [class.library-list]="viewMode === 'list'"
+    >
+      @for (item of visibleGames$ | async; track item.gameId) {
+      <app-gamecard
+        [game]="item"
+        [viewMode]="viewMode"
+        [class.list-card]="viewMode === 'list'"
+      ></app-gamecard>
+      }
+    </div>
     }
   </div>
 </div>

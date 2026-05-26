@@ -1,17 +1,58 @@
-.headline {
-  font-size: var(--cds-global-typography-display-font-size);
-  font-weight: var(--cds-global-typography-display-font-weight);
-  line-height: var(--cds-global-typography-display-line-height);
-  letter-spacing: var(--cds-global-typography-display-letter-spacing);
+:host {
+  display: block;
+  height: 100%;
 }
 
-.action-row {
+/* Step number badge */
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: oklch(98% 0.01 250);
+  background: oklch(64% 0.19 252 / 0.85);
+  box-shadow: 0 0 12px -3px oklch(64% 0.19 252 / 0.9);
+}
+
+/* Disc-type selector cards */
+.type-card {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--cds-alias-object-border-color);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem 0.5rem;
+  border-radius: 0.7rem;
+  background: oklch(24% 0.04 258 / 0.5);
+  border: 1px solid oklch(60% 0.08 250 / 0.14);
+  color: oklch(85% 0.03 250 / 0.8);
+  transition: all 0.16s ease;
+  cursor: pointer;
 }
 
-.content {
+.type-card:hover:not(:disabled) {
+  border-color: oklch(82% 0.13 212 / 0.4);
+  color: oklch(95% 0.02 250);
+}
+
+.type-card.active {
+  background: oklch(64% 0.19 252 / 0.16);
+  border-color: oklch(70% 0.14 240 / 0.5);
+  color: oklch(98% 0.02 250);
+  box-shadow: 0 0 18px -6px oklch(64% 0.19 252 / 0.8);
+}
+
+.type-card:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.type-sub {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.68rem;
+  color: oklch(85% 0.02 250 / 0.45);
 }

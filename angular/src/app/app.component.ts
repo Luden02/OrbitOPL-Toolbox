@@ -1,17 +1,17 @@
 import { Component } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LogsService } from './shared/services/logs.service';
 import PackageInfo from '../../../package.json';
 import { LibraryService } from './shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
-import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     AsyncPipe,
     LucideAngularModule,
   ],
@@ -20,6 +20,7 @@ import { lastValueFrom } from 'rxjs';
 })
 export class AppComponent {
   public currentDirectory = 'None';
+  public readonly version = PackageInfo.version;
   constructor(
     private readonly _logger: LogsService,
     public readonly _libraryService: LibraryService

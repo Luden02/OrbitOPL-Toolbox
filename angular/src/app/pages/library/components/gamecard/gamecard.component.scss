@@ -1,75 +1,173 @@
 :host {
   display: block;
-  max-width: 480px;
 }
 
 :host(.list-card) {
   max-width: none;
 }
 
-.card {
+/* ── Grid poster ────────────────────────────────────────────── */
+.poster {
   height: 100%;
+}
+
+.poster-art {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  width: 100%;
   overflow: hidden;
 }
 
-.card-body {
-  min-width: 0;
-}
-
-.card-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cover-art {
-  width: 132px;
-  min-width: 132px;
-  height: 100%;
-  overflow: hidden;
-  border-right: 1px solid var(--fallback-bc, oklch(var(--bc) / 0.1));
-}
-
-.cover-art img {
+.poster-art img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
 }
 
-.cover-no-art {
+.tile:hover .poster-art img {
+  transform: scale(1.05);
+}
+
+.poster-no-art {
   width: 100%;
   height: 100%;
-  min-height: 192px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--fallback-b2, oklch(var(--b2)));
-  color: var(--fallback-bc, oklch(var(--bc) / 0.35));
+  gap: 0.5rem;
+  background: linear-gradient(
+    160deg,
+    oklch(28% 0.05 258),
+    oklch(18% 0.04 262)
+  );
+  color: oklch(70% 0.06 240 / 0.45);
 }
 
+/* Floating system tag */
+.poster-system {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.4rem;
+  font-family: "Chakra Petch", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: oklch(98% 0.01 250);
+  background: oklch(64% 0.19 252 / 0.85);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px -2px oklch(64% 0.19 252 / 0.8);
+}
+
+.poster-system.is-ps1 {
+  background: oklch(60% 0.17 287 / 0.85);
+  box-shadow: 0 2px 8px -2px oklch(60% 0.17 287 / 0.8);
+}
+
+/* Kebab menu — fades in on hover */
+.poster-menu {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.tile:hover .poster-menu,
+.poster-menu:focus-within {
+  opacity: 1;
+}
+
+.poster-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  padding: 1.75rem 0.7rem 0.6rem;
+  background: linear-gradient(
+    to top,
+    oklch(12% 0.04 262 / 0.96) 10%,
+    oklch(12% 0.04 262 / 0.7) 45%,
+    transparent
+  );
+}
+
+.poster-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  color: oklch(97% 0.02 250);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.poster-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.poster-size {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: oklch(85% 0.02 250 / 0.55);
+}
+
+/* ── Chips (shared by grid + list) ──────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: oklch(50% 0.06 250 / 0.3);
+  color: oklch(88% 0.03 250 / 0.85);
+  border: 1px solid oklch(60% 0.08 250 / 0.18);
+  white-space: nowrap;
+}
+
+.chip-region {
+  background: oklch(82% 0.13 212 / 0.16);
+  color: oklch(85% 0.1 212);
+  border-color: oklch(82% 0.13 212 / 0.3);
+}
+
+/* ── List row ───────────────────────────────────────────────── */
 .game-row {
   display: grid;
-  grid-template-columns: 44px minmax(12rem, 1fr) 11ch 8ch 8ch 8ch 44px 36px;
+  grid-template-columns: 44px minmax(12rem, 1fr) 11ch 8ch 8ch 8ch 40px;
   align-items: center;
   gap: 0.75rem;
   min-height: 52px;
   padding: 0.375rem 0.75rem;
-  border-radius: 8px;
   overflow: visible;
 }
 
 .row-art {
   width: 40px;
   height: 40px;
+  border-radius: 0.4rem;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .row-art img {
-  max-width: 40px;
-  max-height: 40px;
-  object-fit: contain;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
 }
 
 .row-no-art {
@@ -78,9 +176,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  background: var(--fallback-b2, oklch(var(--b2)));
-  color: var(--fallback-bc, oklch(var(--bc) / 0.35));
+  border-radius: 0.4rem;
+  background: oklch(30% 0.05 258 / 0.6);
+  color: oklch(70% 0.06 240 / 0.45);
 }
 
 .row-title,
@@ -93,15 +191,12 @@
 
 .row-title {
   font-weight: 600;
+  color: oklch(95% 0.02 250);
 }
 
 .row-meta {
   font-size: 0.75rem;
-  opacity: 0.75;
-}
-
-.badge-placeholder {
-  width: 2.5rem;
+  color: oklch(85% 0.02 250 / 0.6);
 }
 
 .row-actions {
@@ -110,12 +205,11 @@
 
 @media (max-width: 960px) {
   .game-row {
-    grid-template-columns: 44px minmax(8rem, 1fr) 11ch 36px;
+    grid-template-columns: 44px minmax(8rem, 1fr) 11ch 40px;
   }
 
-  .row-meta:nth-of-type(n + 2),
-  .badge,
-  .badge-placeholder {
+  .game-row .row-meta:nth-of-type(n + 2),
+  .game-row .chip:not(.chip-region) {
     display: none;
   }
 }

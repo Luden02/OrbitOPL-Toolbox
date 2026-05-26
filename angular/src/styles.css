@@ -1,6 +1,60 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @plugin "daisyui" {
-  themes: lofi --default;
+  themes: false;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   OrbitOPL — "PS2 BIOS" theme
+   Deep-navy dashboard backdrop with electric-blue / cyan accents,
+   inspired by the PlayStation 2 system browser and Open PS2 Loader.
+   ─────────────────────────────────────────────────────────────── */
+@plugin "daisyui/theme" {
+  name: "ps2";
+  default: true;
+  prefersdark: false;
+  color-scheme: dark;
+
+  /* Surfaces: base-100 = darkest panel, lighter as it stacks up */
+  --color-base-100: oklch(22% 0.04 258);
+  --color-base-200: oklch(27% 0.045 258);
+  --color-base-300: oklch(34% 0.05 258);
+  --color-base-content: oklch(93% 0.025 250);
+
+  /* Electric PlayStation blue */
+  --color-primary: oklch(64% 0.19 252);
+  --color-primary-content: oklch(98% 0.01 252);
+
+  /* Indigo / violet secondary */
+  --color-secondary: oklch(60% 0.17 287);
+  --color-secondary-content: oklch(98% 0.01 287);
+
+  /* Cyan glow accent */
+  --color-accent: oklch(82% 0.13 212);
+  --color-accent-content: oklch(22% 0.05 240);
+
+  --color-neutral: oklch(30% 0.04 258);
+  --color-neutral-content: oklch(92% 0.02 250);
+
+  --color-info: oklch(74% 0.13 230);
+  --color-info-content: oklch(20% 0.04 240);
+  --color-success: oklch(72% 0.16 155);
+  --color-success-content: oklch(18% 0.04 155);
+  --color-warning: oklch(82% 0.15 82);
+  --color-warning-content: oklch(22% 0.05 82);
+  --color-error: oklch(64% 0.22 22);
+  --color-error-content: oklch(98% 0.01 22);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.85rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  --border: 1px;
+
+  --depth: 1;
+  --noise: 0;
 }
