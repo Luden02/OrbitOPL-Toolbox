@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, SimpleChanges } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
