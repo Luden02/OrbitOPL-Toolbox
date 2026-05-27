@@ -47,6 +47,19 @@ declare interface Window {
       callback: (progress: { percent: number; stage: string }) => void
     ) => void;
     removeAllZsoCompressProgressListeners: () => void;
+    readGameCfg: (
+      oplRoot: string,
+      gameId: string
+    ) => Promise<{
+      success: boolean;
+      entries: Record<string, string>;
+      message?: string;
+    }>;
+    writeGameCfg: (
+      oplRoot: string,
+      gameId: string,
+      entries: Record<string, string>
+    ) => Promise<{ success: boolean; message?: string }>;
     deleteGameAndRelatedFiles: (
       gamePath: string,
       artDir: string,

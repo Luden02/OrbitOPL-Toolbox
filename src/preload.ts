@@ -90,6 +90,13 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   removeAllZsoCompressProgressListeners: () => {
     ipcRenderer.removeAllListeners("zso-compress-progress");
   },
+  readGameCfg: (oplRoot: string, gameId: string) =>
+    ipcRenderer.invoke("read-game-cfg", oplRoot, gameId),
+  writeGameCfg: (
+    oplRoot: string,
+    gameId: string,
+    entries: Record<string, string>
+  ) => ipcRenderer.invoke("write-game-cfg", oplRoot, gameId, entries),
   deleteGameAndRelatedFiles: (
     gamePath: string,
     artDir: string,

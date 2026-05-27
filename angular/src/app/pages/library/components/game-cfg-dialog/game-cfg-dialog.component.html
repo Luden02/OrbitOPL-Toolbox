@@ -1,0 +1,87 @@
+<div class="cfg-backdrop" (click)="close()"></div>
+<div class="cfg-modal glass-strong" role="dialog">
+  <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
+    <i-lucide name="sliders-horizontal" size="18" class="text-accent"></i-lucide>
+    <div class="min-w-0">
+      <h2 class="truncate font-display text-sm font-semibold tracking-wide">
+        Game settings
+      </h2>
+      <p class="truncate font-mono text-[0.68rem] text-base-content/50">
+        {{ game.gameId }}
+      </p>
+    </div>
+    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()">
+      <i-lucide name="x" size="16"></i-lucide>
+    </button>
+  </div>
+
+  @if (loading) {
+  <div class="flex items-center justify-center py-12">
+    <span class="loading loading-spinner text-accent"></span>
+  </div>
+  } @else {
+  <div class="cfg-body flex flex-col gap-5 px-5 py-4">
+    <!-- Display title -->
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Display title override</legend>
+      <input
+        type="text"
+        class="input w-full"
+        [placeholder]="game.title || game.gameId"
+        [value]="title"
+        (input)="title = $any($event.target).value"
+      />
+      <span class="label text-xs"
+        >Shown in OPL instead of the filename. Leave blank to keep the
+        default.</span
+      >
+    </fieldset>
+
+    <!-- Compatibility modes -->
+    <div>
+      <span class="text-sm font-semibold">Compatibility modes</span>
+      <div class="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        @for (mode of compatModes; track mode.bit) {
+        <label
+          class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40"
+          [title]="mode.hint"
+        >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm checkbox-primary mt-0.5"
+            [checked]="compat[$index]"
+            (change)="compat[$index] = $any($event.target).checked"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">Mode {{ mode.bit + 1 }}: {{ mode.label }}</span>
+            <span class="block text-[0.68rem] text-base-content/50">{{ mode.hint }}</span>
+          </span>
+        </label>
+        }
+      </div>
+    </div>
+
+    @if (otherKeyCount > 0) {
+    <p class="flex items-center gap-2 text-xs text-base-content/45">
+      <i-lucide name="info" size="13"></i-lucide>
+      {{ otherKeyCount }} other OPL setting(s) in this file (e.g. DMA, VMC) will
+      be preserved.
+    </p>
+    }
+  </div>
+
+  <div class="flex justify-end gap-2 border-t border-base-content/10 px-5 py-3">
+    <button class="btn btn-ghost btn-sm" (click)="close()" [disabled]="saving">
+      Cancel
+    </button>
+    <button class="btn btn-primary btn-sm" (click)="save()" [disabled]="saving">
+      @if (saving) {
+      <span class="loading loading-spinner loading-xs"></span>
+      } @else {
+      <i-lucide name="save" size="15"></i-lucide>
+      }
+      Save
+    </button>
+  </div>
+  }
+</div>

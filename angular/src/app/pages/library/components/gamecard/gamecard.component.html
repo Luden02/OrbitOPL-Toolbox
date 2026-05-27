@@ -30,6 +30,11 @@
           ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
         >
       </li>
+      <li>
+        <a (click)="openCfg()"
+          ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
+        >
+      </li>
       @if(canCompressZso) {
       <li>
         <a (click)="convertToZso()"
@@ -78,6 +83,11 @@
             ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
           >
         </li>
+        <li>
+          <a (click)="openCfg()"
+            ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
+          >
+        </li>
         @if(canCompressZso) {
         <li>
           <a (click)="convertToZso()"
@@ -106,4 +116,8 @@
     </div>
   </div>
 </div>
+}
+
+@if(showCfg && game) {
+<app-game-cfg-dialog [game]="game" (closed)="showCfg = false"></app-game-cfg-dialog>
 }

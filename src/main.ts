@@ -33,6 +33,7 @@ import {
 } from "./settings.service";
 import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
+import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -313,6 +314,20 @@ ipcMain.handle(
     return compressIsoToZso(isoPath, zsoPath, deleteOriginal, (percent, stage) => {
       event.sender.send("zso-compress-progress", { percent, stage });
     });
+  }
+);
+
+ipcMain.handle(
+  "read-game-cfg",
+  async (_event, oplRoot: string, gameId: string) => {
+    return readGameCfg(oplRoot, gameId);
+  }
+);
+
+ipcMain.handle(
+  "write-game-cfg",
+  async (_event, oplRoot: string, gameId: string, entries: GameCfg) => {
+    return writeGameCfg(oplRoot, gameId, entries);
   }
 );
 

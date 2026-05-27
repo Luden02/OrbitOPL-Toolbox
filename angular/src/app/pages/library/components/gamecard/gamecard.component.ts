@@ -4,12 +4,13 @@ import { Game, gameArt } from '../../../../shared/types/game.type';
 import { LibraryService } from '../../../../shared/services/library.service';
 import { JobsService } from '../../../../shared/services/jobs.service';
 import { LucideAngularModule } from 'lucide-angular';
+import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
 
 export type GamecardViewMode = 'grid' | 'list';
 
 @Component({
   selector: 'app-gamecard',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, GameCfgDialogComponent],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })
@@ -33,6 +34,11 @@ export class GamecardComponent implements OnInit, OnChanges {
   }
 
   public displayArt: gameArt | undefined;
+  public showCfg = false;
+
+  openCfg() {
+    if (this.game) this.showCfg = true;
+  }
 
   ngOnInit() {
     this.updateDisplayArt();
