@@ -30,6 +30,13 @@
           ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
         >
       </li>
+      @if(canCompressZso) {
+      <li>
+        <a (click)="convertToZso()"
+          ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
+        >
+      </li>
+      }
       <li>
         <a class="text-error" (click)="confirmDelete()"
           ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
@@ -71,6 +78,13 @@
             ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
           >
         </li>
+        @if(canCompressZso) {
+        <li>
+          <a (click)="convertToZso()"
+            ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
+          >
+        </li>
+        }
         <li>
           <a class="text-error" (click)="confirmDelete()"
             ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a

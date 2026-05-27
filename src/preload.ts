@@ -69,6 +69,27 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   removeAllPs1ImportProgressListeners: () => {
     ipcRenderer.removeAllListeners("ps1-import-progress");
   },
+  compressIsoToZso: (
+    isoPath: string,
+    zsoPath: string,
+    deleteOriginal: boolean
+  ) =>
+    ipcRenderer.invoke(
+      "compress-iso-to-zso",
+      isoPath,
+      zsoPath,
+      deleteOriginal
+    ),
+  onZsoCompressProgress: (
+    callback: (progress: { percent: number; stage: string }) => void
+  ) => {
+    ipcRenderer.on("zso-compress-progress", (_event, progress) =>
+      callback(progress)
+    );
+  },
+  removeAllZsoCompressProgressListeners: () => {
+    ipcRenderer.removeAllListeners("zso-compress-progress");
+  },
   deleteGameAndRelatedFiles: (
     gamePath: string,
     artDir: string,

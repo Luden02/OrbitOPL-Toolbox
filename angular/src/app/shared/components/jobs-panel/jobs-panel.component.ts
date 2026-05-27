@@ -44,6 +44,8 @@ export class JobsPanelComponent implements OnDestroy {
         return 'PS2 CD';
       case 'ps1':
         return 'PS1';
+      case 'zso':
+        return 'ZSO';
       default:
         return 'PS2 DVD';
     }

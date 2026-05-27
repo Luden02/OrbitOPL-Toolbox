@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/cor
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
+import { JobsService } from '../../../../shared/services/jobs.service';
 import { LucideAngularModule } from 'lucide-angular';
 
 export type GamecardViewMode = 'grid' | 'list';
@@ -16,7 +17,20 @@ export class GamecardComponent implements OnInit, OnChanges {
   @Input() game: Game | undefined;
   @Input() viewMode: GamecardViewMode = 'grid';
 
-  constructor(public readonly _libraryService: LibraryService) {}
+  constructor(
+    public readonly _libraryService: LibraryService,
+    private readonly _jobs: JobsService
+  ) {}
+
+  /** Only PS2 ISO images can be compressed to ZSO. */
+  get canCompressZso(): boolean {
+    if (!this.game) return false;
+    const system = this.game.system ?? 'PS2';
+    const isIso =
+      this.game.format === 'ISO' ||
+      this.game.extension?.toLowerCase() === 'iso';
+    return system === 'PS2' && isIso;
+  }
 
   public displayArt: gameArt | undefined;
 
@@ -44,6 +58,26 @@ export class GamecardComponent implements OnInit, OnChanges {
   fetchArtwork() {
     if (!this.game) return;
     this._libraryService.downloadArtByGameId(this.game.gameId, this.game.system);
+  }
+
+  convertToZso() {
+    if (!this.game || !this.canCompressZso) return;
+    const confirmed = window.confirm(
+      `Compress "${this.game.title || this.game.gameId}" to ZSO?\n\n` +
+        `This creates a smaller .zso and removes the original .iso once it succeeds.`
+    );
+    if (!confirmed) return;
+    this._jobs.enqueue([
+      {
+        type: 'zso',
+        label: this.game.title || this.game.gameId || this.game.filename,
+        filePath: this.game.path,
+        gameId: this.game.gameId,
+        gameName: this.game.title || '',
+        downloadArtwork: false,
+        deleteOriginal: true,
+      },
+    ]);
   }
 
   confirmDelete() {

@@ -32,6 +32,7 @@ import {
   setSetting,
 } from "./settings.service";
 import { checkForUpdates } from "./update.service";
+import { compressIsoToZso } from "./zso.service";
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -298,6 +299,20 @@ ipcMain.handle(
         event.sender.send("ps1-import-progress", { percent, stage });
       }
     );
+  }
+);
+
+ipcMain.handle(
+  "compress-iso-to-zso",
+  async (
+    event,
+    isoPath: string,
+    zsoPath: string,
+    deleteOriginal: boolean
+  ) => {
+    return compressIsoToZso(isoPath, zsoPath, deleteOriginal, (percent, stage) => {
+      event.sender.send("zso-compress-progress", { percent, stage });
+    });
   }
 );
 

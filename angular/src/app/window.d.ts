@@ -38,6 +38,15 @@ declare interface Window {
       callback: (progress: { percent: number; stage: string }) => void
     ) => void;
     removeAllPs2CdImportProgressListeners: () => void;
+    compressIsoToZso: (
+      isoPath: string,
+      zsoPath: string,
+      deleteOriginal: boolean
+    ) => Promise<any>;
+    onZsoCompressProgress: (
+      callback: (progress: { percent: number; stage: string }) => void
+    ) => void;
+    removeAllZsoCompressProgressListeners: () => void;
     deleteGameAndRelatedFiles: (
       gamePath: string,
       artDir: string,

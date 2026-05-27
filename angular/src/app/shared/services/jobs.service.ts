@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable, map } from 'rxjs';
 import { LogsService } from './logs.service';
 import { LibraryService } from './library.service';
 
-export type ImportJobType = 'ps2-dvd' | 'ps2-cd' | 'ps1';
+export type ImportJobType = 'ps2-dvd' | 'ps2-cd' | 'ps1' | 'zso';
 export type JobStatus = 'queued' | 'running' | 'success' | 'error';
 
 export interface ImportJob {
@@ -17,6 +17,8 @@ export interface ImportJob {
   downloadArtwork: boolean;
   /** PS1 only: POPStarter device prefix (e.g. "XX." / "SB."). */
   elfPrefix?: string;
+  /** ZSO only: remove the source ISO once compression succeeds. */
+  deleteOriginal?: boolean;
   status: JobStatus;
   percent: number;
   stage: string;
@@ -168,9 +170,30 @@ export class JobsService {
         return this.runPs2CdJob(job, dirPath);
       case 'ps1':
         return this.runPs1Job(job, dirPath);
+      case 'zso':
+        return this.runZsoJob(job);
       case 'ps2-dvd':
       default:
         return this.runPs2DvdJob(job, dirPath);
+    }
+  }
+
+  private async runZsoJob(job: ImportJob) {
+    const zsoPath = job.filePath.replace(/\.iso$/i, '.zso');
+    window.libraryAPI.onZsoCompressProgress((progress) =>
+      this.patchJob(job.id, {
+        percent: progress.percent,
+        stage: progress.stage,
+      })
+    );
+    try {
+      return await window.libraryAPI.compressIsoToZso(
+        job.filePath,
+        zsoPath,
+        job.deleteOriginal ?? true
+      );
+    } finally {
+      window.libraryAPI.removeAllZsoCompressProgressListeners();
     }
   }
 
