@@ -11,6 +11,7 @@ interface StagedFile {
   gameName: string;
   detected: boolean;
   invalid: boolean;
+  message?: string;
 }
 
 @Component({
@@ -99,6 +100,7 @@ export class ImportComponent {
       ? this._libraryService.tryDeterminePs1GameIdFromHex(path)
       : this._libraryService.tryDetermineGameIdFromHex(path);
 
+    let message: string | undefined;
     try {
       const res: any = await detect;
       if (res?.success) {
@@ -111,8 +113,9 @@ export class ImportComponent {
           invalid: false,
         };
       }
-    } catch {
-      // fall through to invalid
+      message = res?.message;
+    } catch (err: any) {
+      message = err?.message;
     }
     return {
       path,
@@ -121,6 +124,7 @@ export class ImportComponent {
       gameName: '',
       detected: false,
       invalid: true,
+      message,
     };
   }
 

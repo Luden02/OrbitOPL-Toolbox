@@ -8,6 +8,7 @@ import {
   tryDeterminePs1GameIdFromHex,
   downloadArtByGameId,
   sanitizeGameFilename,
+  describeFileAccessError,
 } from "./library.service";
 
 const POPSTARTER_ELF_CANDIDATE_PATHS = [
@@ -163,7 +164,7 @@ export async function importPs1Game(
   } catch (err: any) {
     return {
       success: false,
-      message: err?.message || String(err),
+      message: describeFileAccessError(err),
     };
   }
 }

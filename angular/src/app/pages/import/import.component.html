@@ -183,7 +183,7 @@
 
             @if (file.invalid && !file.detected) {
             <p class="mt-1 text-xs text-warning">
-              Could not auto-detect — enter the Game ID and name manually.
+              {{ file.message || "Could not auto-detect — enter the Game ID and name manually." }}
             </p>
             }
 
