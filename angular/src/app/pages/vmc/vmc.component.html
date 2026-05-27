@@ -1,0 +1,103 @@
+<div class="page flex h-full flex-col fade-in">
+  <header class="page-header glass flex items-center gap-3 px-6">
+    <i-lucide name="hard-drive" size="26" class="text-accent"></i-lucide>
+    <div>
+      <h1 class="section-title text-2xl">Memory Cards</h1>
+      <p class="text-xs text-base-content/45">Virtual PS2 memory cards (VMC)</p>
+    </div>
+  </header>
+
+  @if (_library.hasCurrentDirectory$ | async) {
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    <div class="mx-auto flex max-w-3xl flex-col gap-5">
+      <!-- Create -->
+      <section class="glass rounded-box p-5">
+        <h2 class="mb-3 font-display text-sm font-semibold tracking-wide">
+          Create a card
+        </h2>
+        <div class="flex flex-wrap items-end gap-3">
+          <fieldset class="fieldset min-w-52 flex-1">
+            <legend class="fieldset-legend">Name</legend>
+            <input
+              type="text"
+              class="input w-full"
+              placeholder="shared_card"
+              [value]="newName"
+              (input)="newName = $any($event.target).value"
+            />
+          </fieldset>
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Size</legend>
+            <select
+              class="select"
+              [value]="newSize"
+              (change)="newSize = +$any($event.target).value"
+            >
+              @for (s of sizes; track s) {
+              <option [value]="s">{{ s }} MB</option>
+              }
+            </select>
+          </fieldset>
+          <button class="btn btn-primary" (click)="create()" [disabled]="creating">
+            @if (creating) {
+            <span class="loading loading-spinner loading-sm"></span>
+            } @else {
+            <i-lucide name="plus" size="18"></i-lucide>
+            }
+            Create
+          </button>
+        </div>
+        @if (error) {
+        <p class="mt-2 text-sm text-error">{{ error }}</p>
+        }
+        <p class="mt-2 flex items-center gap-2 text-xs text-base-content/45">
+          <i-lucide name="info" size="13"></i-lucide>
+          New cards are blank — OPL formats them automatically on first use.
+        </p>
+      </section>
+
+      <!-- List -->
+      <section class="glass rounded-box p-5">
+        <h2 class="mb-3 font-display text-sm font-semibold tracking-wide">
+          Existing cards
+        </h2>
+        @if ((_vmc.cards$ | async); as cards) {
+        @if (cards.length === 0) {
+        <div class="flex flex-col items-center gap-2 py-8 text-center text-base-content/40">
+          <i-lucide name="hard-drive" size="28"></i-lucide>
+          <p class="text-sm">No memory cards yet.</p>
+        </div>
+        } @else {
+        <div class="flex flex-col gap-2">
+          @for (card of cards; track card.name) {
+          <div class="flex items-center gap-3 rounded-md border border-base-content/10 bg-base-100/40 p-3">
+            <i-lucide name="hard-drive" size="18" class="text-accent"></i-lucide>
+            <span class="font-mono text-sm">{{ card.name }}</span>
+            <span class="badge badge-ghost badge-sm ml-2">{{ card.sizeMb }} MB</span>
+            <button
+              class="btn btn-ghost btn-xs btn-square ml-auto text-error"
+              (click)="confirmDelete(card.name)"
+              title="Delete"
+            >
+              <i-lucide name="trash-2" size="15"></i-lucide>
+            </button>
+          </div>
+          }
+        </div>
+        }
+        }
+      </section>
+    </div>
+  </div>
+  } @else {
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    <div class="empty-state">
+      <div class="empty-orb"><i-lucide name="folder-open" size="44"></i-lucide></div>
+      <h2 class="font-display mt-5 text-xl tracking-wide">No directory mounted</h2>
+      <p class="mt-1 max-w-sm text-sm text-base-content/50">
+        Mount a library directory to manage memory cards.
+      </p>
+    </div>
+  </div>
+  }
+</div>

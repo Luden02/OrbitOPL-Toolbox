@@ -70,6 +70,15 @@
           <i-lucide name="disc-3" size="19"></i-lucide>
           <span>Import Games</span>
         </a>
+        <a
+          routerLink="/memory-cards"
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
+        >
+          <i-lucide name="hard-drive" size="19"></i-lucide>
+          <span>Memory Cards</span>
+        </a>
 
         <div class="accent-line mx-4 my-3 h-px opacity-60"></div>
 

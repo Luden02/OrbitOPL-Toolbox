@@ -90,6 +90,11 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   removeAllZsoCompressProgressListeners: () => {
     ipcRenderer.removeAllListeners("zso-compress-progress");
   },
+  listVmc: (oplRoot: string) => ipcRenderer.invoke("list-vmc", oplRoot),
+  createVmc: (oplRoot: string, name: string, sizeMb: number) =>
+    ipcRenderer.invoke("create-vmc", oplRoot, name, sizeMb),
+  deleteVmc: (oplRoot: string, name: string) =>
+    ipcRenderer.invoke("delete-vmc", oplRoot, name),
   readGameCfg: (oplRoot: string, gameId: string) =>
     ipcRenderer.invoke("read-game-cfg", oplRoot, gameId),
   writeGameCfg: (

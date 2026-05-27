@@ -61,6 +61,43 @@
       </div>
     </div>
 
+    <!-- VMC slots -->
+    <div>
+      <span class="text-sm font-semibold">Memory cards (VMC)</span>
+      <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Slot 1</legend>
+          <select
+            class="select w-full"
+            [value]="vmc0"
+            (change)="vmc0 = $any($event.target).value"
+          >
+            <option value="">(none)</option>
+            @for (name of cardNames; track name) {
+            <option [value]="name">{{ name }}</option>
+            }
+          </select>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Slot 2</legend>
+          <select
+            class="select w-full"
+            [value]="vmc1"
+            (change)="vmc1 = $any($event.target).value"
+          >
+            <option value="">(none)</option>
+            @for (name of cardNames; track name) {
+            <option [value]="name">{{ name }}</option>
+            }
+          </select>
+        </fieldset>
+      </div>
+      <span class="label text-xs"
+        >Create cards on the Memory Cards page. Assigning one here writes it to
+        this game's config.</span
+      >
+    </div>
+
     @if (otherKeyCount > 0) {
     <p class="flex items-center gap-2 text-xs text-base-content/45">
       <i-lucide name="info" size="13"></i-lucide>

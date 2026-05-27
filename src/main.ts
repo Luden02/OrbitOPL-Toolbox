@@ -34,6 +34,7 @@ import {
 import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
+import { createVmc, deleteVmc, listVmc } from "./vmc.service";
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -330,6 +331,21 @@ ipcMain.handle(
     return writeGameCfg(oplRoot, gameId, entries);
   }
 );
+
+ipcMain.handle("list-vmc", async (_event, oplRoot: string) => {
+  return listVmc(oplRoot);
+});
+
+ipcMain.handle(
+  "create-vmc",
+  async (_event, oplRoot: string, name: string, sizeMb: number) => {
+    return createVmc(oplRoot, name, sizeMb);
+  }
+);
+
+ipcMain.handle("delete-vmc", async (_event, oplRoot: string, name: string) => {
+  return deleteVmc(oplRoot, name);
+});
 
 ipcMain.handle(
   "delete-game-and-related-files",

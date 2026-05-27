@@ -8,6 +8,8 @@ export type GameCfg = Record<string, string>;
 export const CFG_KEY_NAME = '#Name';
 export const CFG_KEY_LONGNAME = '#LongName';
 export const CFG_KEY_COMPAT = '$Compatibility';
+export const CFG_KEY_VMC0 = '$VMC_0';
+export const CFG_KEY_VMC1 = '$VMC_1';
 
 /** Compatibility modes; bit N (value 1<<N) maps to OPL "Mode N+1". */
 export const COMPAT_MODES: { bit: number; label: string; hint: string }[] = [

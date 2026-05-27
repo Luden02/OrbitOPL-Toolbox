@@ -47,6 +47,20 @@ declare interface Window {
       callback: (progress: { percent: number; stage: string }) => void
     ) => void;
     removeAllZsoCompressProgressListeners: () => void;
+    listVmc: (oplRoot: string) => Promise<{
+      success: boolean;
+      cards: { name: string; sizeBytes: number; sizeMb: number }[];
+      message?: string;
+    }>;
+    createVmc: (
+      oplRoot: string,
+      name: string,
+      sizeMb: number
+    ) => Promise<{ success: boolean; name?: string; message?: string }>;
+    deleteVmc: (
+      oplRoot: string,
+      name: string
+    ) => Promise<{ success: boolean; message?: string }>;
     readGameCfg: (
       oplRoot: string,
       gameId: string
