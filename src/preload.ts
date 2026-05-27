@@ -90,6 +90,12 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   removeAllZsoCompressProgressListeners: () => {
     ipcRenderer.removeAllListeners("zso-compress-progress");
   },
+  getApps: (oplRoot: string) => ipcRenderer.invoke("get-apps", oplRoot),
+  openAskElfFiles: () => ipcRenderer.invoke("open-ask-elf-files"),
+  importApp: (oplRoot: string, elfPath: string, title: string) =>
+    ipcRenderer.invoke("import-app", oplRoot, elfPath, title),
+  deleteApp: (oplRoot: string, folder: string) =>
+    ipcRenderer.invoke("delete-app", oplRoot, folder),
   listVmc: (oplRoot: string) => ipcRenderer.invoke("list-vmc", oplRoot),
   createVmc: (oplRoot: string, name: string, sizeMb: number) =>
     ipcRenderer.invoke("create-vmc", oplRoot, name, sizeMb),

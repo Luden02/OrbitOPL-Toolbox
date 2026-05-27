@@ -1,4 +1,4 @@
-export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL' | 'POPS';
+export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL' | 'POPS' | 'APP';
 
 export type Game = {
   filename: string;
@@ -11,8 +11,10 @@ export type Game = {
   extension: string;
   parentPath: string;
   format?: GameFormat;
-  system?: 'PS1' | 'PS2';
+  system?: 'PS1' | 'PS2' | 'APPS';
   art?: gameArt[];
+  /** APPS only: the subfolder name under APPS/ (used for deletion). */
+  appFolder?: string;
 };
 
 export type RawGameFile = {

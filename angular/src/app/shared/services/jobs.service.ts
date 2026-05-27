@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable, map } from 'rxjs';
 import { LogsService } from './logs.service';
 import { LibraryService } from './library.service';
 
-export type ImportJobType = 'ps2-dvd' | 'ps2-cd' | 'ps1' | 'zso';
+export type ImportJobType = 'ps2-dvd' | 'ps2-cd' | 'ps1' | 'zso' | 'apps';
 export type JobStatus = 'queued' | 'running' | 'success' | 'error';
 
 export interface ImportJob {
@@ -172,10 +172,17 @@ export class JobsService {
         return this.runPs1Job(job, dirPath);
       case 'zso':
         return this.runZsoJob(job);
+      case 'apps':
+        return this.runAppsJob(job, dirPath);
       case 'ps2-dvd':
       default:
         return this.runPs2DvdJob(job, dirPath);
     }
+  }
+
+  private async runAppsJob(job: ImportJob, dirPath: string) {
+    this.patchJob(job.id, { stage: 'Copying ELF…', percent: 50 });
+    return window.libraryAPI.importApp(dirPath, job.filePath, job.gameName);
   }
 
   private async runZsoJob(job: ImportJob) {

@@ -699,6 +699,15 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   }
 }
 
+export async function openAskElfFiles() {
+  const result = await dialog.showOpenDialog({
+    properties: ["openFile", "multiSelections"],
+    filters: [{ name: "PS2 ELF / Homebrew", extensions: ["elf", "ELF"] }],
+    title: "Select homebrew ELF(s) to import",
+  });
+  return result;
+}
+
 export async function openAskGameFiles(
   isGameCd: boolean,
   isGameDvd: boolean

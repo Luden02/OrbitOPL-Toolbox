@@ -178,7 +178,8 @@ export class LibraryService {
       return Promise.all([
         window.libraryAPI.getGamesFiles(currentDirectory),
         window.libraryAPI.getULGames(currentDirectory),
-      ]).then(async ([files, ulResult]) => {
+        window.libraryAPI.getApps(currentDirectory),
+      ]).then(async ([files, ulResult, appsResult]) => {
         if (files.success) {
           this._logger.log(
             'libraryService',
@@ -199,7 +200,16 @@ export class LibraryService {
             );
           }
 
-          await this.parseGameFilesToLibrary(files.data, ulGames);
+          const apps =
+            appsResult?.success && appsResult.apps
+              ? this.parseAppsToLibrary(appsResult.apps)
+              : [];
+
+          if (apps.length > 0) {
+            this._logger.log('libraryService', `Found ${apps.length} app(s)`);
+          }
+
+          await this.parseGameFilesToLibrary(files.data, ulGames, apps);
         } else {
           this._logger.error('libraryService', files.message);
           this.setCurrentAction('');
@@ -349,9 +359,34 @@ export class LibraryService {
     });
   }
 
+  private parseAppsToLibrary(
+    apps: {
+      folder: string;
+      title: string;
+      boot: string;
+      path: string;
+      sizeBytes: number;
+    }[]
+  ): Game[] {
+    return apps.map((app) => ({
+      filename: app.boot,
+      title: app.title,
+      cdType: 'APPS',
+      gameId: '',
+      path: app.path,
+      extension: 'ELF',
+      parentPath: '',
+      format: 'APP' as GameFormat,
+      system: 'APPS' as const,
+      appFolder: app.folder,
+      size: this.formatFileSize(app.sizeBytes) || '??',
+    }));
+  }
+
   private async parseGameFilesToLibrary(
     gamefiles: RawGameFile[],
-    ulGames: Game[] = []
+    ulGames: Game[] = [],
+    apps: Game[] = []
   ) {
     this.setLoading(true);
     this.setCurrentAction('Mapping gamefiles to Game Objects...');
@@ -408,8 +443,9 @@ export class LibraryService {
       }
     }
 
-    // Merge UL games
+    // Merge UL games and homebrew apps
     validGames.push(...ulGames);
+    validGames.push(...apps);
 
     if (this.currentDirectory) {
       const artFiles = await this.parseArtFiles(this.currentDirectory);
@@ -509,9 +545,14 @@ export class LibraryService {
       'Triggered downloading complete library art files...'
     );
     const games = this.librarySubject.getValue();
-    const downloadPromises = games.map((game) =>
-      this.downloadArtByGameId(game.gameId, game.system)
-    );
+    const downloadPromises = games
+      .filter((game) => game.system !== 'APPS' && game.gameId)
+      .map((game) =>
+        this.downloadArtByGameId(
+          game.gameId,
+          game.system === 'PS1' ? 'PS1' : 'PS2'
+        )
+      );
     return Promise.all(downloadPromises);
   }
 
@@ -577,6 +618,29 @@ export class LibraryService {
 
     this.setCurrentAction('');
     this.setLoading(false);
+  }
+
+  public async deleteApp(game: Game) {
+    if (!game.appFolder || !this.currentDirectory) return;
+    this._logger.log('deleteApp', `Deleting app: ${game.title}`);
+    this.setLoading(true);
+    this.setCurrentAction(`Deleting ${game.title}...`);
+    try {
+      const res = await window.libraryAPI.deleteApp(
+        this.currentDirectory,
+        game.appFolder
+      );
+      if (res.success) {
+        this.refreshGamesFiles();
+      } else {
+        this._logger.error('deleteApp', `Failed to delete: ${res.message}`);
+      }
+    } catch (error: any) {
+      this._logger.error('deleteApp', `Error: ${error?.message || error}`);
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+    }
   }
 
   public async deleteGame(game: Game) {

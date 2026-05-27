@@ -16,7 +16,7 @@
           <span class="step-num">1</span>
           <h2 class="font-display text-sm font-semibold tracking-wide">Disc type</h2>
         </div>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <button
             class="type-card"
             [class.active]="importMode === 'ps2-dvd'"
@@ -44,7 +44,26 @@
             <span class="font-semibold">PS1 / POPS</span>
             <span class="type-sub">.cue</span>
           </button>
+          <button
+            class="type-card"
+            [class.active]="importMode === 'apps'"
+            (click)="setMode('apps')"
+          >
+            <i-lucide name="terminal" size="22"></i-lucide>
+            <span class="font-semibold">App / Homebrew</span>
+            <span class="type-sub">.elf</span>
+          </button>
         </div>
+
+        @if (isApp) {
+        <div class="mt-4 flex gap-2 rounded-md border border-info/30 bg-info/10 p-3 text-sm">
+          <i-lucide name="info" size="16" class="mt-0.5 shrink-0 text-info"></i-lucide>
+          <span
+            >Homebrew import copies each ELF into its own folder under APPS/
+            with a title.cfg launcher, so it shows up in OPL's apps list.</span
+          >
+        </div>
+        }
 
         @if (isGamePsx) {
         <div class="mt-4 flex gap-2 rounded-md border border-info/30 bg-info/10 p-3 text-sm">
@@ -65,6 +84,7 @@
           <h2 class="font-display text-sm font-semibold tracking-wide">Options</h2>
         </div>
 
+        @if (!isApp) {
         <label class="flex cursor-pointer items-center gap-3">
           <input
             type="checkbox"
@@ -74,6 +94,11 @@
           />
           <span class="text-sm">Download artwork after import</span>
         </label>
+        } @else {
+        <p class="text-sm text-base-content/55">
+          No extra options for homebrew apps.
+        </p>
+        }
 
         @if (isGamePsx) {
         <div class="mt-5 border-t border-base-content/10 pt-4">
@@ -122,8 +147,8 @@
 
         <p class="mb-3 text-sm text-base-content/55">
           Pick the
-          {{ isGameCd || isGamePsx ? ".cue file(s)" : ".iso / .zso file(s)" }} to
-          import. You can select multiple at once.
+          {{ isApp ? ".elf file(s)" : isGameCd || isGamePsx ? ".cue file(s)" : ".iso / .zso file(s)" }}
+          to import. You can select multiple at once.
         </p>
 
         <button class="btn btn-primary" (click)="addFiles()" [disabled]="scanning">
@@ -162,6 +187,15 @@
             </p>
             }
 
+            @if (isApp) {
+            <input
+              type="text"
+              class="input input-sm mt-2 w-full"
+              placeholder="App title"
+              [value]="file.gameName"
+              (input)="file.gameName = $any($event.target).value"
+            />
+            } @else {
             <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <input
                 type="text"
@@ -180,6 +214,7 @@
             </div>
             @if (file.detected) {
             <span class="label mt-1 text-success text-xs">Auto-detected</span>
+            }
             }
           </div>
           }

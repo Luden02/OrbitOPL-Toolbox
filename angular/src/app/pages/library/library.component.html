@@ -106,6 +106,14 @@
       PlayStation 1
       <span class="seg-count">{{ ps1Count$ | async }}</span>
     </button>
+    <button
+      class="seg-tab"
+      [class.active]="isActive('APPS')"
+      (click)="setTab('APPS')"
+    >
+      Apps
+      <span class="seg-count">{{ appsCount$ | async }}</span>
+    </button>
   </div>
 
   <!-- ── Body ────────────────────────────────────────────────── -->
@@ -151,7 +159,7 @@
       [class.library-grid]="viewMode === 'grid'"
       [class.library-list]="viewMode === 'list'"
     >
-      @for (item of visibleGames$ | async; track item.gameId) {
+      @for (item of visibleGames$ | async; track item.path || item.gameId) {
       <app-gamecard
         [game]="item"
         [viewMode]="viewMode"

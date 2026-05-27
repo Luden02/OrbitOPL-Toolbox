@@ -9,7 +9,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '../../shared/types/game.type';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 
-type SystemTab = 'PS2' | 'PS1';
+type SystemTab = 'PS2' | 'PS1' | 'APPS';
 type SortMode = 'title-asc' | 'title-desc' | 'gameId-asc' | 'gameId-desc';
 
 @Component({
@@ -36,6 +36,7 @@ export class LibraryComponent {
   public visibleGames$: Observable<Game[]> | undefined;
   public ps2Count$: Observable<number> | undefined;
   public ps1Count$: Observable<number> | undefined;
+  public appsCount$: Observable<number> | undefined;
   public totalCount$: Observable<number> | undefined;
 
   ngOnInit() {
@@ -52,6 +53,9 @@ export class LibraryComponent {
     );
     this.ps2Count$ = this.ps2Games$.pipe(map((g) => g.length));
     this.ps1Count$ = this.ps1Games$.pipe(map((g) => g.length));
+    this.appsCount$ = library$.pipe(
+      map((games) => games.filter((g) => g.system === 'APPS').length)
+    );
     this.totalCount$ = library$.pipe(map((g) => g.length));
 
     this.visibleGames$ = combineLatest([
@@ -69,9 +73,11 @@ export class LibraryComponent {
         const query = search.trim().toLocaleLowerCase();
 
         const filteredGames = games
-          .filter((g) =>
-            tab === 'PS1' ? g.system === 'PS1' : (g.system ?? 'PS2') === 'PS2'
-          )
+          .filter((g) => {
+            if (tab === 'PS1') return g.system === 'PS1';
+            if (tab === 'APPS') return g.system === 'APPS';
+            return (g.system ?? 'PS2') === 'PS2';
+          })
           .filter((g) => {
             if (!query) return true;
             return (

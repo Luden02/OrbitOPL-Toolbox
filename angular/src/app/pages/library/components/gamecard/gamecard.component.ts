@@ -23,6 +23,11 @@ export class GamecardComponent implements OnInit, OnChanges {
     private readonly _jobs: JobsService
   ) {}
 
+  /** Homebrew apps are managed differently from disc games. */
+  get isApp(): boolean {
+    return this.game?.system === 'APPS';
+  }
+
   /** Only PS2 ISO images can be compressed to ZSO. */
   get canCompressZso(): boolean {
     if (!this.game) return false;
@@ -62,8 +67,11 @@ export class GamecardComponent implements OnInit, OnChanges {
   }
 
   fetchArtwork() {
-    if (!this.game) return;
-    this._libraryService.downloadArtByGameId(this.game.gameId, this.game.system);
+    if (!this.game || this.isApp) return;
+    this._libraryService.downloadArtByGameId(
+      this.game.gameId,
+      this.game.system === 'PS1' ? 'PS1' : 'PS2'
+    );
   }
 
   convertToZso() {
@@ -88,6 +96,13 @@ export class GamecardComponent implements OnInit, OnChanges {
 
   confirmDelete() {
     if (!this.game) return;
+    if (this.isApp) {
+      const confirmed = window.confirm(
+        `Delete the app "${this.game.title}"?\nThis removes its APPS folder.`
+      );
+      if (confirmed) this._libraryService.deleteApp(this.game);
+      return;
+    }
     const confirmed = window.confirm(
       `Are you sure you want to delete "${this.game.title || this.game.gameId}"?\nThis will also remove associated artwork.`
     );

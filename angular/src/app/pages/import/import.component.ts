@@ -41,10 +41,18 @@ export class ImportComponent {
   get isGamePsx(): boolean {
     return this.importMode === 'ps1';
   }
+  get isApp(): boolean {
+    return this.importMode === 'apps';
+  }
 
-  /** A staged file is importable once it has both an id and a name. */
+  /**
+   * A staged entry is importable once it has a name; disc games additionally
+   * need a game id (apps don't have one).
+   */
   get readyCount(): number {
-    return this.staged.filter((f) => f.gameId && f.gameName).length;
+    return this.staged.filter(
+      (f) => f.gameName && (this.isApp || f.gameId)
+    ).length;
   }
 
   setMode(mode: ImportJobType) {
@@ -53,11 +61,12 @@ export class ImportComponent {
   }
 
   async addFiles() {
-    const isSelectingCue = this.isGameCd || this.isGamePsx;
-    const result = await window.libraryAPI.openAskGameFiles(
-      isSelectingCue,
-      this.isGameDvd
-    );
+    const result = this.isApp
+      ? await window.libraryAPI.openAskElfFiles()
+      : await window.libraryAPI.openAskGameFiles(
+          this.isGameCd || this.isGamePsx,
+          this.isGameDvd
+        );
     if (result?.canceled || !result?.filePaths?.length) {
       return;
     }
@@ -68,12 +77,20 @@ export class ImportComponent {
         if (this.staged.some((f) => f.path === path)) {
           continue;
         }
-        const staged = await this.detectFile(path);
+        const staged = this.isApp
+          ? this.stageApp(path)
+          : await this.detectFile(path);
         this.staged = [...this.staged, staged];
       }
     } finally {
       this.scanning = false;
     }
+  }
+
+  private stageApp(path: string): StagedFile {
+    const fileName = path.split(/[\\/]/).pop() || path;
+    const title = fileName.replace(/\.elf$/i, '');
+    return { path, fileName, gameId: '', gameName: title, detected: false, invalid: false };
   }
 
   private async detectFile(path: string): Promise<StagedFile> {
@@ -116,7 +133,9 @@ export class ImportComponent {
   }
 
   importAll() {
-    const ready = this.staged.filter((f) => f.gameId && f.gameName);
+    const ready = this.staged.filter(
+      (f) => f.gameName && (this.isApp || f.gameId)
+    );
     if (!ready.length) {
       return;
     }

@@ -18,6 +18,7 @@ import {
   getULGames,
   moveFile,
   openAskDirectory,
+  openAskElfFiles,
   openAskGameFiles,
   renameGamefile,
   tryDetermineGameIdFromHex,
@@ -35,6 +36,7 @@ import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { createVmc, deleteVmc, listVmc } from "./vmc.service";
+import { deleteApp, getApps, importApp } from "./apps.service";
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -331,6 +333,25 @@ ipcMain.handle(
     return writeGameCfg(oplRoot, gameId, entries);
   }
 );
+
+ipcMain.handle("get-apps", async (_event, oplRoot: string) => {
+  return getApps(oplRoot);
+});
+
+ipcMain.handle("open-ask-elf-files", async () => {
+  return openAskElfFiles();
+});
+
+ipcMain.handle(
+  "import-app",
+  async (_event, oplRoot: string, elfPath: string, title: string) => {
+    return importApp(oplRoot, elfPath, title);
+  }
+);
+
+ipcMain.handle("delete-app", async (_event, oplRoot: string, folder: string) => {
+  return deleteApp(oplRoot, folder);
+});
 
 ipcMain.handle("list-vmc", async (_event, oplRoot: string) => {
   return listVmc(oplRoot);

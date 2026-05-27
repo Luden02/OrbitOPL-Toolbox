@@ -47,6 +47,27 @@ declare interface Window {
       callback: (progress: { percent: number; stage: string }) => void
     ) => void;
     removeAllZsoCompressProgressListeners: () => void;
+    getApps: (oplRoot: string) => Promise<{
+      success: boolean;
+      apps: {
+        folder: string;
+        title: string;
+        boot: string;
+        path: string;
+        sizeBytes: number;
+      }[];
+      message?: string;
+    }>;
+    openAskElfFiles: () => Promise<any>;
+    importApp: (
+      oplRoot: string,
+      elfPath: string,
+      title: string
+    ) => Promise<{ success: boolean; folder?: string; message?: string }>;
+    deleteApp: (
+      oplRoot: string,
+      folder: string
+    ) => Promise<{ success: boolean; message?: string }>;
     listVmc: (oplRoot: string) => Promise<{
       success: boolean;
       cards: { name: string; sizeBytes: number; sizeMb: number }[];

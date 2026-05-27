@@ -25,6 +25,7 @@
       tabindex="-1"
       class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
     >
+      @if(!isApp) {
       <li>
         <a (click)="fetchArtwork()"
           ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
@@ -35,6 +36,7 @@
           ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
         >
       </li>
+      }
       @if(canCompressZso) {
       <li>
         <a (click)="convertToZso()"
@@ -59,7 +61,7 @@
     } @else {
     <div class="poster-no-art">
       <i-lucide name="image-off" size="40"></i-lucide>
-      <span class="font-mono text-xs">{{ game?.gameId }}</span>
+      <span class="font-mono text-xs">{{ game?.gameId || game?.title }}</span>
     </div>
     }
 
@@ -67,7 +69,7 @@
     <span
       class="poster-system"
       [class.is-ps1]="game?.system === 'PS1'"
-      >{{ game?.system === "PS1" ? "PS1" : "PS2" }}</span
+      >{{ game?.system === "PS1" ? "PS1" : game?.system === "APPS" ? "APP" : "PS2" }}</span
     >
 
     <div class="dropdown dropdown-end poster-menu">
