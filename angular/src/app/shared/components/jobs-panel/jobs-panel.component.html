@@ -1,0 +1,95 @@
+@if (collapsed) {
+<!-- Collapsed rail -->
+<button
+  class="jobs-rail glass-strong"
+  (click)="toggle()"
+  title="Show import jobs"
+>
+  <i-lucide name="list-checks" size="20"></i-lucide>
+  @if ((_jobs.activeCount$ | async); as active) {
+  @if (active > 0) {
+  <span class="badge badge-primary badge-sm font-semibold">{{ active }}</span>
+  }
+  }
+</button>
+} @else {
+<!-- Expanded panel -->
+<aside class="jobs-panel glass-strong flex w-72 flex-col">
+  <div class="flex items-center gap-2 border-b border-base-content/10 px-4 py-3">
+    <i-lucide name="list-checks" size="18" class="text-accent"></i-lucide>
+    <span class="font-display text-sm font-semibold tracking-wide">Import Jobs</span>
+    <button
+      class="btn btn-ghost btn-xs btn-square ml-auto"
+      (click)="toggle()"
+      title="Collapse"
+    >
+      <i-lucide name="chevrons-right" size="16"></i-lucide>
+    </button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-3">
+    @if ((_jobs.jobs$ | async); as jobs) {
+    @if (jobs.length === 0) {
+    <div class="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center text-base-content/40">
+      <i-lucide name="inbox" size="28"></i-lucide>
+      <p class="text-xs">No import jobs yet.</p>
+    </div>
+    } @else {
+    <div class="flex flex-col gap-2">
+      @for (job of jobs; track trackJob($index, job)) {
+      <div
+        class="rounded-md border border-base-content/10 bg-base-100/40 p-2.5"
+        [class.border-error]="job.status === 'error'"
+        [class.border-success]="job.status === 'success'"
+      >
+        <div class="flex items-center gap-2">
+          <i-lucide
+            [name]="statusIcon(job)"
+            size="15"
+            [class.text-success]="job.status === 'success'"
+            [class.text-error]="job.status === 'error'"
+            [class.text-accent]="job.status === 'running'"
+            [class.text-base-content]="job.status === 'queued'"
+            [class.spin]="job.status === 'running'"
+          ></i-lucide>
+          <span class="truncate text-xs font-medium" [title]="job.label">{{ job.label }}</span>
+          <span class="badge badge-ghost badge-xs ml-auto shrink-0">{{ typeLabel(job) }}</span>
+          @if (job.status === 'success' || job.status === 'error' || job.status === 'queued') {
+          <button
+            class="btn btn-ghost btn-xs btn-square shrink-0"
+            (click)="_jobs.removeJob(job.id)"
+            title="Remove"
+          >
+            <i-lucide name="x" size="13"></i-lucide>
+          </button>
+          }
+        </div>
+
+        @if (job.status === 'running') {
+        <progress
+          class="progress progress-primary mt-2 h-1.5 w-full"
+          [value]="job.percent"
+          max="100"
+        ></progress>
+        <p class="mt-1 truncate text-[0.68rem] text-base-content/55">{{ job.stage }}</p>
+        } @else if (job.status === 'queued') {
+        <p class="mt-1 text-[0.68rem] text-base-content/45">Queued</p>
+        } @else if (job.status === 'error') {
+        <p class="mt-1 text-[0.68rem] text-error" [title]="job.message">{{ job.message }}</p>
+        }
+      </div>
+      }
+    </div>
+    }
+    }
+  </div>
+
+  @if ((_jobs.jobs$ | async)?.length) {
+  <div class="border-t border-base-content/10 p-2">
+    <button class="btn btn-ghost btn-xs btn-block" (click)="_jobs.clearFinished()">
+      <i-lucide name="brush-cleaning" size="14"></i-lucide> Clear finished
+    </button>
+  </div>
+  }
+</aside>
+}

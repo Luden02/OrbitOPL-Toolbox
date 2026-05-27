@@ -1,9 +1,16 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  shell,
+} from "electron";
 import path from "path";
 import electronReloader from "electron-reloader";
 import PackageInfo from "../package.json";
 import {
-  convertBinToIso,
   deleteGameAndRelatedFiles,
   downloadArtByGameId,
   getArtFolder,
@@ -11,13 +18,20 @@ import {
   getULGames,
   moveFile,
   openAskDirectory,
-  openAskGameFile,
+  openAskGameFiles,
   renameGamefile,
   tryDetermineGameIdFromHex,
   tryDeterminePs1GameIdFromHex,
 } from "./library.service";
 import { importPs1Game } from "./pops.service";
 import { importPs2CdGame } from "./cd.service";
+import {
+  AppSettings,
+  directoryExists,
+  getSettings,
+  setSetting,
+} from "./settings.service";
+import { checkForUpdates } from "./update.service";
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -159,6 +173,38 @@ ipcMain.on("set-loading-state", (_event, isLoading: boolean) => {
   rendererIsLoading = !!isLoading;
 });
 
+ipcMain.handle("get-settings", async () => {
+  return getSettings();
+});
+
+ipcMain.handle(
+  "set-setting",
+  async <K extends keyof AppSettings>(
+    _event: unknown,
+    key: K,
+    value: AppSettings[K]
+  ) => {
+    return setSetting(key, value);
+  }
+);
+
+ipcMain.handle("directory-exists", async (_event, dirPath: string) => {
+  return directoryExists(dirPath);
+});
+
+ipcMain.handle("check-for-updates", async () => {
+  return checkForUpdates();
+});
+
+ipcMain.handle("open-external", async (_event, url: string) => {
+  // Only allow http(s) links to be opened externally.
+  if (/^https?:\/\//i.test(url)) {
+    await shell.openExternal(url);
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle("open-ask-directory", async (options) => {
   return openAskDirectory(options);
 });
@@ -198,16 +244,9 @@ ipcMain.handle(
 );
 
 ipcMain.handle(
-  "convert-bin-to-iso",
-  async (event, cueFilePath: string, outputDir: string) => {
-    return convertBinToIso(cueFilePath, outputDir);
-  }
-);
-
-ipcMain.handle(
-  "open-ask-game-file",
+  "open-ask-game-files",
   async (event, isGameCd: boolean, isGameDvd: boolean) => {
-    return openAskGameFile(isGameCd, isGameDvd);
+    return openAskGameFiles(isGameCd, isGameDvd);
   }
 );
 

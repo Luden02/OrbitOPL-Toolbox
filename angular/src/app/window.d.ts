@@ -15,8 +15,7 @@ declare interface Window {
       system?: 'PS1' | 'PS2'
     ) => Promise<any>;
     tryDetermineGameIdFromHex: (filepath: string) => Promise<any>;
-    convertBinToIso: (cueFilePath: string, outputDir: string) => Promise<any>;
-    openAskGameFile: (isGameCd: boolean, isGameDvd: boolean) => Promise<any>;
+    openAskGameFiles: (isGameCd: boolean, isGameDvd: boolean) => Promise<any>;
     tryDeterminePs1GameIdFromHex: (filepath: string) => Promise<any>;
     importPs1Game: (
       cueFilePath: string,
@@ -63,5 +62,27 @@ declare interface Window {
     ) => void;
     removeAllMainLogListeners: () => void;
     setLoadingState: (isLoading: boolean) => void;
+    getSettings: () => Promise<AppSettings>;
+    setSetting: <K extends keyof AppSettings>(
+      key: K,
+      value: AppSettings[K]
+    ) => Promise<AppSettings>;
+    directoryExists: (dirPath: string) => Promise<boolean>;
+    checkForUpdates: () => Promise<UpdateCheckResult>;
+    openExternal: (url: string) => Promise<boolean>;
   };
+}
+
+declare interface UpdateCheckResult {
+  updateAvailable: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  releaseUrl?: string;
+  releaseName?: string;
+  error?: string;
+}
+
+declare interface AppSettings {
+  lastDirectory?: string;
+  autoReconnect: boolean;
 }

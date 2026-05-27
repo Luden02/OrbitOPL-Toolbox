@@ -3,7 +3,7 @@
     <i-lucide name="disc-3" size="26" class="text-accent"></i-lucide>
     <div>
       <h1 class="section-title text-2xl">Import Games</h1>
-      <p class="text-xs text-base-content/45">Add discs to your OPL collection</p>
+      <p class="text-xs text-base-content/45">Add one or many discs to your OPL collection</p>
     </div>
   </header>
 
@@ -20,8 +20,7 @@
           <button
             class="type-card"
             [class.active]="importMode === 'ps2-dvd'"
-            [disabled]="_libraryService.loading$ | async"
-            (click)="importMode = 'ps2-dvd'; resetImportState()"
+            (click)="setMode('ps2-dvd')"
           >
             <i-lucide name="disc" size="22"></i-lucide>
             <span class="font-semibold">PS2 DVD</span>
@@ -30,8 +29,7 @@
           <button
             class="type-card"
             [class.active]="importMode === 'ps2-cd'"
-            [disabled]="_libraryService.loading$ | async"
-            (click)="importMode = 'ps2-cd'; resetImportState()"
+            (click)="setMode('ps2-cd')"
           >
             <i-lucide name="disc-2" size="22"></i-lucide>
             <span class="font-semibold">PS2 CD</span>
@@ -40,8 +38,7 @@
           <button
             class="type-card"
             [class.active]="importMode === 'ps1'"
-            [disabled]="_libraryService.loading$ | async"
-            (click)="importMode = 'ps1'; resetImportState()"
+            (click)="setMode('ps1')"
           >
             <i-lucide name="gamepad-2" size="22"></i-lucide>
             <span class="font-semibold">PS1 / POPS</span>
@@ -61,83 +58,16 @@
         }
       </section>
 
-      <!-- Step 2 — select the file -->
+      <!-- Step 2 — options -->
       <section class="glass rounded-box p-5">
         <div class="mb-3 flex items-center gap-2">
           <span class="step-num">2</span>
-          <h2 class="font-display text-sm font-semibold tracking-wide">Select game file</h2>
-        </div>
-        <p class="mb-3 text-sm text-base-content/55">
-          Point to the
-          {{ isGameCd || isGamePsx ? ".cue file" : ".iso / .zso file" }} you want
-          to import.
-        </p>
-        <button
-          class="btn btn-primary"
-          (click)="askForGameFile()"
-          [disabled]="_libraryService.loading$ | async"
-        >
-          <i-lucide name="file-search" size="18"></i-lucide>Browse…
-        </button>
-        @if (gamePath) {
-        <div class="mt-3 flex items-center gap-2 rounded-md bg-base-100/50 p-2 font-mono text-xs text-base-content/70">
-          <i-lucide name="file-check-2" size="15" class="text-success"></i-lucide>
-          <span class="truncate" [title]="gamePath">{{ gamePath }}</span>
-        </div>
-        }
-        @if (invalidFileDiscovered) {
-        <div class="mt-3 flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-          <i-lucide name="triangle-alert" size="16" class="mt-0.5 shrink-0"></i-lucide>
-          <span
-            >The selected file appears to be invalid. Please double-check the
-            file and try again.</span
-          >
-        </div>
-        }
-      </section>
-
-      <!-- Step 3 — metadata -->
-      <section class="glass rounded-box p-5">
-        <div class="mb-4 flex items-center gap-2">
-          <span class="step-num">3</span>
-          <h2 class="font-display text-sm font-semibold tracking-wide">Game details</h2>
+          <h2 class="font-display text-sm font-semibold tracking-wide">Options</h2>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Game ID</legend>
-            <input
-              type="text"
-              class="input w-full"
-              placeholder="SLUS_123.45"
-              [disabled]="autoDiscoveredId"
-              [value]="gameId"
-              (input)="gameId = $any($event.target).value"
-            />
-            @if(autoDiscoveredId) {
-            <span class="label text-success">Auto-detected</span>
-            }
-          </fieldset>
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">Game Name</legend>
-            <input
-              type="text"
-              class="input w-full"
-              placeholder="Game title"
-              [disabled]="autoDiscoveredName"
-              [value]="gameName"
-              (input)="gameName = $any($event.target).value"
-            />
-            @if(autoDiscoveredName) {
-            <span class="label text-success">Auto-detected</span>
-            }
-          </fieldset>
-        </div>
-
-        <label class="mt-4 flex cursor-pointer items-center gap-3">
+        <label class="flex cursor-pointer items-center gap-3">
           <input
             type="checkbox"
-            [disabled]="_libraryService.loading$ | async"
             [checked]="downloadArtwork"
             class="toggle toggle-primary"
             (change)="downloadArtwork = $any($event.target).checked"
@@ -157,7 +87,6 @@
                 name="radio-elfprefix"
                 class="radio radio-primary radio-sm"
                 [checked]="elfPrefix === 'XX.'"
-                [disabled]="_libraryService.loading$ | async"
                 (change)="elfPrefix = 'XX.'"
               />
               <span class="text-sm">XX. — USB / MX4SIO (MX4SIO requires extra drivers)</span>
@@ -168,7 +97,6 @@
                 name="radio-elfprefix"
                 class="radio radio-primary radio-sm"
                 [checked]="elfPrefix === 'SB.'"
-                [disabled]="_libraryService.loading$ | async"
                 (change)="elfPrefix = 'SB.'"
               />
               <span class="text-sm">SB. — SMB network share</span>
@@ -178,26 +106,101 @@
         }
       </section>
 
+      <!-- Step 3 — select files & review -->
+      <section class="glass rounded-box p-5">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="step-num">3</span>
+            <h2 class="font-display text-sm font-semibold tracking-wide">Select files</h2>
+          </div>
+          @if (staged.length) {
+          <button class="btn btn-ghost btn-xs" (click)="clearStaged()">
+            <i-lucide name="x" size="14"></i-lucide> Clear
+          </button>
+          }
+        </div>
+
+        <p class="mb-3 text-sm text-base-content/55">
+          Pick the
+          {{ isGameCd || isGamePsx ? ".cue file(s)" : ".iso / .zso file(s)" }} to
+          import. You can select multiple at once.
+        </p>
+
+        <button class="btn btn-primary" (click)="addFiles()" [disabled]="scanning">
+          @if (scanning) {
+          <span class="loading loading-spinner loading-sm"></span> Scanning…
+          } @else {
+          <i-lucide name="file-search" size="18"></i-lucide> Add files…
+          }
+        </button>
+
+        @if (staged.length) {
+        <div class="mt-4 flex flex-col gap-2">
+          @for (file of staged; track file.path) {
+          <div class="rounded-md border border-base-content/10 bg-base-100/40 p-3">
+            <div class="flex items-center gap-2">
+              <i-lucide
+                [name]="file.invalid ? 'triangle-alert' : 'file-check-2'"
+                size="15"
+                [class.text-warning]="file.invalid"
+                [class.text-success]="!file.invalid"
+              ></i-lucide>
+              <span class="truncate font-mono text-xs text-base-content/70" [title]="file.path">{{
+                file.fileName
+              }}</span>
+              <button
+                class="btn btn-ghost btn-xs btn-square ml-auto"
+                (click)="removeStaged(file.path)"
+              >
+                <i-lucide name="trash-2" size="14"></i-lucide>
+              </button>
+            </div>
+
+            @if (file.invalid && !file.detected) {
+            <p class="mt-1 text-xs text-warning">
+              Could not auto-detect — enter the Game ID and name manually.
+            </p>
+            }
+
+            <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <input
+                type="text"
+                class="input input-sm w-full"
+                placeholder="Game ID (SLUS_123.45)"
+                [value]="file.gameId"
+                (input)="file.gameId = $any($event.target).value"
+              />
+              <input
+                type="text"
+                class="input input-sm w-full"
+                placeholder="Game name"
+                [value]="file.gameName"
+                (input)="file.gameName = $any($event.target).value"
+              />
+            </div>
+            @if (file.detected) {
+            <span class="label mt-1 text-success text-xs">Auto-detected</span>
+            }
+          </div>
+          }
+        </div>
+        }
+      </section>
+
       <!-- Action -->
-      <div class="flex justify-end pb-2">
+      <div class="flex items-center justify-end gap-3 pb-2">
+        @if (staged.length) {
+        <span class="text-xs text-base-content/50">
+          {{ readyCount }} of {{ staged.length }} ready
+        </span>
+        }
         <button
           class="btn btn-success btn-wide"
-          (click)="startAutoImportAttempt()"
-          [disabled]="
-            !gamePath ||
-            gamePath.length === 0 ||
-            !gameId ||
-            gameId.length === 0 ||
-            !gameName ||
-            gameName.length === 0 ||
-            (_libraryService.loading$ | async)
-          "
+          (click)="importAll()"
+          [disabled]="readyCount === 0 || scanning"
         >
-          @if(_libraryService.loading$ | async) {
-          <span class="loading loading-spinner loading-sm"></span>
-          } @else {
           <i-lucide name="download" size="18"></i-lucide>
-          } Start Import
+          Import {{ readyCount }} game{{ readyCount === 1 ? "" : "s" }}
         </button>
       </div>
     </div>

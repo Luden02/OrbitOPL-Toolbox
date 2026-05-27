@@ -1,0 +1,133 @@
+<div class="page flex h-full flex-col fade-in">
+  <header class="page-header glass flex items-center gap-3 px-6">
+    <i-lucide name="settings" size="26" class="text-accent"></i-lucide>
+    <h1 class="section-title text-2xl">Settings</h1>
+  </header>
+
+  <div class="flex-1 overflow-y-auto px-6 py-8">
+    <div class="flex flex-col gap-4 max-w-3xl mx-auto">
+      <!-- ── Library ─────────────────────────────────────────────── -->
+      <div class="glass rounded-box">
+        <div class="card-body">
+          <h2 class="card-title text-base">
+            <i-lucide name="library" size="20" class="text-accent"></i-lucide>
+            Library
+          </h2>
+
+          <div class="flex items-start justify-between gap-4 mt-1">
+            <div>
+              <p class="font-medium text-sm">Reconnect on launch</p>
+              <p class="text-sm text-base-content/60">
+                Automatically re-mount the last used directory when the app
+                starts, if it is still available.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              class="toggle toggle-primary"
+              [checked]="(settings$ | async)?.autoReconnect"
+              (change)="onAutoReconnectChange($any($event.target).checked)"
+            />
+          </div>
+
+          <div class="accent-line my-2 h-px opacity-60"></div>
+
+          <div>
+            <p class="font-medium text-sm">Last directory</p>
+            @if((settings$ | async)?.lastDirectory; as dir) {
+            <p class="font-mono text-[0.72rem] text-base-content/55 break-all mt-1">
+              {{ dir }}
+            </p>
+            } @else {
+            <p class="text-sm text-base-content/40 italic mt-1">
+              No directory has been mounted yet.
+            </p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Updates ─────────────────────────────────────────────── -->
+      <div class="glass rounded-box">
+        <div class="card-body">
+          <h2 class="card-title text-base">
+            <i-lucide name="refresh-cw" size="20" class="text-accent"></i-lucide>
+            Updates
+          </h2>
+
+          <div class="flex items-start justify-between gap-4 mt-1">
+            <div class="min-w-0">
+              <p class="font-medium text-sm">Check for updates</p>
+              @if ((_update.result$ | async); as result) {
+                @if (result.updateAvailable) {
+                <p class="text-sm text-primary mt-1">
+                  Version {{ result.latestVersion }} is available
+                  (you have {{ result.currentVersion }}).
+                </p>
+                } @else if (result.error) {
+                <p class="text-sm text-warning mt-1">
+                  Couldn't check right now: {{ result.error }}
+                </p>
+                } @else {
+                <p class="text-sm text-base-content/60 mt-1">
+                  You're on the latest version ({{ result.currentVersion }}).
+                </p>
+                }
+              } @else {
+              <p class="text-sm text-base-content/60 mt-1">
+                Releases are checked against GitHub.
+              </p>
+              }
+            </div>
+
+            <div class="flex shrink-0 gap-2">
+              @if ((_update.result$ | async)?.updateAvailable) {
+              <button class="btn btn-primary btn-sm" (click)="openRelease()">
+                <i-lucide name="download" size="15"></i-lucide> Download
+              </button>
+              }
+              <button
+                class="btn btn-outline btn-sm"
+                (click)="checkForUpdates()"
+                [disabled]="_update.checking$ | async"
+              >
+                @if (_update.checking$ | async) {
+                <span class="loading loading-spinner loading-xs"></span>
+                } @else {
+                <i-lucide name="refresh-cw" size="15"></i-lucide>
+                }
+                Check now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Logging ─────────────────────────────────────────────── -->
+      <div class="glass rounded-box">
+        <div class="card-body">
+          <h2 class="card-title text-base">
+            <i-lucide name="terminal" size="20" class="text-accent"></i-lucide>
+            Logging
+          </h2>
+
+          <div class="flex items-start justify-between gap-4 mt-1">
+            <div>
+              <p class="font-medium text-sm">Verbose logging</p>
+              <p class="text-sm text-base-content/60">
+                Include detailed diagnostic entries in the in-app log viewer.
+                Useful when reporting issues.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              class="toggle toggle-primary"
+              [checked]="verboseMode"
+              (change)="onVerboseChange()"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

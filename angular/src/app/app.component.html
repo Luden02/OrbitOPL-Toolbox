@@ -1,4 +1,28 @@
 <div class="flex h-full flex-col">
+  <!-- ── Update banner ─────────────────────────────────────────── -->
+  @if ((_updateService.result$ | async)?.updateAvailable && !(_updateService.dismissed$ | async)) {
+  @if ((_updateService.result$ | async); as update) {
+  <div class="flex items-center gap-3 border-b border-primary/30 bg-primary/15 px-4 py-2 text-sm">
+    <i-lucide name="sparkles" size="16" class="text-primary"></i-lucide>
+    <span>
+      A new version is available —
+      <span class="font-semibold">{{ update.latestVersion }}</span>
+      (you have {{ update.currentVersion }}).
+    </span>
+    <button class="btn btn-primary btn-xs ml-auto" (click)="_updateService.openRelease()">
+      <i-lucide name="download" size="14"></i-lucide> Download
+    </button>
+    <button
+      class="btn btn-ghost btn-xs btn-square"
+      (click)="_updateService.dismiss()"
+      title="Dismiss"
+    >
+      <i-lucide name="x" size="14"></i-lucide>
+    </button>
+  </div>
+  }
+  }
+
   <div class="flex flex-1 min-h-0">
     <!-- ── Navigation rail ─────────────────────────────────────── -->
     <aside class="sidebar glass-strong flex w-60 flex-col">
@@ -59,6 +83,15 @@
           <span>Logs</span>
         </a>
         <a
+          routerLink="/settings"
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
+        >
+          <i-lucide name="settings" size="19"></i-lucide>
+          <span>Settings</span>
+        </a>
+        <a
           routerLink="/info"
           routerLinkActive="active"
           class="nav-item"
@@ -112,6 +145,9 @@
     <main class="min-w-0 flex-1 overflow-hidden">
       <router-outlet></router-outlet>
     </main>
+
+    <!-- ── Import jobs rail ────────────────────────────────────── -->
+    <app-jobs-panel></app-jobs-panel>
   </div>
 
   <!-- ── Status bar ────────────────────────────────────────────── -->

@@ -4,6 +4,7 @@ import { LogsComponent } from './pages/logs/logs.component';
 import { InvalidComponent } from './pages/invalid/invalid.component';
 import { ImportComponent } from './pages/import/import.component';
 import { InfoComponent } from './pages/info/info.component';
+import { SettingsComponent } from './pages/settings/settings.component';
 import { loadingGuard } from './shared/guards/loading.guard';
 
 export const routes: Routes = [
@@ -30,6 +31,11 @@ export const routes: Routes = [
   {
     path: 'import',
     component: ImportComponent,
+    canActivate: [loadingGuard],
+  },
+  {
+    path: 'settings',
+    component: SettingsComponent,
     canActivate: [loadingGuard],
   },
   {

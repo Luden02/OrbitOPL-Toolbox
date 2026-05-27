@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { downloadArtByGameId, getArtFolder } from "./library.service";
 
 contextBridge.exposeInMainWorld("libraryAPI", {
   openAskDirectory: () => ipcRenderer.invoke("open-ask-directory"),
@@ -18,10 +17,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system),
   tryDetermineGameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-gameid-from-hex", filepath),
-  convertBinToIso: (cueFilePath: string, outputDir: string) =>
-    ipcRenderer.invoke("convert-bin-to-iso", cueFilePath, outputDir),
-  openAskGameFile: (isGameCd: boolean, isGameDvd: boolean) =>
-    ipcRenderer.invoke("open-ask-game-file", isGameCd, isGameDvd),
+  openAskGameFiles: (isGameCd: boolean, isGameDvd: boolean) =>
+    ipcRenderer.invoke("open-ask-game-files", isGameCd, isGameDvd),
   tryDeterminePs1GameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-ps1-gameid-from-hex", filepath),
   importPs1Game: (
@@ -107,4 +104,11 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   },
   setLoadingState: (isLoading: boolean) =>
     ipcRenderer.send("set-loading-state", isLoading),
+  getSettings: () => ipcRenderer.invoke("get-settings"),
+  setSetting: (key: string, value: unknown) =>
+    ipcRenderer.invoke("set-setting", key, value),
+  directoryExists: (dirPath: string) =>
+    ipcRenderer.invoke("directory-exists", dirPath),
+  checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+  openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
 });

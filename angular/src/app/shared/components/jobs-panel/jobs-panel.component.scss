@@ -1,0 +1,33 @@
+:host {
+  display: contents;
+}
+
+.jobs-panel {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jobs-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 3rem;
+  padding-top: 0.9rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.jobs-rail:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.spin {
+  animation: jobs-spin 1s linear infinite;
+}
+
+@keyframes jobs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

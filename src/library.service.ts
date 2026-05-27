@@ -699,20 +699,10 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   }
 }
 
-export async function convertBinToIso(
-  cueFilePath: string,
-  outputIsoPath: string
+export async function openAskGameFiles(
+  isGameCd: boolean,
+  isGameDvd: boolean
 ) {
-  try {
-    return { success: true, message: "Conversion completed successfully." };
-  } catch (err: any) {
-    return { success: false, message: err?.message || "Conversion failed." };
-  }
-}
-
-export async function openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {
-  const properties = ["openFile"];
-  // if gameCd ask for .cue file, if gameDvd ask for .iso/.zso
   const filters = [];
   if (isGameCd) {
     filters.push({ name: "CUE Files", extensions: ["cue"] });
@@ -721,9 +711,9 @@ export async function openAskGameFile(isGameCd: boolean, isGameDvd: boolean) {
     filters.push({ name: "ISO/ZSO Files", extensions: ["iso", "zso"] });
   }
   const result = await dialog.showOpenDialog({
-    ...properties,
+    properties: ["openFile", "multiSelections"],
     filters,
-    title: "Select Game File to Import",
+    title: "Select Game Files to Import",
   });
 
   return result;
