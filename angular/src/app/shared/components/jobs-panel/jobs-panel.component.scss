@@ -4,6 +4,8 @@
 
 .jobs-panel {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 30;
 }
 
 .jobs-rail {
@@ -16,6 +18,8 @@
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: background-color 0.15s ease;
+  position: relative;
+  z-index: 30;
 }
 
 .jobs-rail:hover {

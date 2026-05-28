@@ -25,7 +25,7 @@
 
   <div class="flex flex-1 min-h-0">
     <!-- ── Navigation rail ─────────────────────────────────────── -->
-    <aside class="sidebar glass-strong flex w-60 flex-col">
+    <aside class="sidebar glass-strong flex w-60 flex-col relative z-30">
       <div class="brand flex items-center gap-3 px-5 pt-5 pb-4">
         <img src="icon.svg" alt="" class="h-9 w-9 drop-shadow-[0_0_8px_rgba(80,180,255,0.5)]" />
         <div class="leading-tight">
@@ -160,7 +160,7 @@
   </div>
 
   <!-- ── Status bar ────────────────────────────────────────────── -->
-  <footer class="status-bar glass-strong flex h-9 items-center gap-4 px-4 text-xs">
+  <footer class="status-bar glass-strong relative z-30 flex h-9 items-center gap-4 px-4 text-xs">
     <div class="flex items-center gap-2">
       @if(this._libraryService.loading$ | async) {
       <span class="loading loading-spinner loading-xs text-accent"></span>

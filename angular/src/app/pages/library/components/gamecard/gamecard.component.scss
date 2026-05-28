@@ -15,10 +15,18 @@
   position: relative;
   aspect-ratio: 3 / 4;
   width: 100%;
-  overflow: hidden;
+  /* No overflow:hidden here — the dropdown menu must be able to extend
+     beyond the tile bounds. Image clipping lives on the inner wrapper. */
 }
 
-.poster-art img {
+.poster-art-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.poster-art-clip img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -26,7 +34,7 @@
   transition: transform 0.3s ease;
 }
 
-.tile:hover .poster-art img {
+.tile:hover .poster-art-clip img {
   transform: scale(1.05);
 }
 

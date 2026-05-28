@@ -63,14 +63,19 @@
 <!-- ── Grid poster ───────────────────────────────────────────── -->
 <div class="tile poster">
   <div class="poster-art">
-    @if(displayArt) {
-    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="cover art" />
-    } @else {
-    <div class="poster-no-art">
-      <i-lucide name="image-off" size="40"></i-lucide>
-      <span class="font-mono text-xs">{{ game?.gameId || game?.title }}</span>
+    <!-- Image goes in its own clipped wrapper so the dropdown menu can extend
+         past the tile bounds without getting cut off (overflow:hidden lives
+         on .poster-art-clip, not on .poster-art). -->
+    <div class="poster-art-clip">
+      @if(displayArt) {
+      <img [src]="'data:image/png;base64,' + displayArt.base64" alt="cover art" />
+      } @else {
+      <div class="poster-no-art">
+        <i-lucide name="image-off" size="40"></i-lucide>
+        <span class="font-mono text-xs">{{ game?.gameId || game?.title }}</span>
+      </div>
+      }
     </div>
-    }
 
     <!-- top overlays -->
     <span
