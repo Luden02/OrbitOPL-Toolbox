@@ -28,6 +28,8 @@ export class ImportComponent {
 
   importMode: ImportJobType = 'ps2-dvd';
   downloadArtwork = true;
+  /** PS2 DVD only: keep the original filename (new OPL convention). */
+  keepOriginalName = false;
   elfPrefix = 'XX.';
 
   staged: StagedFile[] = [];
@@ -152,6 +154,7 @@ export class ImportComponent {
         gameName: f.gameName,
         downloadArtwork: this.downloadArtwork,
         elfPrefix: this.isGamePsx ? this.elfPrefix : undefined,
+        keepOriginalName: this.isGameDvd ? this.keepOriginalName : undefined,
       }))
     );
     this.staged = [];

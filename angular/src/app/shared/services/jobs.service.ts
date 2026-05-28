@@ -19,6 +19,11 @@ export interface ImportJob {
   elfPrefix?: string;
   /** ZSO only: remove the source ISO once compression succeeds. */
   deleteOriginal?: boolean;
+  /**
+   * PS2 DVD only: skip the rename step so the file keeps its original name
+   * (OPL "new" naming convention — game ID read from SYSTEM.CNF).
+   */
+  keepOriginalName?: boolean;
   status: JobStatus;
   percent: number;
   stage: string;
@@ -269,6 +274,20 @@ export class JobsService {
       const movedPath =
         moveResult.newPath ||
         `${destinationDir}/${job.filePath.split(/[\\/]/).pop()}`;
+
+      // Skip the rename in "new OPL convention" mode — OPL will read the
+      // game ID from SYSTEM.CNF on its own.
+      if (job.keepOriginalName) {
+        if (job.downloadArtwork) {
+          this.patchJob(job.id, { stage: 'Fetching artwork…', percent: 100 });
+          await window.libraryAPI.downloadArtByGameId(
+            `${dirPath}/ART`,
+            job.gameId,
+            'PS2'
+          );
+        }
+        return { success: true };
+      }
 
       this.patchJob(job.id, { stage: 'Renaming…' });
       const renameResult: any = await window.libraryAPI.renameGamefile(

@@ -407,45 +407,68 @@ export class LibraryService {
     for (const file of gamefiles) {
       const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/i);
       const ext = file.extension?.toLowerCase();
-      if (
+      const looksLikeImage =
         (ext === '.iso' || ext === '.zso' || ext === '.vcd') &&
         typeof file.name === 'string' &&
         typeof file.path === 'string' &&
-        file.stats &&
-        typeof file.stats.size === 'number' &&
-        gameIdMatch
-      ) {
-        this.setLoading(true);
-        this.setCurrentAction(file.name);
+        !!file.stats &&
+        typeof file.stats.size === 'number';
 
-        this._logger.verbose(
-          'libraryService.parseGameFilesToLibrary',
-          `Mapping: ${file.name}`
-        );
-        const gameId = gameIdMatch[1];
-        const title = gameIdMatch[2];
-
-        const dirName = file.parentPath?.split(/[\\/]/).pop() || '';
-        const isPops = dirName === 'POPS';
-        const isVcd = dirName === 'VCD';
-        const isPs1 = isPops || isVcd;
-
-        validGames.push({
-          filename: file.name + file.extension,
-          title: title,
-          cdType: isPops ? 'POPS' : dirName,
-          gameId: gameId,
-          region: this.mapGameIdToRegion(gameId),
-          path: file.path,
-          extension: file.extension,
-          parentPath: file.parentPath,
-          format: isPops ? 'POPS' : this.extensionToFormat(file.extension),
-          system: isPs1 ? 'PS1' : 'PS2',
-          size: this.formatFileSize(file.stats.size) || '??',
-        });
-      } else {
+      if (!looksLikeImage) {
         invalidFiles.push(file);
+        continue;
       }
+
+      this.setLoading(true);
+      this.setCurrentAction(file.name);
+      this._logger.verbose(
+        'libraryService.parseGameFilesToLibrary',
+        `Mapping: ${file.name}`
+      );
+
+      let gameId: string;
+      let title: string;
+
+      if (gameIdMatch) {
+        // Legacy naming convention: GAMEID prefix in the filename.
+        gameId = gameIdMatch[1];
+        title = gameIdMatch[2];
+      } else if (ext === '.iso') {
+        // "New" OPL naming convention: no GAMEID prefix — read SYSTEM.CNF
+        // from the disc image. Cached after the first scan.
+        this.setCurrentAction(`Resolving ${file.name}…`);
+        const resolved = await window.libraryAPI.resolveIsoGameId(file.path);
+        if (!resolved?.success || !resolved.gameId) {
+          invalidFiles.push(file);
+          continue;
+        }
+        gameId = resolved.gameId;
+        title = resolved.gameName || file.name;
+      } else {
+        // .zso / .vcd without a GAMEID prefix isn't resolvable yet (would need
+        // ZISO/VCD block decompression). Treat as invalid for now.
+        invalidFiles.push(file);
+        continue;
+      }
+
+      const dirName = file.parentPath?.split(/[\\/]/).pop() || '';
+      const isPops = dirName === 'POPS';
+      const isVcd = dirName === 'VCD';
+      const isPs1 = isPops || isVcd;
+
+      validGames.push({
+        filename: file.name + file.extension,
+        title: title,
+        cdType: isPops ? 'POPS' : dirName,
+        gameId: gameId,
+        region: this.mapGameIdToRegion(gameId),
+        path: file.path,
+        extension: file.extension,
+        parentPath: file.parentPath,
+        format: isPops ? 'POPS' : this.extensionToFormat(file.extension),
+        system: isPs1 ? 'PS1' : 'PS2',
+        size: this.formatFileSize(file.stats!.size) || '??',
+      });
     }
 
     // Merge UL games and homebrew apps

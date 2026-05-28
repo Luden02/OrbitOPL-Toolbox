@@ -15,6 +15,12 @@ declare interface Window {
       system?: 'PS1' | 'PS2'
     ) => Promise<any>;
     tryDetermineGameIdFromHex: (filepath: string) => Promise<any>;
+    resolveIsoGameId: (filepath: string) => Promise<{
+      success: boolean;
+      gameId?: string;
+      gameName?: string;
+      message?: string;
+    }>;
     openAskGameFiles: (isGameCd: boolean, isGameDvd: boolean) => Promise<any>;
     tryDeterminePs1GameIdFromHex: (filepath: string) => Promise<any>;
     importPs1Game: (

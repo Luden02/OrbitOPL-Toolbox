@@ -94,6 +94,23 @@
           />
           <span class="text-sm">Download artwork after import</span>
         </label>
+        @if (isGameDvd) {
+        <label class="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            [checked]="keepOriginalName"
+            class="toggle toggle-primary"
+            (change)="keepOriginalName = $any($event.target).checked"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">Keep original filename</span>
+            <span class="block text-[0.68rem] text-base-content/55">
+              New OPL convention — OPL reads the game ID from SYSTEM.CNF instead
+              of the filename. Useful for clean library listings.
+            </span>
+          </span>
+        </label>
+        }
         } @else {
         <p class="text-sm text-base-content/55">
           No extra options for homebrew apps.

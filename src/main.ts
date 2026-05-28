@@ -20,6 +20,7 @@ import {
   openAskDirectory,
   openAskElfFiles,
   openAskGameFiles,
+  resolveIsoGameId,
   renameGamefile,
   tryDetermineGameIdFromHex,
   tryDeterminePs1GameIdFromHex,
@@ -239,6 +240,10 @@ ipcMain.handle(
     return downloadArtByGameId(dirPath, gameId, system || "PS2");
   }
 );
+
+ipcMain.handle("resolve-iso-gameid", async (_event, filepath: string) => {
+  return resolveIsoGameId(filepath);
+});
 
 ipcMain.handle(
   "try-determine-gameid-from-hex",

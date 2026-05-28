@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system),
   tryDetermineGameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-gameid-from-hex", filepath),
+  resolveIsoGameId: (filepath: string) =>
+    ipcRenderer.invoke("resolve-iso-gameid", filepath),
   openAskGameFiles: (isGameCd: boolean, isGameDvd: boolean) =>
     ipcRenderer.invoke("open-ask-game-files", isGameCd, isGameDvd),
   tryDeterminePs1GameIdFromHex: (filepath: string) =>

@@ -3,6 +3,7 @@ import * as fs from "fs/promises";
 import * as fsSync from "fs";
 import path from "path";
 import https from "https";
+import { getCachedGameId, setCachedGameId } from "./iso-cache.service";
 
 const PS1_GAME_ID_PREFIXES = [
   "SCUS",
@@ -542,6 +543,44 @@ export function describeFileAccessError(err: any, fallbackPath?: string): string
   }
 
   return err?.message || String(err);
+}
+
+/**
+ * Resolves the PS2 game ID for an ISO that doesn't carry the GAMEID prefix
+ * in its filename (the "new" OPL naming convention — OPL reads the ID from
+ * the disc's SYSTEM.CNF). Results are cached per (path, size, mtime) so
+ * library scans only pay the hex-scan cost the first time.
+ */
+export async function resolveIsoGameId(
+  filepath: string
+): Promise<{
+  success: boolean;
+  gameId?: string;
+  gameName?: string;
+  message?: string;
+}> {
+  let stat;
+  try {
+    stat = await fs.stat(filepath);
+  } catch (err: any) {
+    return { success: false, message: describeFileAccessError(err, filepath) };
+  }
+
+  const cached = getCachedGameId(filepath, stat.size, stat.mtimeMs);
+  if (cached) {
+    return { success: true, gameId: cached.gameId, gameName: cached.gameName };
+  }
+
+  const result = await tryDetermineGameIdFromHex(filepath);
+  if (result && (result as any).success) {
+    const r = result as any;
+    setCachedGameId(filepath, stat.size, stat.mtimeMs, r.gameId, r.gameName);
+    return { success: true, gameId: r.gameId, gameName: r.gameName };
+  }
+  return {
+    success: false,
+    message: (result as any)?.message || "Could not resolve game ID.",
+  };
 }
 
 export async function tryDetermineGameIdFromHex(filepath: string) {
