@@ -8,8 +8,19 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("get-ul-games", dirPath),
   getArtFolder: (dirPath: string) =>
     ipcRenderer.invoke("get-art-folder", dirPath),
-  renameGamefile: (dirPath: string, gameId: string, gameName: string) =>
-    ipcRenderer.invoke("rename-gamefile", dirPath, gameId, gameName),
+  renameGamefile: (
+    dirPath: string,
+    gameId: string,
+    gameName: string,
+    nameOnly?: boolean
+  ) =>
+    ipcRenderer.invoke(
+      "rename-gamefile",
+      dirPath,
+      gameId,
+      gameName,
+      !!nameOnly
+    ),
   downloadArtByGameId: (
     dirPath: string,
     gameId: string,

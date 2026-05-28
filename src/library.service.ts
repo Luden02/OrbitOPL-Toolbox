@@ -495,13 +495,17 @@ export function sanitizeGameFilename(name: string): string {
 export async function renameGamefile(
   dirpath: string,
   gameId: string,
-  gameName: string
+  gameName: string,
+  nameOnly: boolean = false
 ) {
-  console.log(dirpath, gameId, gameName);
   const ext = path.extname(dirpath);
   const parentDir = path.dirname(dirpath);
   const safeName = sanitizeGameFilename(gameName);
-  const newFileName = `${gameId}.${safeName}${ext}`;
+  // "New" OPL convention: drop the GAMEID. prefix so the file is just
+  // "<Title>.iso". OPL reads the game ID from SYSTEM.CNF on its own.
+  const newFileName = nameOnly
+    ? `${safeName}${ext}`
+    : `${gameId}.${safeName}${ext}`;
   const newFilePath = path.join(parentDir, newFileName);
 
   try {

@@ -7,7 +7,8 @@ declare interface Window {
     renameGamefile: (
       dirPath: string,
       gameId: string,
-      gameName: string
+      gameName: string,
+      nameOnly?: boolean
     ) => Promise<any>;
     downloadArtByGameId: (
       dirPath: string,

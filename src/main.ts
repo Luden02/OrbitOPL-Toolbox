@@ -229,8 +229,14 @@ ipcMain.handle("get-art-folder", async (event, dirPath: string) => {
 
 ipcMain.handle(
   "rename-gamefile",
-  async (event, dirPath: string, gameId: string, gameName: string) => {
-    return renameGamefile(dirPath, gameId, gameName);
+  async (
+    event,
+    dirPath: string,
+    gameId: string,
+    gameName: string,
+    nameOnly?: boolean
+  ) => {
+    return renameGamefile(dirPath, gameId, gameName, !!nameOnly);
   }
 );
 

@@ -103,10 +103,11 @@
             (change)="keepOriginalName = $any($event.target).checked"
           />
           <span class="leading-tight">
-            <span class="text-sm">Keep original filename</span>
+            <span class="text-sm">Use new OPL naming (drop GAMEID prefix)</span>
             <span class="block text-[0.68rem] text-base-content/55">
-              New OPL convention — OPL reads the game ID from SYSTEM.CNF instead
-              of the filename. Useful for clean library listings.
+              File is saved as "&lt;Title&gt;.iso" instead of
+              "SLES_123.45.&lt;Title&gt;.iso". OPL reads the game ID from
+              SYSTEM.CNF.
             </span>
           </span>
         </label>
