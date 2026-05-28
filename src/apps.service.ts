@@ -57,6 +57,10 @@ export async function getApps(
 
     for (const item of items) {
       if (!item.isDirectory()) continue;
+      // Skip POPStarter launchers for PS1 games — those folders are created
+      // alongside each PS1 VCD and are already represented by their PS1 entry
+      // in the library. Showing them here would duplicate every PS1 title.
+      if (/^POPS_/i.test(item.name)) continue;
       const folderPath = path.join(dir, item.name);
 
       let title = item.name;
