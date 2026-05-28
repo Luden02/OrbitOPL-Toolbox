@@ -5,12 +5,17 @@ import { LibraryService } from '../../../../shared/services/library.service';
 import { JobsService } from '../../../../shared/services/jobs.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
+import { LibraryRenameDialogComponent } from '../rename-dialog/rename-dialog.component';
 
 export type GamecardViewMode = 'grid' | 'list';
 
 @Component({
   selector: 'app-gamecard',
-  imports: [LucideAngularModule, GameCfgDialogComponent],
+  imports: [
+    LucideAngularModule,
+    GameCfgDialogComponent,
+    LibraryRenameDialogComponent,
+  ],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })
@@ -38,11 +43,28 @@ export class GamecardComponent implements OnInit, OnChanges {
     return system === 'PS2' && isIso;
   }
 
+  /** Old/new naming convention only applies to PS2 disc images. */
+  get canRenameConvention(): boolean {
+    if (!this.game) return false;
+    const system = this.game.system ?? 'PS2';
+    return (
+      system === 'PS2' &&
+      (this.game.format === 'ISO' || this.game.format === 'ZSO') &&
+      !!this.game.gameId &&
+      !!this.game.title
+    );
+  }
+
   public displayArt: gameArt | undefined;
   public showCfg = false;
+  public showRename = false;
 
   openCfg() {
     if (this.game) this.showCfg = true;
+  }
+
+  openRename() {
+    if (this.game) this.showRename = true;
   }
 
   ngOnInit() {

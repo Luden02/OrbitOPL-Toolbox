@@ -3,7 +3,7 @@
   <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
     <i-lucide name="text-cursor-input" size="18" class="text-accent"></i-lucide>
     <h2 class="font-display text-sm font-semibold tracking-wide">
-      Rename all games to convention
+      {{ isSingle ? "Rename game to convention" : "Rename all games to convention" }}
     </h2>
     <button
       class="btn btn-ghost btn-xs btn-square ml-auto"

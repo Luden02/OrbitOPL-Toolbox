@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '../../../../shared/services/library.service';
 import { LogsService } from '../../../../shared/services/logs.service';
@@ -19,6 +19,9 @@ interface RenamePlanItem {
   styleUrl: './rename-dialog.component.scss',
 })
 export class LibraryRenameDialogComponent implements OnInit {
+  /** When provided, the dialog operates on this single game instead of the
+   *  whole library. */
+  @Input() game?: Game;
   @Output() closed = new EventEmitter<void>();
 
   convention: Convention = 'new';
@@ -40,15 +43,24 @@ export class LibraryRenameDialogComponent implements OnInit {
     private readonly _logger: LogsService
   ) {}
 
-  ngOnInit() {
-    this.candidates = this._library.currentLibraryValue.filter(
-      (g) =>
-        (g.system ?? 'PS2') === 'PS2' &&
-        (g.format === 'ISO' || g.format === 'ZSO') &&
-        !!g.path &&
-        !!g.gameId &&
-        !!g.title
+  /** Per-game eligibility check shared by both bulk and single modes. */
+  private isEligible(g: Game): boolean {
+    return (
+      (g.system ?? 'PS2') === 'PS2' &&
+      (g.format === 'ISO' || g.format === 'ZSO') &&
+      !!g.path &&
+      !!g.gameId &&
+      !!g.title
     );
+  }
+
+  get isSingle(): boolean {
+    return !!this.game;
+  }
+
+  ngOnInit() {
+    const pool = this.game ? [this.game] : this._library.currentLibraryValue;
+    this.candidates = pool.filter((g) => this.isEligible(g));
     this.rebuildPlan();
   }
 
