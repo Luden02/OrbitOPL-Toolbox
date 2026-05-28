@@ -87,6 +87,11 @@
               <i-lucide name="file-archive" size="16"></i-lucide>Convert all PS2 ISOs to ZSO
             </a>
           </li>
+          <li>
+            <a (click)="openRenameDialog()">
+              <i-lucide name="text-cursor-input" size="16"></i-lucide>Rename all games to convention…
+            </a>
+          </li>
         </ul>
       </div>
       }
@@ -175,3 +180,9 @@
     }
   </div>
 </div>
+
+@if (showRenameDialog) {
+<app-library-rename-dialog
+  (closed)="showRenameDialog = false"
+></app-library-rename-dialog>
+}

@@ -1,0 +1,132 @@
+<div class="rename-backdrop" (click)="close()"></div>
+<div class="rename-modal glass-strong" role="dialog">
+  <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
+    <i-lucide name="text-cursor-input" size="18" class="text-accent"></i-lucide>
+    <h2 class="font-display text-sm font-semibold tracking-wide">
+      Rename all games to convention
+    </h2>
+    <button
+      class="btn btn-ghost btn-xs btn-square ml-auto"
+      (click)="close()"
+      [disabled]="running"
+    >
+      <i-lucide name="x" size="16"></i-lucide>
+    </button>
+  </div>
+
+  <div class="rename-body flex flex-col gap-4 px-5 py-4">
+    @if (!done) {
+    <div>
+      <span class="text-sm font-semibold">Target convention</span>
+      <div class="mt-2 flex flex-col gap-2">
+        <label class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40">
+          <input
+            type="radio"
+            name="convention"
+            class="radio radio-primary radio-sm mt-0.5"
+            [checked]="convention === 'new'"
+            [disabled]="running"
+            (change)="setConvention('new')"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">New — &lt;Title&gt;.iso</span>
+            <span class="block text-[0.68rem] text-base-content/55">
+              e.g. <span class="font-mono">Max Payne.iso</span>. OPL reads the
+              game ID from SYSTEM.CNF.
+            </span>
+          </span>
+        </label>
+        <label class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40">
+          <input
+            type="radio"
+            name="convention"
+            class="radio radio-primary radio-sm mt-0.5"
+            [checked]="convention === 'old'"
+            [disabled]="running"
+            (change)="setConvention('old')"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">Old — &lt;GAMEID&gt;.&lt;Title&gt;.iso</span>
+            <span class="block text-[0.68rem] text-base-content/55">
+              e.g. <span class="font-mono">SLES_123.45.Max Payne.iso</span>.
+              Maximally compatible with older OPL builds.
+            </span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div class="rounded-md border border-base-content/10 bg-base-100/30 p-3 text-sm">
+      <div class="flex items-center gap-2">
+        <i-lucide name="info" size="14" class="text-accent"></i-lucide>
+        <span>{{ planCount }} game{{ planCount === 1 ? "" : "s" }} will be renamed.</span>
+      </div>
+      @if (skippedCount > 0) {
+      <p class="ml-6 mt-1 text-xs text-base-content/55">
+        {{ skippedCount }} already match the chosen convention and will be left
+        alone.
+      </p>
+      }
+      <p class="ml-6 mt-1 text-xs text-base-content/55">
+        Art files in <span class="font-mono">ART/</span> are keyed by GAMEID
+        (e.g. <span class="font-mono">SLES_123.45_COV.png</span>) and are
+        <strong>not</strong> renamed — OPL needs them that way regardless of
+        the game-file convention.
+      </p>
+    </div>
+
+    @if (running) {
+    <div>
+      <progress
+        class="progress progress-primary h-2 w-full"
+        [value]="progress"
+        max="100"
+      ></progress>
+      <p class="mt-1 truncate text-[0.68rem] text-base-content/55">
+        {{ currentLabel }}
+      </p>
+    </div>
+    }
+    } @else {
+    <div class="rounded-md border border-base-content/10 bg-base-100/30 p-4 text-sm">
+      <div class="flex items-center gap-2">
+        <i-lucide
+          [name]="failed === 0 ? 'circle-check' : 'triangle-alert'"
+          size="18"
+          [class.text-success]="failed === 0"
+          [class.text-warning]="failed > 0"
+        ></i-lucide>
+        <span class="font-semibold">Done.</span>
+      </div>
+      <p class="mt-1 text-sm text-base-content/70">
+        Renamed {{ succeeded }} game{{ succeeded === 1 ? "" : "s" }}.
+        @if (failed > 0) {
+        <span class="text-warning">{{ failed }} failed — check the Logs page.</span>
+        }
+      </p>
+    </div>
+    }
+  </div>
+
+  <div class="flex justify-end gap-2 border-t border-base-content/10 px-5 py-3">
+    @if (!done) {
+    <button class="btn btn-ghost btn-sm" (click)="close()" [disabled]="running">
+      Cancel
+    </button>
+    <button
+      class="btn btn-primary btn-sm"
+      (click)="run()"
+      [disabled]="running || planCount === 0"
+    >
+      @if (running) {
+      <span class="loading loading-spinner loading-xs"></span>
+      } @else {
+      <i-lucide name="text-cursor-input" size="15"></i-lucide>
+      }
+      Rename {{ planCount }} game{{ planCount === 1 ? "" : "s" }}
+    </button>
+    } @else {
+    <button class="btn btn-primary btn-sm" (click)="close()">Close</button>
+    }
+  </div>
+</div>

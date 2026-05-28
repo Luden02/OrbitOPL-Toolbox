@@ -3,6 +3,7 @@ import {
   GamecardComponent,
   GamecardViewMode,
 } from './components/gamecard/gamecard.component';
+import { LibraryRenameDialogComponent } from './components/rename-dialog/rename-dialog.component';
 import { LibraryService } from '../../shared/services/library.service';
 import { JobsService } from '../../shared/services/jobs.service';
 import { AsyncPipe } from '@angular/common';
@@ -15,15 +16,26 @@ type SortMode = 'title-asc' | 'title-desc' | 'gameId-asc' | 'gameId-desc';
 
 @Component({
   selector: 'app-library',
-  imports: [GamecardComponent, AsyncPipe, LucideAngularModule],
+  imports: [
+    GamecardComponent,
+    LibraryRenameDialogComponent,
+    AsyncPipe,
+    LucideAngularModule,
+  ],
   templateUrl: './library.component.html',
   styleUrl: './library.component.scss',
 })
 export class LibraryComponent {
+  public showRenameDialog = false;
+
   constructor(
     public readonly _libraryService: LibraryService,
     private readonly _jobs: JobsService
   ) {}
+
+  openRenameDialog() {
+    this.showRenameDialog = true;
+  }
 
   /** Queues a ZSO compression job for every PS2 ISO in the library. */
   convertAllToZso() {
