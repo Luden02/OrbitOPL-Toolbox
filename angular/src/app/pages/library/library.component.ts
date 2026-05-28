@@ -4,6 +4,7 @@ import {
   GamecardViewMode,
 } from './components/gamecard/gamecard.component';
 import { LibraryService } from '../../shared/services/library.service';
+import { JobsService } from '../../shared/services/jobs.service';
 import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '../../shared/types/game.type';
@@ -19,7 +20,39 @@ type SortMode = 'title-asc' | 'title-desc' | 'gameId-asc' | 'gameId-desc';
   styleUrl: './library.component.scss',
 })
 export class LibraryComponent {
-  constructor(public readonly _libraryService: LibraryService) {}
+  constructor(
+    public readonly _libraryService: LibraryService,
+    private readonly _jobs: JobsService
+  ) {}
+
+  /** Queues a ZSO compression job for every PS2 ISO in the library. */
+  convertAllToZso() {
+    const candidates = this._libraryService.currentLibraryValue.filter(
+      (g) =>
+        (g.system ?? 'PS2') === 'PS2' &&
+        (g.format === 'ISO' || g.extension?.toLowerCase() === 'iso')
+    );
+    if (candidates.length === 0) {
+      window.alert('No uncompressed PS2 ISO games in the library.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Compress ${candidates.length} PS2 ISO game(s) to ZSO?\n\n` +
+        `Each .iso will be replaced with a smaller .zso once its job succeeds.`
+    );
+    if (!confirmed) return;
+    this._jobs.enqueue(
+      candidates.map((g) => ({
+        type: 'zso',
+        label: g.title || g.gameId || g.filename,
+        filePath: g.path,
+        gameId: g.gameId,
+        gameName: g.title || '',
+        downloadArtwork: false,
+        deleteOriginal: true,
+      }))
+    );
+  }
 
   private activeTabSubject = new BehaviorSubject<SystemTab>('PS2');
   public activeTab$ = this.activeTabSubject.asObservable();

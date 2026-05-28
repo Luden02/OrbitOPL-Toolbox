@@ -83,6 +83,11 @@ export class LibraryService {
     return this.currentDirectory;
   }
 
+  /** Synchronous snapshot of the current library — useful for bulk actions. */
+  public get currentLibraryValue(): Game[] {
+    return this.librarySubject.getValue();
+  }
+
   private setCurrentDirectory(dir: string | undefined) {
     this.currentDirectory = dir;
     this.currentDirectorySubject.next(dir);
