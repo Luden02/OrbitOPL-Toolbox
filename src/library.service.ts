@@ -828,6 +828,28 @@ export async function deleteGameAndRelatedFiles(
       // ART directory may not exist — that's fine
     }
 
+    // PS1 VCDs are paired with an APPS/POPS_<sanitizedName>/ launcher created
+    // during import. Remove that folder too so PS1 deletes don't leave the
+    // launcher orphaned on disk.
+    if (path.extname(gamePath).toLowerCase() === ".vcd") {
+      const oplRoot = path.dirname(artDir); // artDir = <root>/ART
+      const base = path.basename(gamePath, path.extname(gamePath));
+      // Strip the "GAMEID." prefix if present; otherwise use the whole stem.
+      const prefix = `${gameId}.`;
+      const sanitizedName = base.startsWith(prefix)
+        ? base.slice(prefix.length)
+        : base;
+      if (sanitizedName) {
+        const appsLauncher = path.join(oplRoot, "APPS", `POPS_${sanitizedName}`);
+        try {
+          await fs.rm(appsLauncher, { recursive: true, force: true });
+        } catch {
+          // Best-effort — the launcher may not exist (e.g. PS1 game imported
+          // outside this app), and that's fine.
+        }
+      }
+    }
+
     return { success: true };
   } catch (err: any) {
     return { success: false, message: err?.message || String(err) };
