@@ -11,6 +11,9 @@ The goal isn’t to replace OPLManager, but to offer an alternative — one that
 
 > Built with Electron + Angular, styled with Tailwind CSS & daisyUI. Cross-platform: **Windows, macOS, and Linux**.
 
+<img width="1316" height="747" alt="Screenshot 2026-06-16 at 4 51 05 PM" src="https://github.com/user-attachments/assets/38534dc9-83c1-40ba-9a24-f2e64f5106d0" />
+
+
 # ✨ Features
 
 ### 🎮 Multi-system library
@@ -28,6 +31,8 @@ The goal isn’t to replace OPLManager, but to offer an alternative — one that
 - **APPS** — import homebrew `ELF` executables with a custom title
 - **Automatic game-ID detection** by scanning the disc image (no need to look it up manually)
 - **Queued batch imports** with live progress for long operations
+
+<img width="1496" height="821" alt="Screenshot 2026-06-16 at 4 56 48 PM" src="https://github.com/user-attachments/assets/e9aac4f1-821e-40fe-b37f-8a66074b1434" />
 
 ### 🖼️ Artwork
 
