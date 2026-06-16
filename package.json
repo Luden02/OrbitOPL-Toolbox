@@ -1,11 +1,11 @@
 {
   "name": "orbitopl-toolbox",
-  "version": "0.2.4-beta",
+  "version": "1.0.0",
   "description": "A modern, cross-platform way to manage your OPL game collection. ",
   "main": "dist/src/main.js",
   "author": "Luden",
   "email": "",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
     "build": "tsc",
