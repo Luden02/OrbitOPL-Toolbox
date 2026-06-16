@@ -17,13 +17,19 @@ export class InvalidComponent {
   renameGameName: string = '';
   fetchArtwork: boolean = false;
 
+  bulkConvention: 'old' | 'new' = 'new';
+  bulkRunning: boolean = false;
+  bulkResult: { corrected: number; skipped: number } | null = null;
+
   constructor(public readonly _libraryService: LibraryService) {}
 
   openRenameTool(filepath: string) {
     const dialog = document.getElementById('rename_tool') as HTMLDialogElement;
     dialog?.showModal();
-    this._libraryService.tryDetermineGameIdFromHex(filepath).then((result) => {
-      if (result.success) {
+    // Auto-discover the game ID straight from the disc image — handles ISO
+    // (raw scan) and ZSO (decompression) alike.
+    this._libraryService.resolveIsoGameId(filepath).then((result) => {
+      if (result.success && result.gameId) {
         this.renamedFilePath = filepath;
         this.renameGameId = result.gameId;
         this.renameGameName = result.gameName || '';
@@ -32,16 +38,30 @@ export class InvalidComponent {
   }
 
   openBulkAutoCorrection() {
+    this.bulkResult = null;
     const dialog = document.getElementById(
       'bulk_auto_tool'
     ) as HTMLDialogElement;
     dialog?.showModal();
   }
 
+  closeBulkAutoCorrection() {
+    if (this.bulkRunning) return;
+    (document.getElementById('bulk_auto_tool') as HTMLDialogElement)?.close();
+  }
+
   startBulkAutoCorrection() {
-    this._libraryService.bulkAutoCorrection(this.fetchArtwork).then(() => {
-      (document.getElementById('bulk_auto_tool') as HTMLDialogElement).close();
-    });
+    if (this.bulkRunning) return;
+    this.bulkRunning = true;
+    this.bulkResult = null;
+    this._libraryService
+      .bulkAutoCorrection(this.fetchArtwork, this.bulkConvention)
+      .then((result) => {
+        this.bulkResult = result;
+      })
+      .finally(() => {
+        this.bulkRunning = false;
+      });
   }
 
   sendRenaming() {

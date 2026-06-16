@@ -109,6 +109,13 @@
           >
         </li>
         }
+        @if(canRenameConvention) {
+        <li>
+          <a (click)="openRename()"
+            ><i-lucide name="text-cursor-input" [size]="16"></i-lucide>Rename to convention…</a
+          >
+        </li>
+        }
         <li>
           <a class="text-error" (click)="confirmDelete()"
             ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a

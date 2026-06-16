@@ -88,6 +88,11 @@ export class LibraryService {
     return this.librarySubject.getValue();
   }
 
+  /** Synchronous snapshot of the invalid files — useful for bulk actions. */
+  public get currentInvalidFilesValue(): any[] {
+    return this.invalidFilesSubject.getValue();
+  }
+
   private setCurrentDirectory(dir: string | undefined) {
     this.currentDirectory = dir;
     this.currentDirectorySubject.next(dir);
@@ -433,9 +438,10 @@ export class LibraryService {
         // Legacy naming convention: GAMEID prefix in the filename.
         gameId = gameIdMatch[1];
         title = gameIdMatch[2];
-      } else if (ext === '.iso') {
-        // "New" OPL naming convention: no GAMEID prefix — read SYSTEM.CNF
-        // from the disc image. Cached after the first scan.
+      } else if (ext === '.iso' || ext === '.zso') {
+        // "New" OPL naming convention: no GAMEID prefix — read the game ID from
+        // the disc image (ZSO is decompressed on the fly). Cached after the
+        // first scan.
         this.setCurrentAction(`Resolving ${file.name}…`);
         const resolved = await window.libraryAPI.resolveIsoGameId(file.path);
         if (!resolved?.success || !resolved.gameId) {
@@ -445,8 +451,8 @@ export class LibraryService {
         gameId = resolved.gameId;
         title = resolved.gameName || file.name;
       } else {
-        // .zso / .vcd without a GAMEID prefix isn't resolvable yet (would need
-        // ZISO/VCD block decompression). Treat as invalid for now.
+        // .vcd without a GAMEID prefix isn't resolvable yet (would need VCD
+        // block decompression). Treat as invalid for now.
         invalidFiles.push(file);
         continue;
       }
@@ -491,8 +497,18 @@ export class LibraryService {
     this.setCurrentAction('');
     this.setLoading(false);
 
-    console.log(validGames);
-    console.log(invalidFiles);
+    this._logger.log(
+      'libraryService',
+      `Library updated: ${validGames.length} game(s), ${invalidFiles.length} invalid file(s)`
+    );
+    if (invalidFiles.length > 0) {
+      this._logger.verbose(
+        'libraryService.parseGameFilesToLibrary',
+        `Invalid files: ${invalidFiles
+          .map((f) => f.name + (f.extension || ''))
+          .join(', ')}`
+      );
+    }
   }
 
   private parseArtFiles(dirPath: string) {
@@ -508,17 +524,18 @@ export class LibraryService {
   public async renameInvalidGameFile(
     path: string,
     gameId: string,
-    gameName: string
+    gameName: string,
+    nameOnly: boolean = false
   ) {
     this._logger.log('renameInvalidGameFile', 'Renaming ' + path);
     this.setLoading(true);
     this.setCurrentAction('Renaming ' + path + '...');
     this._logger.verbose(
       'renameInvalidGameFile',
-      `${path} -> ${gameId}, ${gameName}`
+      `${path} -> ${gameId}, ${gameName} (${nameOnly ? 'new' : 'old'} convention)`
     );
     return window.libraryAPI
-      .renameGamefile(path, gameId, gameName)
+      .renameGamefile(path, gameId, gameName, nameOnly)
       .then((res) => {
         this.setCurrentAction('');
         this.setLoading(false);
@@ -573,14 +590,14 @@ export class LibraryService {
       'Triggered downloading complete library art files...'
     );
     const games = this.librarySubject.getValue();
-    const downloadPromises = games
-      .filter((game) => game.system !== 'APPS' && game.gameId)
-      .map((game) =>
-        this.downloadArtByGameId(
-          game.gameId,
-          game.system === 'PS1' ? 'PS1' : 'PS2'
-        )
-      );
+    const targets = games.filter((game) => game.system !== 'APPS' && game.gameId);
+    this._logger.verbose(
+      'downloadAllArt',
+      `Fetching artwork for ${targets.length} game(s)`
+    );
+    const downloadPromises = targets.map((game) =>
+      this.downloadArtByGameId(game.gameId, game.system === 'PS1' ? 'PS1' : 'PS2')
+    );
     return Promise.all(downloadPromises);
   }
 
@@ -594,7 +611,10 @@ export class LibraryService {
     return window.libraryAPI.tryDetermineGameIdFromHex(filepath).then((res) => {
       this.setCurrentAction('');
       this.setLoading(false);
-      console.log(res);
+      this._logger.verbose(
+        'tryDetermineGameIdFromHex',
+        `Result: ${JSON.stringify(res)}`
+      );
       return res;
     });
   }
@@ -611,41 +631,105 @@ export class LibraryService {
       .then((res) => {
         this.setCurrentAction('');
         this.setLoading(false);
-        console.log(res);
+        this._logger.verbose(
+          'tryDeterminePs1GameIdFromHex',
+          `Result: ${JSON.stringify(res)}`
+        );
         return res;
       });
   }
 
-  public async bulkAutoCorrection(fetchArtwork: boolean) {
+  /**
+   * Auto-discovers a PS2 game ID by reading the disc image itself — a raw byte
+   * scan for ISO, on-the-fly decompression for ZSO. Results are cached on the
+   * main side per (path, size, mtime).
+   */
+  public resolveIsoGameId(filepath: string) {
+    this._logger.log(
+      'resolveIsoGameId',
+      'Auto-discovering Game ID from disc image: ' + filepath
+    );
+    this.setLoading(true);
+    this.setCurrentAction('Reading game ID from disc...');
+    return window.libraryAPI.resolveIsoGameId(filepath).then((res) => {
+      this.setCurrentAction('');
+      this.setLoading(false);
+      return res;
+    });
+  }
+
+  /**
+   * Auto-corrects every invalid file in one pass: the game ID is discovered
+   * from each disc image (ISO via raw scan, ZSO via decompression), then the
+   * file is renamed into the chosen naming convention and, optionally, its
+   * artwork is fetched.
+   */
+  public async bulkAutoCorrection(
+    fetchArtwork: boolean,
+    convention: 'old' | 'new' = 'new'
+  ): Promise<{ corrected: number; skipped: number }> {
     this._logger.log(
       'bulkAutoCorrection',
-      'Triggered bulk auto-correction of invalid game files...'
+      `Triggered bulk auto-correction (convention=${convention}, fetchArtwork=${fetchArtwork})`
     );
     this.setLoading(true);
     this.setCurrentAction('Auto-correcting invalid game files...');
 
-    const invalidFiles = this.invalidFiles$.subscribe(async (files) => {
+    // Snapshot the list up front — renaming refreshes invalidFiles$, so iterating
+    // the live subject would process a shifting set.
+    const files = [...this.currentInvalidFilesValue];
+    const nameOnly = convention === 'new';
+    let corrected = 0;
+    let skipped = 0;
+
+    try {
       for (const file of files) {
-        this.setLoading(true);
         this.setCurrentAction('Processing ' + file.name + '...');
 
-        const result = await this.tryDetermineGameIdFromHex(file.path);
-        if (result.success) {
-          await this.renameInvalidGameFile(
-            file.path,
-            result.gameId,
-            result.gameName || ''
-          );
+        // Auto-discovery only knows how to read PS2 disc images for now.
+        const ext = (file.extension || '').toLowerCase();
+        if (ext !== '.iso' && ext !== '.zso') {
+          skipped++;
+          continue;
+        }
+
+        const result = await window.libraryAPI.resolveIsoGameId(file.path);
+        if (!result?.success || !result.gameId) {
+          skipped++;
+          continue;
+        }
+
+        const renamed = await window.libraryAPI.renameGamefile(
+          file.path,
+          result.gameId,
+          result.gameName || file.name,
+          nameOnly
+        );
+        if (renamed?.success) {
+          corrected++;
           if (fetchArtwork) {
             await this.downloadArtByGameId(result.gameId);
           }
+        } else {
+          skipped++;
+          this._logger.error(
+            'bulkAutoCorrection',
+            `Failed to rename ${file.name}: ${renamed?.message}`
+          );
         }
       }
-      invalidFiles.unsubscribe();
-    });
+    } finally {
+      this.setCurrentAction('');
+      this.setLoading(false);
+      // Single refresh once everything is done, rather than per file.
+      this.refreshGamesFiles();
+    }
 
-    this.setCurrentAction('');
-    this.setLoading(false);
+    this._logger.log(
+      'bulkAutoCorrection',
+      `Done — corrected ${corrected}, skipped ${skipped}.`
+    );
+    return { corrected, skipped };
   }
 
   public async deleteApp(game: Game) {

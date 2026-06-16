@@ -125,26 +125,127 @@
 
 <dialog id="bulk_auto_tool" class="modal">
   <div class="modal-box glass-strong">
-    <h3 class="font-display text-lg font-semibold tracking-wide">Bulk Auto-Correction</h3>
+    <div class="flex items-center gap-2">
+      <i-lucide name="wand-sparkles" size="18" class="text-accent"></i-lucide>
+      <h3 class="font-display text-lg font-semibold tracking-wide">
+        Bulk Auto-Correction
+      </h3>
+      <button
+        class="btn btn-ghost btn-sm btn-square ml-auto"
+        (click)="closeBulkAutoCorrection()"
+        [disabled]="bulkRunning"
+        aria-label="Close"
+      >
+        <i-lucide name="x" size="16"></i-lucide>
+      </button>
+    </div>
+
+    @if (!bulkResult) {
     <p class="py-4 text-sm text-base-content/70">
-      This will attempt to automatically correct all invalid game files by
-      reading their internal hex values, renaming the files and fetching
-      missing artwork where possible.
+      Auto-discovers the game ID for every invalid file by reading the disc
+      image itself — ISO is scanned directly, ZSO is decompressed on the fly —
+      then renames each file into the convention you choose below.
     </p>
-    <label class="flex cursor-pointer items-center gap-3">
+
+    <div>
+      <span class="text-sm font-semibold">Target convention</span>
+      <div class="mt-2 flex flex-col gap-2">
+        <label
+          class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40"
+        >
+          <input
+            type="radio"
+            name="bulk_convention"
+            class="radio radio-primary radio-sm mt-0.5"
+            [checked]="bulkConvention === 'new'"
+            [disabled]="bulkRunning"
+            (change)="bulkConvention = 'new'"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">New — &lt;Title&gt;.iso</span>
+            <span class="block text-[0.68rem] text-base-content/55">
+              e.g. <span class="font-mono">Max Payne.iso</span>. OPL reads the
+              game ID from the disc.
+            </span>
+          </span>
+        </label>
+        <label
+          class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40"
+        >
+          <input
+            type="radio"
+            name="bulk_convention"
+            class="radio radio-primary radio-sm mt-0.5"
+            [checked]="bulkConvention === 'old'"
+            [disabled]="bulkRunning"
+            (change)="bulkConvention = 'old'"
+          />
+          <span class="leading-tight">
+            <span class="text-sm">Old — &lt;GAMEID&gt;.&lt;Title&gt;.iso</span>
+            <span class="block text-[0.68rem] text-base-content/55">
+              e.g. <span class="font-mono">SLES_123.45.Max Payne.iso</span>.
+              Maximally compatible with older OPL builds.
+            </span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <label class="mt-3 flex cursor-pointer items-center gap-3">
       <input
         type="checkbox"
         checked="checked"
         class="toggle toggle-primary"
+        [disabled]="bulkRunning"
         [(ngModel)]="fetchArtwork"
       />
       <span class="text-sm">Fetch artwork while correcting</span>
     </label>
+
     <div class="modal-action">
-      <button class="btn btn-primary" (click)="startBulkAutoCorrection()">
-        <i-lucide name="wand-sparkles" size="16"></i-lucide>Start Bulk Auto-Correction
+      <button
+        class="btn btn-ghost"
+        (click)="closeBulkAutoCorrection()"
+        [disabled]="bulkRunning"
+      >
+        Cancel
+      </button>
+      <button
+        class="btn btn-primary"
+        (click)="startBulkAutoCorrection()"
+        [disabled]="bulkRunning"
+      >
+        @if (bulkRunning) {
+        <span class="loading loading-spinner loading-xs"></span>
+        } @else {
+        <i-lucide name="wand-sparkles" size="16"></i-lucide>
+        }
+        Start Bulk Auto-Correction
       </button>
     </div>
+    } @else {
+    <div class="my-4 rounded-md border border-base-content/10 bg-base-100/30 p-4 text-sm">
+      <div class="flex items-center gap-2">
+        <i-lucide name="circle-check" size="18" class="text-success"></i-lucide>
+        <span class="font-semibold">Done.</span>
+      </div>
+      <p class="mt-1 text-sm text-base-content/70">
+        Corrected {{ bulkResult.corrected }} file{{
+          bulkResult.corrected === 1 ? "" : "s"
+        }}.
+        @if (bulkResult.skipped > 0) {
+        <span class="text-base-content/55">
+          {{ bulkResult.skipped }} could not be resolved and were left alone.
+        </span>
+        }
+      </p>
+    </div>
+    <div class="modal-action">
+      <button class="btn btn-primary" (click)="closeBulkAutoCorrection()">
+        Close
+      </button>
+    </div>
+    }
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
