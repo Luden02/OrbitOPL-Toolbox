@@ -7,6 +7,7 @@
   "email": "",
   "license": "GPL-3.0-only",
   "scripts": {
+    "setup": "node scripts/setup.js",
     "postinstall": "electron-builder install-app-deps",
     "build": "tsc",
     "build:watch": "tsc -w",
