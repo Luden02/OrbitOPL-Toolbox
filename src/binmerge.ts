@@ -9,6 +9,9 @@ import {
   sectorsToMsf,
   CueSheet,
 } from "./cue-parser";
+import { createLogger, formatBytes } from "./logger";
+
+const log = createLogger("binmerge");
 
 export interface MergeResult {
   mergedBinPath: string;
@@ -26,6 +29,7 @@ export async function mergeMultiBin(
 
   // Single-file CUE: no merge needed
   if (cueSheet.files.length <= 1) {
+    log.verbose("Single-file CUE — no BIN merge needed");
     const binPath = path.join(cueDir, cueSheet.files[0].filename);
     return {
       mergedBinPath: binPath,
@@ -37,6 +41,7 @@ export async function mergeMultiBin(
   // Determine block size from first track
   const firstTrackType = cueSheet.files[0].tracks[0]?.type || "MODE2/2352";
   const blockSize = getBlockSize(firstTrackType);
+  log.info(`Merging ${cueSheet.files.length} BIN files (block size ${blockSize}B)`);
 
   const baseName = path.parse(cueFilePath).name;
   const mergedBinPath = path.join(outputDir, `${baseName}.bin`);
@@ -54,6 +59,7 @@ export async function mergeMultiBin(
     const stat = await fs.stat(binPath);
     totalSize += stat.size;
   }
+  log.verbose(`Total BIN payload to merge: ${formatBytes(totalSize)}`);
 
   let writtenBytes = 0;
 
@@ -63,6 +69,10 @@ export async function mergeMultiBin(
     fileOffsets.push(cumulativeOffset);
 
     const stat = await fs.stat(binPath);
+    log.verbose(
+      `Appending BIN ${i + 1}/${cueSheet.files.length} ${file.filename} ` +
+        `(${formatBytes(stat.size)}) at sector offset ${cumulativeOffset}`
+    );
     cumulativeOffset += Math.floor(stat.size / blockSize);
 
     await new Promise<void>((resolve, reject) => {
@@ -135,6 +145,11 @@ export async function mergeMultiBin(
   }
 
   await fs.writeFile(mergedCuePath, cueContent, "utf-8");
+
+  log.info(
+    `Merged ${cueSheet.files.length} BIN files → ${path.basename(mergedBinPath)} ` +
+      `(${formatBytes(writtenBytes)}, ${mergedCueSheet.files[0].tracks.length} track(s))`
+  );
 
   return {
     mergedBinPath,

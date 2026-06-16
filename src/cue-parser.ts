@@ -1,5 +1,8 @@
 import * as fs from "fs/promises";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("cue-parser");
 
 export interface CueIndex {
   number: number; // 0 or 1
@@ -127,6 +130,10 @@ export async function parseCueSheet(cueFilePath: string): Promise<CueSheet> {
     currentFile.tracks.push(currentTrack);
   }
 
+  const trackTotal = cueSheet.files.reduce((n, f) => n + f.tracks.length, 0);
+  log.verbose(
+    `Parsed ${path.basename(cueFilePath)}: ${cueSheet.files.length} FILE(s), ${trackTotal} track(s)`
+  );
   return cueSheet;
 }
 

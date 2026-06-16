@@ -10,6 +10,9 @@ import {
   sanitizeGameFilename,
   describeFileAccessError,
 } from "./library.service";
+import { createLogger } from "./logger";
+
+const log = createLogger("ps1-import");
 
 const POPSTARTER_ELF_CANDIDATE_PATHS = [
   path.resolve(__dirname, "../assets/POPSTARTER.ELF"),
@@ -21,6 +24,7 @@ async function findPopstarterElf(): Promise<string | null> {
   for (const candidate of POPSTARTER_ELF_CANDIDATE_PATHS) {
     try {
       await fs.access(candidate);
+      log.verbose(`Using POPSTARTER.ELF at ${candidate}`);
       return candidate;
     } catch {
       // Try next candidate
@@ -45,6 +49,7 @@ export async function importPs1Game(
   onProgress?: (percent: number, stage: string) => void
 ): Promise<ImportPs1Result> {
   try {
+    log.info(`PS1 import started: ${cueFilePath} (ELF prefix "${elfPrefix}")`);
     const popsDir = path.join(oplRoot, "POPS");
     const artDir = path.join(oplRoot, "ART");
 
@@ -62,6 +67,7 @@ export async function importPs1Game(
 
     if (cueSheet.files.length > 1) {
       if (onProgress) onProgress(5, "Merging multi-BIN files");
+      log.verbose(`Merging ${cueSheet.files.length} BIN files into one`);
 
       // Create temp directory for merged output
       tempDir = path.join(popsDir, `.tmp_merge_${Date.now()}`);
@@ -84,6 +90,7 @@ export async function importPs1Game(
 
     const idResult = await tryDeterminePs1GameIdFromHex(binPath);
     if (!idResult.success || !("gameId" in idResult)) {
+      log.error(`PS1 import: ${idResult.message || "could not determine game ID"}`);
       return {
         success: false,
         message: idResult.message || "Could not determine PS1 game ID from the disc image.",
@@ -92,6 +99,7 @@ export async function importPs1Game(
 
     const gameId = idResult.gameId;
     const gameName = idResult.gameName || "Unknown";
+    log.verbose(`Detected PS1 game ${gameId} (${gameName})`);
 
     // Step 3: Convert BIN/CUE to VCD
     if (onProgress) onProgress(35, "Converting to VCD format");
@@ -99,6 +107,7 @@ export async function importPs1Game(
     const sanitizedName = sanitizeGameFilename(gameName);
     const vcdFilename = `${gameId}.${sanitizedName}.VCD`;
     const vcdPath = path.join(popsDir, vcdFilename);
+    log.verbose(`Converting to VCD → POPS/${vcdFilename}`);
 
     await convertToVcd(binPath, cuePath, vcdPath, (percent, stage) => {
       if (onProgress) {
@@ -122,6 +131,7 @@ export async function importPs1Game(
 
     const popstarterElf = await findPopstarterElf();
     if (!popstarterElf) {
+      log.error("POPSTARTER.ELF not found in assets — cannot create PS1 launcher");
       return {
         success: false,
         message:
@@ -142,6 +152,7 @@ export async function importPs1Game(
       `title=${gameName}\nboot=${elfFilename}\n`,
       "utf-8"
     );
+    log.verbose(`Created POPStarter launcher APPS/${appsFolderName}/${elfFilename}`);
 
     // Step 7: Download artwork
     if (downloadArtwork) {
@@ -155,6 +166,7 @@ export async function importPs1Game(
 
     if (onProgress) onProgress(100, "Import complete");
 
+    log.info(`PS1 import complete: ${gameId} (${gameName}) → POPS/${vcdFilename}`);
     return {
       success: true,
       vcdPath,
@@ -162,6 +174,7 @@ export async function importPs1Game(
       gameName,
     };
   } catch (err: any) {
+    log.error(`PS1 import failed for ${cueFilePath}:`, err?.message || err);
     return {
       success: false,
       message: describeFileAccessError(err),

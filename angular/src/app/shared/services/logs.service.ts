@@ -23,7 +23,7 @@ export class LogsService {
       window.libraryAPI.onMainLog((entry) => {
         const type =
           entry.level === 'ERR' ? 'ERR' : entry.level === 'VRB' ? 'VRB' : 'INF';
-        this.addLog('main-process', entry.message, type);
+        this.addLog(entry.location || 'main-process', entry.message, type);
       });
     }
   }

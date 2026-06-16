@@ -1,5 +1,8 @@
 import * as fs from "fs/promises";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("vmc");
 
 /**
  * Virtual Memory Card (VMC) management.
@@ -42,6 +45,9 @@ export async function listVmc(
     const cards: VmcInfo[] = [];
     for (const item of items) {
       if (!item.isFile() || !/\.bin$/i.test(item.name)) continue;
+      // Skip macOS AppleDouble sidecars (`._name.bin`) created when writing to
+      // FAT/exFAT cards, plus any other hidden files — they aren't real VMCs.
+      if (item.name.startsWith(".")) continue;
       const stat = await fs.stat(path.join(dir, item.name));
       cards.push({
         name: item.name.replace(/\.bin$/i, ""),
@@ -50,8 +56,10 @@ export async function listVmc(
       });
     }
     cards.sort((a, b) => a.name.localeCompare(b.name));
+    log.verbose(`Listed ${cards.length} VMC(s) in ${dir}`);
     return { success: true, cards };
   } catch (err: any) {
+    log.error(`Failed to list VMCs in ${vmcDir(oplRoot)}:`, err?.message || err);
     return { success: false, cards: [], message: err?.message || String(err) };
   }
 }
@@ -79,6 +87,7 @@ export async function createVmc(
       // Does not exist — good to create.
     }
 
+    log.info(`Creating ${sizeMb} MB VMC "${name}" → ${target}`);
     const handle = await fs.open(target, "w");
     try {
       for (let written = 0; written < sizeMb; written++) {
@@ -87,8 +96,10 @@ export async function createVmc(
     } finally {
       await handle.close();
     }
+    log.info(`Created VMC "${name}" (${sizeMb} MB)`);
     return { success: true, name };
   } catch (err: any) {
+    log.error(`Failed to create VMC "${rawName}":`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }
@@ -101,8 +112,10 @@ export async function deleteVmc(
     const safe = sanitizeVmcName(name);
     if (!safe) return { success: false, message: "Invalid card name." };
     await fs.rm(path.join(vmcDir(oplRoot), `${safe}.bin`), { force: true });
+    log.info(`Deleted VMC "${safe}"`);
     return { success: true };
   } catch (err: any) {
+    log.error(`Failed to delete VMC "${name}":`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }

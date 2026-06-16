@@ -8,6 +8,9 @@ import {
   CueSheet,
   CueTrack,
 } from "./cue-parser";
+import { createLogger, formatBytes } from "./logger";
+
+const log = createLogger("cue2pops");
 
 const SECTOR_SIZE = 2352;
 const HEADER_SIZE = 1048576; // 1 MB = 0x100000
@@ -188,6 +191,7 @@ export async function convertToVcd(
 
   const binStat = await fs.stat(binPath);
   const binSize = binStat.size;
+  log.info(`Converting BIN→VCD: ${formatBytes(binSize)} → ${outputVcdPath}`);
 
   if (onProgress) onProgress(5, "Building VCD header");
 
@@ -207,6 +211,10 @@ export async function convertToVcd(
     if (track.postgap) postgapCount++;
   }
   const isCdrwin = pregapCount === 1 && postgapCount === 0;
+  log.verbose(
+    `VCD header: ${allTracks.length} track(s), ${pregapCount} pregap(s), ` +
+      `${postgapCount} postgap(s)${isCdrwin ? " — CDRWIN style" : ""}`
+  );
 
   // Find gap insertion point for CDRWIN fix
   let gapInsertOffset = -1;
@@ -218,6 +226,7 @@ export async function convertToVcd(
       if (idx01) {
         const sectors = msfToSectors(idx01.minutes, idx01.seconds, idx01.frames);
         gapInsertOffset = sectors * SECTOR_SIZE;
+        log.verbose(`CDRWIN fix: inserting 150-sector gap at byte ${gapInsertOffset}`);
       }
     }
   }
@@ -316,4 +325,5 @@ export async function convertToVcd(
   });
 
   if (onProgress) onProgress(100, "Conversion complete");
+  log.info(`VCD conversion complete → ${outputVcdPath}`);
 }

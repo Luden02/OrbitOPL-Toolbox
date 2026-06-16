@@ -38,6 +38,9 @@ import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { createVmc, deleteVmc, listVmc } from "./vmc.service";
 import { deleteApp, getApps, importApp } from "./apps.service";
+import { createLogger, setLogWindow } from "./logger";
+
+const log = createLogger("main");
 
 const size = { minWidth: 1280, minHeight: 720 };
 
@@ -60,10 +63,16 @@ function createWindow() {
     },
   });
 
+  // Forward this window's log entries into the in-app Logs viewer, and stop
+  // once it's gone so we never write to a destroyed webContents.
+  setLogWindow(win);
+  win.on("closed", () => setLogWindow(null));
+
   win.on("close", (event) => {
     if (!rendererIsLoading || forceCloseRequested) {
       return;
     }
+    log.warn("Close requested while an action is still running");
     event.preventDefault();
     const choice = dialog.showMessageBoxSync(win, {
       type: "warning",
@@ -102,7 +111,10 @@ function createWindow() {
   const args = process.argv.slice(1);
   const serve = args.includes("--serve");
 
-  // Forward main process console output to renderer
+  // Safety net: forward any stray console.* output (third-party libs, Electron
+  // internals, legacy call sites) into the renderer's Logs viewer. Scoped logs
+  // go through ./logger instead, which captured the originals below before this
+  // wrapper was installed — so logger entries are never forwarded twice.
   const origLog = console.log;
   const origError = console.error;
   const origWarn = console.warn;
@@ -134,6 +146,12 @@ function createWindow() {
     sendLog("INF", args);
   };
 
+  log.info(
+    `Launching OrbitOPL Toolbox v${PackageInfo.version} (${
+      serve ? "dev/serve" : "packaged"
+    } mode) on ${process.platform}`
+  );
+
   if (serve) {
     electronReloader(module);
     win.loadURL("http://localhost:4200");
@@ -161,10 +179,10 @@ app.on("activate", () => {
 
 app.on("browser-window-focus", function () {
   globalShortcut.register("CommandOrControl+R", () => {
-    console.log("CommandOrControl+R is pressed: Shortcut Disabled");
+    log.verbose("Blocked reload shortcut (Cmd/Ctrl+R)");
   });
   globalShortcut.register("F5", () => {
-    console.log("F5 is pressed: Shortcut Disabled");
+    log.verbose("Blocked reload shortcut (F5)");
   });
 });
 
@@ -177,6 +195,7 @@ app.on("browser-window-blur", function () {
 
 ipcMain.on("set-loading-state", (_event, isLoading: boolean) => {
   rendererIsLoading = !!isLoading;
+  log.verbose(`Renderer loading state -> ${rendererIsLoading ? "busy" : "idle"}`);
 });
 
 ipcMain.handle("get-settings", async () => {

@@ -1,5 +1,8 @@
 import * as fs from "fs/promises";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("cfg");
 
 /**
  * Per-game OPL config files (`CFG/<GAMEID>.cfg`).
@@ -31,12 +34,15 @@ export async function readGameCfg(
       const key = line.slice(0, eq);
       entries[key] = line.slice(eq + 1);
     }
+    log.verbose(`Read CFG for ${gameId}: ${Object.keys(entries).length} key(s)`);
     return { success: true, entries };
   } catch (err: any) {
     // A missing file simply means "no config yet" — not an error.
     if (err?.code === "ENOENT") {
+      log.verbose(`No CFG file for ${gameId} yet`);
       return { success: true, entries: {} };
     }
+    log.error(`Failed to read CFG for ${gameId}:`, err?.message || err);
     return { success: false, entries: {}, message: err?.message || String(err) };
   }
 }
@@ -53,14 +59,17 @@ export async function writeGameCfg(
     // An empty config is equivalent to no config — remove the file.
     if (keys.length === 0) {
       await fs.rm(target, { force: true });
+      log.info(`Cleared CFG for ${gameId} (no keys left — file removed)`);
       return { success: true };
     }
 
     await fs.mkdir(path.dirname(target), { recursive: true });
     const body = keys.map((k) => `${k}=${entries[k]}`).join("\r\n") + "\r\n";
     await fs.writeFile(target, body, "utf-8");
+    log.info(`Wrote CFG for ${gameId}: ${keys.length} key(s) [${keys.join(", ")}]`);
     return { success: true };
   } catch (err: any) {
+    log.error(`Failed to write CFG for ${gameId}:`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }

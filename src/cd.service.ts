@@ -7,6 +7,9 @@ import {
   downloadArtByGameId,
   sanitizeGameFilename,
 } from "./library.service";
+import { createLogger, formatBytes } from "./logger";
+
+const log = createLogger("cd-import");
 
 export interface ImportPs2CdResult {
   success: boolean;
@@ -47,9 +50,11 @@ async function binToIso(
   if (offset === null) {
     throw new Error(`Unsupported track type for ISO conversion: ${trackType}`);
   }
+  log.verbose(`BIN→ISO: track type ${trackType}, user-data offset ${offset}B/sector`);
 
   // MODE1/2048 is already a cooked ISO — fast path
   if (offset === 0 && trackType.toUpperCase().startsWith("MODE1/2048")) {
+    log.verbose("BIN→ISO: MODE1/2048 already cooked — copying as-is");
     await fs.copyFile(binPath, isoPath);
     if (onProgress) onProgress(100);
     return;
@@ -57,6 +62,9 @@ async function binToIso(
 
   const stat = await fs.stat(binPath);
   const totalSectors = Math.floor(stat.size / RAW_SECTOR_SIZE);
+  log.verbose(
+    `BIN→ISO: extracting 2048B/sector from ${formatBytes(stat.size)} (${totalSectors} sectors)`
+  );
   if (totalSectors === 0) {
     throw new Error("BIN file is empty or smaller than one sector.");
   }
@@ -126,6 +134,7 @@ export async function importPs2CdGame(
   let tempDir: string | null = null;
 
   try {
+    log.info(`PS2 CD import started: ${cueFilePath}`);
     const cdDir = path.join(oplRoot, "CD");
     const artDir = path.join(oplRoot, "ART");
     await fs.mkdir(cdDir, { recursive: true });
@@ -139,16 +148,21 @@ export async function importPs2CdGame(
       .flatMap((f) => f.tracks)
       .find((t) => t.type.toUpperCase().startsWith("MODE"));
     if (!firstDataTrack) {
+      log.error(`No data track in CUE ${cueFilePath} — cannot build ISO`);
       return {
         success: false,
         message: "No data track found in CUE sheet — cannot build ISO.",
       };
     }
+    log.verbose(
+      `CUE references ${originalCue.files.length} BIN file(s); data track type ${firstDataTrack.type}`
+    );
 
     // Step 1: Merge multi-bin into a single bin (no-op if already single-file)
     let binPath: string;
     if (originalCue.files.length > 1) {
       if (onProgress) onProgress(5, "Merging multi-BIN files");
+      log.verbose(`Merging ${originalCue.files.length} BIN files into one`);
       tempDir = path.join(cdDir, `.tmp_merge_${Date.now()}`);
       await fs.mkdir(tempDir, { recursive: true });
       const mergeResult = await mergeMultiBin(cueFilePath, tempDir, (p, s) => {
@@ -167,8 +181,10 @@ export async function importPs2CdGame(
     let gameName = overrideGameName?.trim();
     if (!gameId || !gameName) {
       if (onProgress) onProgress(28, "Detecting PS2 game ID");
+      log.verbose(`Detecting PS2 game ID from ${path.basename(binPath)}`);
       const idResult = await tryDetermineGameIdFromHex(binPath);
       if (!idResult.success || !("gameId" in idResult)) {
+        log.error(`PS2 CD import: ${idResult.message || "could not determine game ID"}`);
         return {
           success: false,
           message:
@@ -177,6 +193,8 @@ export async function importPs2CdGame(
       }
       if (!gameId) gameId = idResult.gameId;
       if (!gameName) gameName = idResult.gameName || "Unknown";
+    } else {
+      log.verbose(`Using supplied game ID/name: ${gameId} / ${gameName}`);
     }
 
     const safeName = sanitizeGameFilename(gameName);
@@ -185,6 +203,7 @@ export async function importPs2CdGame(
 
     // Step 3: Convert BIN → ISO (extract 2048-byte user data per sector)
     if (onProgress) onProgress(30, "Converting BIN to ISO");
+    log.verbose(`Building ISO → ${isoFilename}`);
     await binToIso(binPath, isoPath, firstDataTrack.type, (percent) => {
       if (onProgress) {
         onProgress(30 + Math.round(percent * 0.6), "Converting BIN to ISO");
@@ -195,6 +214,7 @@ export async function importPs2CdGame(
     if (tempDir) {
       try {
         await fs.rm(tempDir, { recursive: true, force: true });
+        log.verbose("Removed temporary merge directory");
       } catch {
         // non-critical
       }
@@ -213,6 +233,7 @@ export async function importPs2CdGame(
 
     if (onProgress) onProgress(100, "Import complete");
 
+    log.info(`PS2 CD import complete: ${gameId} (${gameName}) → ${isoFilename}`);
     return {
       success: true,
       isoPath,
@@ -220,6 +241,7 @@ export async function importPs2CdGame(
       gameName,
     };
   } catch (err: any) {
+    log.error(`PS2 CD import failed for ${cueFilePath}:`, err?.message || err);
     // Best-effort cleanup of temp directory on failure
     if (tempDir) {
       try {

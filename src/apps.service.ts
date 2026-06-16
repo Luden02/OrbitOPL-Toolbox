@@ -1,5 +1,8 @@
 import * as fs from "fs/promises";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("apps");
 
 /**
  * Homebrew "APPS" support.
@@ -95,8 +98,10 @@ export async function getApps(
     }
 
     apps.sort((a, b) => a.title.localeCompare(b.title));
+    log.verbose(`Found ${apps.length} homebrew app(s) in ${dir}`);
     return { success: true, apps };
   } catch (err: any) {
+    log.error(`Failed to enumerate apps in ${appsDir(oplRoot)}:`, err?.message || err);
     return { success: false, apps: [], message: err?.message || String(err) };
   }
 }
@@ -112,11 +117,13 @@ export async function importApp(
 
     try {
       await fs.access(targetDir);
+      log.warn(`App folder "${folderName}" already exists — import aborted`);
       return { success: false, message: `An app folder "${folderName}" already exists.` };
     } catch {
       // good — does not exist
     }
 
+    log.info(`Importing homebrew app "${title || folderName}" from ${elfPath}`);
     await fs.mkdir(targetDir, { recursive: true });
     const elfBase = path.basename(elfPath);
     await fs.copyFile(elfPath, path.join(targetDir, elfBase));
@@ -125,8 +132,10 @@ export async function importApp(
       `title=${title || folderName}\nboot=${elfBase}\n`,
       "utf-8"
     );
+    log.info(`Imported app into APPS/${folderName} (boot=${elfBase})`);
     return { success: true, folder: folderName };
   } catch (err: any) {
+    log.error(`Failed to import app from ${elfPath}:`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }
@@ -138,14 +147,17 @@ export async function deleteApp(
   try {
     // Guard against path traversal — only a direct child of APPS/ is allowed.
     if (!folder || folder.includes("/") || folder.includes("\\") || folder.includes("..")) {
+      log.warn(`Rejected app delete for suspicious folder name: "${folder}"`);
       return { success: false, message: "Invalid app folder." };
     }
     await fs.rm(path.join(appsDir(oplRoot), folder), {
       recursive: true,
       force: true,
     });
+    log.info(`Deleted app APPS/${folder}`);
     return { success: true };
   } catch (err: any) {
+    log.error(`Failed to delete app APPS/${folder}:`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }

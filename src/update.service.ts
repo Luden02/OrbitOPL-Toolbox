@@ -1,4 +1,7 @@
 import PackageInfo from "../package.json";
+import { createLogger } from "./logger";
+
+const log = createLogger("update");
 
 const REPO = "Luden02/OrbitOPL-Toolbox";
 const RELEASES_URL = `https://api.github.com/repos/${REPO}/releases?per_page=10`;
@@ -44,6 +47,7 @@ export function isNewerVersion(candidate: string, current: string): boolean {
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const currentVersion = PackageInfo.version;
   try {
+    log.verbose(`Checking for updates (current v${currentVersion}) at ${RELEASES_URL}`);
     const response = await fetch(RELEASES_URL, {
       headers: {
         Accept: "application/vnd.github+json",
@@ -66,19 +70,26 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
     // (prereleases/betas included, since this project ships them).
     const latest = releases.find((r) => !r.draft);
     if (!latest) {
+      log.verbose("No published releases found");
       return { updateAvailable: false, currentVersion };
     }
 
     const latestVersion = latest.tag_name.replace(/^v/i, "");
+    const updateAvailable = isNewerVersion(latest.tag_name, currentVersion);
+    log.info(
+      updateAvailable
+        ? `Update available: v${latestVersion} (current v${currentVersion})`
+        : `Up to date (latest v${latestVersion}, current v${currentVersion})`
+    );
     return {
-      updateAvailable: isNewerVersion(latest.tag_name, currentVersion),
+      updateAvailable,
       currentVersion,
       latestVersion,
       releaseUrl: latest.html_url,
       releaseName: latest.name || latest.tag_name,
     };
   } catch (error: any) {
-    console.error("Update check failed:", error?.message || error);
+    log.error("Update check failed:", error?.message || error);
     return {
       updateAvailable: false,
       currentVersion,

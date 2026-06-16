@@ -4,6 +4,9 @@ import * as fsSync from "fs";
 import path from "path";
 import https from "https";
 import { getCachedGameId, setCachedGameId } from "./iso-cache.service";
+import { createLogger, formatBytes } from "./logger";
+
+const log = createLogger("library");
 
 const PS1_GAME_ID_PREFIXES = [
   "SCUS",
@@ -63,14 +66,17 @@ async function loadPs1GamesList() {
 
       if (map.size > 0) {
         cachedPs1GamesList = map;
+        log.verbose(`Loaded PS1 games list (${map.size} titles) from ${candidate}`);
         return cachedPs1GamesList;
       }
     } catch (err) {
       // Intentionally ignore missing file/location attempts.
+      log.verbose(`PS1 games list not at ${candidate}, trying next candidate`);
     }
   }
 
   cachedPs1GamesList = null;
+  log.warn("PS1 games list not found in any candidate path — titles will fall back to filenames");
   return cachedPs1GamesList;
 }
 
@@ -148,14 +154,17 @@ async function loadPs2GamesList() {
 
       if (map.size > 0) {
         cachedPs2GamesList = map;
+        log.verbose(`Loaded PS2 games list (${map.size} titles) from ${candidate}`);
         return cachedPs2GamesList;
       }
     } catch (err) {
       // Intentionally ignore missing file/location attempts.
+      log.verbose(`PS2 games list not at ${candidate}, trying next candidate`);
     }
   }
 
   cachedPs2GamesList = null;
+  log.warn("PS2 games list not found in any candidate path — titles will fall back to filenames");
   return cachedPs2GamesList;
 }
 
@@ -184,12 +193,17 @@ export async function openAskDirectory(options: any) {
 
 export async function getGamesFiles(dirPath: string) {
   try {
+    log.verbose(`Scanning game folders under ${dirPath} (CD, DVD, VCD, POPS)`);
     const [items_cd, items_dvd, items_vcd, items_pops] = await Promise.all([
       fs.readdir(path.join(dirPath, "CD"), { withFileTypes: true }).catch(() => []),
       fs.readdir(path.join(dirPath, "DVD"), { withFileTypes: true }).catch(() => []),
       fs.readdir(path.join(dirPath, "VCD"), { withFileTypes: true }).catch(() => []),
       fs.readdir(path.join(dirPath, "POPS"), { withFileTypes: true }).catch(() => []),
     ]);
+    log.verbose(
+      `Raw directory entries — CD: ${items_cd.length}, DVD: ${items_dvd.length}, ` +
+        `VCD: ${items_vcd.length}, POPS: ${items_pops.length}`
+    );
     // Only include files, skip directories
     const items = [
       ...items_cd.map((item) =>
@@ -229,8 +243,10 @@ export async function getGamesFiles(dirPath: string) {
 
       files.push(itemInfo);
     }
+    log.info(`Found ${files.length} disc image file(s) under ${dirPath}`);
     return { success: true, data: files };
   } catch (err) {
+    log.error(`Failed to scan game files in ${dirPath}:`, err);
     return { success: false, message: err };
   }
 }
@@ -261,6 +277,7 @@ export async function getULGames(dirPath: string) {
     try {
       await fs.access(ulCfgPath);
     } catch {
+      log.verbose(`No ul.cfg in ${dirPath} — no UL (split) games present`);
       return { success: true, data: [] };
     }
 
@@ -268,10 +285,12 @@ export async function getULGames(dirPath: string) {
     const RECORD_SIZE = 64;
 
     if (buffer.length === 0) {
+      log.verbose("ul.cfg is empty — no UL games to parse");
       return { success: true, data: [] };
     }
 
     const recordCount = Math.floor(buffer.length / RECORD_SIZE);
+    log.verbose(`Parsing ul.cfg: ${buffer.length} bytes → ${recordCount} record(s)`);
     const entries: {
       name: string;
       gameId: string;
@@ -354,11 +373,18 @@ export async function getULGames(dirPath: string) {
         }
       }
 
+      log.verbose(
+        `UL entry: ${gameId} "${name}" — ${numParts} part(s), ${mediaType}, ${formatBytes(totalSize)}`
+      );
       entries.push({ name, gameId, numParts, mediaType, totalSize });
     }
 
+    if (entries.length > 0) {
+      log.info(`Parsed ${entries.length} UL (split) game(s) from ul.cfg`);
+    }
     return { success: true, data: entries };
   } catch (err) {
+    log.error(`Failed to read UL games from ${dirPath}:`, err);
     return { success: false, message: err };
   }
 }
@@ -397,8 +423,11 @@ export async function getArtFolder(dirpath: string) {
           };
         })
     );
+    log.verbose(`Loaded ${artFiles.length} artwork file(s) from ${artDir}`);
     return { success: true, data: artFiles };
   } catch (err) {
+    // ART folder is optional; a missing one is expected on fresh libraries.
+    log.verbose(`No artwork loaded from ${path.join(dirpath, "ART")}: ${(err as Error)?.message || err}`);
     return { success: false, message: err };
   }
 }
@@ -415,9 +444,14 @@ export async function downloadArtByGameId(
   const results: any[] = [];
   const localName = saveAsName || gameId;
 
+  log.info(
+    `Downloading ${system} artwork for ${gameId} (${types.join(", ")}) into ${dirPath}`
+  );
+
   for (const type of types) {
     const fileName = `${gameId}_${type}.png`;
     const url = `${baseUrl}/${gameId}/${fileName}`;
+    log.verbose(`GET ${url}`);
 
     try {
       const buffer = await new Promise<Buffer>((resolve, reject) => {
@@ -437,6 +471,7 @@ export async function downloadArtByGameId(
 
       const savePath = path.join(dirPath, `${localName}_${type}.png`);
       await fs.writeFile(savePath, buffer);
+      log.verbose(`Saved ${type} artwork (${formatBytes(buffer.length)}) → ${savePath}`);
       results.push({
         name: localName,
         type,
@@ -444,6 +479,7 @@ export async function downloadArtByGameId(
         savedPath: savePath,
       });
     } catch (err: any) {
+      log.verbose(`${type} artwork unavailable for ${gameId}: ${err.message}`);
       results.push({
         name: localName,
         type,
@@ -453,6 +489,8 @@ export async function downloadArtByGameId(
     }
   }
 
+  const saved = results.filter((r) => r.savedPath).length;
+  log.info(`Artwork for ${gameId}: ${saved}/${types.length} file(s) downloaded`);
   return { success: true, data: results };
 }
 
@@ -508,10 +546,16 @@ export async function renameGamefile(
     : `${gameId}.${safeName}${ext}`;
   const newFilePath = path.join(parentDir, newFileName);
 
+  log.verbose(
+    `Renaming (${nameOnly ? "new" : "old"} convention): ${path.basename(dirpath)} → ${newFileName}`
+  );
+
   try {
     await fs.rename(dirpath, newFilePath);
+    log.info(`Renamed ${gameId} → ${newFileName}`);
     return { success: true, newPath: newFilePath };
   } catch (err) {
+    log.error(`Failed to rename ${path.basename(dirpath)} → ${newFileName}:`, err);
     return { success: false, message: err };
   }
 }
@@ -567,20 +611,34 @@ export async function resolveIsoGameId(
   try {
     stat = await fs.stat(filepath);
   } catch (err: any) {
+    log.error(`Cannot stat ${filepath} for ID resolution:`, err?.message || err);
     return { success: false, message: describeFileAccessError(err, filepath) };
   }
 
   const cached = getCachedGameId(filepath, stat.size, stat.mtimeMs);
   if (cached) {
+    log.verbose(`Resolved ${path.basename(filepath)} from cache → ${cached.gameId}`);
     return { success: true, gameId: cached.gameId, gameName: cached.gameName };
   }
 
-  const result = await tryDetermineGameIdFromHex(filepath);
+  // ZSO images are LZ4-compressed, so a raw byte scan can't see the game ID.
+  // Decompress on the fly and scan the inflated stream instead.
+  const isZso = path.extname(filepath).toLowerCase() === ".zso";
+  log.verbose(
+    `Cache miss for ${path.basename(filepath)} (${formatBytes(stat.size)}) — ` +
+      `scanning ${isZso ? "decompressed ZSO" : "raw image"} for game ID`
+  );
+  const result = isZso
+    ? await tryDetermineGameIdFromZso(filepath)
+    : await tryDetermineGameIdFromHex(filepath);
   if (result && (result as any).success) {
     const r = result as any;
     setCachedGameId(filepath, stat.size, stat.mtimeMs, r.gameId, r.gameName);
+    const titleSuffix = r.gameName ? ` (${r.gameName})` : "";
+    log.info(`Resolved ${path.basename(filepath)} → ${r.gameId}${titleSuffix}`);
     return { success: true, gameId: r.gameId, gameName: r.gameName };
   }
+  log.warn(`Could not resolve a game ID for ${path.basename(filepath)}`);
   return {
     success: false,
     message: (result as any)?.message || "Could not resolve game ID.",
@@ -603,7 +661,9 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
         };
       }
       scanPath = path.join(getCueDirectory(filepath), firstFile);
+      log.verbose(`PS2 hex scan: resolved CUE to first BIN ${firstFile}`);
     } catch (err: any) {
+      log.error(`PS2 hex scan: failed to parse CUE ${filepath}:`, err?.message || err);
       return {
         success: false,
         message: err?.message || "Failed to parse CUE sheet.",
@@ -616,6 +676,7 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
   try {
     fileHandle = await fs.open(scanPath, "r");
   } catch (err: any) {
+    log.error(`PS2 hex scan: cannot open ${scanPath}:`, err?.code || err?.message || err);
     return {
       success: false,
       message: describeFileAccessError(err, scanPath),
@@ -623,6 +684,7 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
   }
 
   try {
+    log.verbose(`PS2 hex scan: reading ${path.basename(scanPath)} in ${FILE_SCAN_CHUNK_BYTES / 1024}KB chunks`);
     const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
     let position = 0;
     let carry = "";
@@ -650,6 +712,10 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
         const lookupId = normaliseGameIdForLookup(gameId);
         const gameName = await findPs2GameName(lookupId);
 
+        log.verbose(
+          `PS2 hex scan: matched ${gameId} within first ${formatBytes(position)}` +
+            (gameName ? ` (${gameName})` : " (no title in games list)")
+        );
         return {
           success: true,
           gameId,
@@ -664,11 +730,13 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
           : chunk;
     }
 
+    log.verbose(`PS2 hex scan: no game ID found after reading ${formatBytes(position)}`);
     return {
       success: false,
       message: "Could not locate a PS2 game ID inside the provided file.",
     };
   } catch (err: any) {
+    log.error(`PS2 hex scan: read error on ${path.basename(scanPath)}:`, err?.message || err);
     return {
       success: false,
       message: err?.message || "Failed while reading file contents.",
@@ -678,6 +746,84 @@ export async function tryDetermineGameIdFromHex(filepath: string) {
       await fileHandle.close();
     }
   }
+}
+
+/**
+ * Resolves a PS2 game ID from a ZSO (compressed ISO) by inflating the image
+ * block by block and scanning the decompressed stream for the ID — the same
+ * pattern tryDetermineGameIdFromHex matches on a raw ISO. The game ID is carried
+ * in the disc's root directory (the boot ELF is named after it), so the scan
+ * stops almost immediately on a valid disc; the byte cap bounds the cost when no
+ * ID is present.
+ */
+export async function tryDetermineGameIdFromZso(filepath: string) {
+  const { streamZsoContents } = await import("./zso.service");
+
+  const SCAN_FLUSH_BYTES = FILE_SCAN_CHUNK_BYTES; // scan in ~1 MB windows
+  const SCAN_LIMIT_BYTES = 64 * 1024 * 1024; // safety bound for ID-less images
+  let pending = "";
+  let foundId: string | null = null;
+
+  const scan = (text: string): boolean => {
+    PS2_GAME_ID_REGEX.lastIndex = 0;
+    const matches = text.match(PS2_GAME_ID_REGEX);
+    if (matches && matches.length > 0) {
+      foundId = matches[0].replace(/;1$/, "");
+      return true;
+    }
+    return false;
+  };
+
+  const result = await streamZsoContents(
+    filepath,
+    (chunk) => {
+      pending += chunk.toString("latin1");
+      if (pending.length < SCAN_FLUSH_BYTES) {
+        return false;
+      }
+      if (scan(pending)) {
+        return true;
+      }
+      // Keep a small tail so an ID straddling two windows still matches.
+      pending = pending.slice(-FILE_SCAN_OVERLAP_BYTES);
+      return false;
+    },
+    SCAN_LIMIT_BYTES
+  );
+
+  // Scan whatever is left in the final, sub-window buffer.
+  if (!foundId && pending) {
+    scan(pending);
+  }
+
+  if (foundId) {
+    const lookupId = normaliseGameIdForLookup(foundId);
+    const gameName = await findPs2GameName(lookupId);
+    log.verbose(
+      `ZSO scan: matched ${foundId}` +
+        (gameName ? ` (${gameName})` : " (no title in games list)")
+    );
+    return {
+      success: true,
+      gameId: foundId,
+      formattedGameId: lookupId,
+      ...(gameName ? { gameName } : {}),
+    };
+  }
+
+  if (!result.success) {
+    log.error(`ZSO scan: failed to read ${path.basename(filepath)}: ${result.message}`);
+    return {
+      success: false,
+      message: result.message || "Failed while reading ZSO contents.",
+    };
+  }
+
+  log.verbose(`ZSO scan: no game ID found in ${path.basename(filepath)}`);
+  return {
+    success: false,
+    message: "Could not locate a PS2 game ID inside the ZSO image.",
+  };
 }
 
 export async function tryDeterminePs1GameIdFromHex(filepath: string) {
@@ -696,7 +842,9 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
         };
       }
       scanPath = path.join(getCueDirectory(filepath), firstFile);
+      log.verbose(`PS1 hex scan: resolved CUE to first BIN ${firstFile}`);
     } catch (err: any) {
+      log.error(`PS1 hex scan: failed to parse CUE ${filepath}:`, err?.message || err);
       return {
         success: false,
         message: err?.message || "Failed to parse CUE sheet.",
@@ -709,6 +857,7 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   try {
     fileHandle = await fs.open(scanPath, "r");
   } catch (err: any) {
+    log.error(`PS1 hex scan: cannot open ${scanPath}:`, err?.code || err?.message || err);
     return {
       success: false,
       message: describeFileAccessError(err, scanPath),
@@ -716,6 +865,7 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   }
 
   try {
+    log.verbose(`PS1 hex scan: reading ${path.basename(scanPath)} in ${FILE_SCAN_CHUNK_BYTES / 1024}KB chunks`);
     const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
     let position = 0;
     let carry = "";
@@ -745,6 +895,10 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
         const lookupId = normaliseGameIdForLookup(gameId);
         const gameName = await findPs1GameName(lookupId);
 
+        log.verbose(
+          `PS1 hex scan: matched ${gameId} within first ${formatBytes(position)}` +
+            (gameName ? ` (${gameName})` : " (no title in games list)")
+        );
         return {
           success: true,
           gameId,
@@ -759,11 +913,13 @@ export async function tryDeterminePs1GameIdFromHex(filepath: string) {
           : chunk;
     }
 
+    log.verbose(`PS1 hex scan: no game ID found after reading ${formatBytes(position)}`);
     return {
       success: false,
       message: "Could not locate a PS1 game ID inside the provided file.",
     };
   } catch (err: any) {
+    log.error(`PS1 hex scan: read error on ${path.basename(scanPath)}:`, err?.message || err);
     return {
       success: false,
       message: err?.message || "Failed while reading file contents.",
@@ -809,9 +965,11 @@ export async function deleteGameAndRelatedFiles(
   artDir: string,
   gameId: string
 ) {
+  log.info(`Deleting ${gameId} and related files: ${gamePath}`);
   try {
     // Delete the game file
     await fs.unlink(gamePath);
+    log.verbose(`Removed disc image ${path.basename(gamePath)}`);
 
     // Delete related artwork files (e.g., SLUS_123.45_COV.png)
     try {
@@ -823,6 +981,9 @@ export async function deleteGameAndRelatedFiles(
         } catch {
           // Ignore individual art file deletion failures
         }
+      }
+      if (relatedArt.length > 0) {
+        log.verbose(`Removed ${relatedArt.length} artwork file(s) for ${gameId}`);
       }
     } catch {
       // ART directory may not exist — that's fine
@@ -843,6 +1004,7 @@ export async function deleteGameAndRelatedFiles(
         const appsLauncher = path.join(oplRoot, "APPS", `POPS_${sanitizedName}`);
         try {
           await fs.rm(appsLauncher, { recursive: true, force: true });
+          log.verbose(`Removed paired POPStarter launcher APPS/POPS_${sanitizedName}`);
         } catch {
           // Best-effort — the launcher may not exist (e.g. PS1 game imported
           // outside this app), and that's fine.
@@ -850,8 +1012,10 @@ export async function deleteGameAndRelatedFiles(
       }
     }
 
+    log.info(`Deleted ${gameId}`);
     return { success: true };
   } catch (err: any) {
+    log.error(`Failed to delete ${gameId} (${gamePath}):`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }
@@ -866,7 +1030,7 @@ export async function moveFile(
     elapsed: number;
   }) => void
 ) {
-  console.log("Moving file from", sourcePath, "to", destPath);
+  log.info(`Moving file: ${sourcePath} → ${destPath}`);
 
   let targetPath = destPath;
 
@@ -891,12 +1055,12 @@ export async function moveFile(
 
   try {
     await fs.rename(sourcePath, targetPath);
-    console.log("File moved successfully using rename");
+    log.verbose(`Moved instantly via rename (same volume) → ${targetPath}`);
     return { success: true, newPath: targetPath };
   } catch (err: any) {
     if (err?.code === "EXDEV") {
       try {
-        console.log("Cross-device move detected, starting file copy...");
+        log.verbose("Cross-device move (EXDEV) — falling back to streamed copy");
         const stats = await fs.stat(sourcePath);
         const totalSize = stats.size;
         const startTime = Date.now();
@@ -921,8 +1085,8 @@ export async function moveFile(
               const copiedMB = (copiedBytes / (1024 * 1024)).toFixed(2);
               const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
               const elapsed = ((now - startTime) / 1000).toFixed(1);
-              console.log(
-                `Progress: ${progress}% (${copiedMB}/${totalMB} MB) - ${elapsed}s elapsed`
+              log.verbose(
+                `Copy progress: ${progress}% (${copiedMB}/${totalMB} MB) — ${elapsed}s elapsed`
               );
 
               if (onProgress) {
@@ -946,14 +1110,14 @@ export async function moveFile(
         });
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-        console.log(`File copied successfully: ${sizeMB} MB in ${duration}s`);
-        console.log("move complete");
+        log.info(`Copied ${formatBytes(totalSize)} in ${duration}s → ${targetPath}`);
         return { success: true, newPath: targetPath };
       } catch (copyErr: any) {
+        log.error(`Cross-device copy failed (${sourcePath}):`, copyErr?.message || copyErr);
         return { success: false, message: copyErr?.message || String(copyErr) };
       }
     }
+    log.error(`Failed to move ${sourcePath} → ${targetPath}:`, err?.message || err);
     return { success: false, message: err?.message || String(err) };
   }
 }

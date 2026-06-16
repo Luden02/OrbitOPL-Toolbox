@@ -1,6 +1,9 @@
 import { app } from "electron";
 import fs from "fs";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("settings");
 
 /**
  * Persisted application settings. Stored as JSON in the Electron userData
@@ -42,8 +45,9 @@ export function setSetting<K extends keyof AppSettings>(
   settings[key] = value;
   try {
     fs.writeFileSync(settingsFilePath(), JSON.stringify(settings, null, 2));
+    log.verbose(`Persisted setting "${String(key)}" = ${JSON.stringify(value)}`);
   } catch (error) {
-    console.error(`Failed to persist setting "${String(key)}":`, error);
+    log.error(`Failed to persist setting "${String(key)}":`, error);
   }
   return settings;
 }

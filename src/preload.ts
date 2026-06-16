@@ -145,6 +145,7 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   onMainLog: (
     callback: (entry: {
       level: string;
+      location?: string;
       message: string;
       timestamp: string;
     }) => void

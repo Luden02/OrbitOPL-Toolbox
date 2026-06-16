@@ -1,6 +1,9 @@
 import { app } from "electron";
 import fs from "fs";
 import path from "path";
+import { createLogger } from "./logger";
+
+const log = createLogger("iso-cache");
 
 /**
  * Persistent cache of resolved game IDs for prefix-less ("new OPL convention")
@@ -34,7 +37,7 @@ function writeAll(data: CacheFile): void {
   try {
     fs.writeFileSync(cachePath(), JSON.stringify(data));
   } catch (error) {
-    console.error("Failed to persist ISO ID cache:", error);
+    log.error("Failed to persist ISO ID cache:", error);
   }
 }
 
@@ -62,4 +65,5 @@ export function setCachedGameId(
   const data = readAll();
   data[absPath] = { gameId, gameName, size, mtimeMs };
   writeAll(data);
+  log.verbose(`Cached game ID ${gameId} for ${path.basename(absPath)}`);
 }
