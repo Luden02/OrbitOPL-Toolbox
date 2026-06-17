@@ -73,7 +73,7 @@ The goal isn’t to replace OPLManager, but to offer an alternative — one that
 
 Grab the latest build from the [Releases](https://github.com/Luden02/OrbitOPL-Toolbox/releases) page.
 
-Or if you're on Arch Linux you can use the [AUR Binaries](https://aur.archlinux.org/orbitopl-toolbox-bin.git) or [AUR git](https://aur.archlinux.org/orbitopl-toolbox-git.git) (thanks to u/m0tic)
+Or if you're on Arch Linux you can use the [AUR Binaries](https://aur.archlinux.org/packages/orbitopl-toolbox-bin) or [AUR git](https://aur.archlinux.org/packages/orbitopl-toolbox-git) (thanks to u/m0tic)
 
 ### 🐧 Linux
 
