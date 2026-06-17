@@ -7,7 +7,6 @@ import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { JobsPanelComponent } from './shared/components/jobs-panel/jobs-panel.component';
 import { UpdateService } from './shared/services/update.service';
-import { UpdateModalComponent } from './shared/components/update-modal/update-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +17,6 @@ import { UpdateModalComponent } from './shared/components/update-modal/update-mo
     AsyncPipe,
     LucideAngularModule,
     JobsPanelComponent,
-    UpdateModalComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -26,8 +24,6 @@ import { UpdateModalComponent } from './shared/components/update-modal/update-mo
 export class AppComponent {
   public currentDirectory = 'None';
   public readonly version = PackageInfo.version;
-  /** Controls the "how to update" modal opened from the status-bar badge. */
-  public showUpdateModal = false;
   constructor(
     private readonly _logger: LogsService,
     public readonly _libraryService: LibraryService,

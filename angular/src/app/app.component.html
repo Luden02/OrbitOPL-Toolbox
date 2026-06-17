@@ -179,24 +179,6 @@
       <span class="opacity-40">·</span>
       }
       <span class="font-display tracking-wider text-base-content/35">OrbitOPL v{{ version }}</span>
-      @if ((_updateService.result$ | async)?.updateAvailable) {
-      <button
-        class="badge badge-sm badge-primary gap-1 cursor-pointer font-semibold"
-        (click)="showUpdateModal = true"
-        title="An update is available — click for instructions"
-      >
-        <i-lucide name="sparkles" size="11"></i-lucide>
-        Update available
-      </button>
-      }
     </div>
   </footer>
-
-  <!-- ── How-to-update modal ───────────────────────────────────────── -->
-  @if (showUpdateModal) {
-  <app-update-modal
-    [update]="_updateService.result$ | async"
-    (closed)="showUpdateModal = false"
-  ></app-update-modal>
-  }
 </div>
