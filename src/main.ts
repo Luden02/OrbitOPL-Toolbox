@@ -11,6 +11,8 @@ import path from "path";
 import electronReloader from "electron-reloader";
 import PackageInfo from "../package.json";
 import {
+  checkOplStructure,
+  createOplFolders,
   deleteGameAndRelatedFiles,
   downloadArtByGameId,
   getArtFolder,
@@ -42,7 +44,7 @@ import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
 
-const size = { minWidth: 1280, minHeight: 720 };
+const size = { minWidth: 800, minHeight: 600 };
 
 // Tracks whether the renderer has a long-running action in progress.
 // Updated via the "set-loading-state" IPC channel from LibraryService.
@@ -237,6 +239,17 @@ ipcMain.handle("open-ask-directory", async (options) => {
 ipcMain.handle("get-games-files", async (event, dirPath: string) => {
   return getGamesFiles(dirPath);
 });
+
+ipcMain.handle("check-opl-structure", async (event, dirPath: string) => {
+  return checkOplStructure(dirPath);
+});
+
+ipcMain.handle(
+  "create-opl-folders",
+  async (event, dirPath: string, folders: string[]) => {
+    return createOplFolders(dirPath, folders);
+  }
+);
 
 ipcMain.handle("get-ul-games", async (event, dirPath: string) => {
   return getULGames(dirPath);

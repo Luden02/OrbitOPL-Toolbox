@@ -2,6 +2,16 @@ declare interface Window {
   libraryAPI: {
     openAskDirectory: () => Promise<any>;
     getGamesFiles: (dirPath: string) => Promise<any>;
+    checkOplStructure: (dirPath: string) => Promise<{
+      success: boolean;
+      existing?: string[];
+      missing?: string[];
+      message?: string;
+    }>;
+    createOplFolders: (
+      dirPath: string,
+      folders: string[]
+    ) => Promise<{ success: boolean; created?: string[]; message?: string }>;
     getULGames: (dirPath: string) => Promise<any>;
     getArtFolder: (dirPath: string) => Promise<any>;
     renameGamefile: (

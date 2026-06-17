@@ -1,6 +1,10 @@
 import { Component } from '@angular/core';
 
 import { LibraryService } from '../../shared/services/library.service';
+import {
+  JobsService,
+  NewImportJob,
+} from '../../shared/services/jobs.service';
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -21,7 +25,10 @@ export class InvalidComponent {
   bulkRunning: boolean = false;
   bulkResult: { corrected: number; skipped: number } | null = null;
 
-  constructor(public readonly _libraryService: LibraryService) {}
+  constructor(
+    public readonly _libraryService: LibraryService,
+    private readonly _jobs: JobsService
+  ) {}
 
   openRenameTool(filepath: string) {
     const dialog = document.getElementById('rename_tool') as HTMLDialogElement;
@@ -54,10 +61,36 @@ export class InvalidComponent {
     if (this.bulkRunning) return;
     this.bulkRunning = true;
     this.bulkResult = null;
+    // Resolve game IDs first, then queue a rename (and optional artwork) job
+    // per file so the whole batch is tracked in the jobs queue.
     this._libraryService
-      .bulkAutoCorrection(this.fetchArtwork, this.bulkConvention)
-      .then((result) => {
-        this.bulkResult = result;
+      .planBulkAutoCorrection()
+      .then(({ resolved, skipped }) => {
+        const jobs: NewImportJob[] = [];
+        for (const item of resolved) {
+          jobs.push({
+            type: 'rename',
+            label: item.gameName || item.gameId,
+            filePath: item.path,
+            gameId: item.gameId,
+            gameName: item.gameName,
+            downloadArtwork: false,
+            keepOriginalName: this.bulkConvention === 'new',
+          });
+          if (this.fetchArtwork) {
+            jobs.push({
+              type: 'artwork',
+              label: item.gameName || item.gameId,
+              filePath: item.path,
+              gameId: item.gameId,
+              gameName: item.gameName,
+              downloadArtwork: false,
+              system: 'PS2',
+            });
+          }
+        }
+        if (jobs.length > 0) this._jobs.enqueue(jobs);
+        this.bulkResult = { corrected: resolved.length, skipped };
       })
       .finally(() => {
         this.bulkRunning = false;
@@ -65,25 +98,31 @@ export class InvalidComponent {
   }
 
   sendRenaming() {
-    this._libraryService
-      .renameInvalidGameFile(
-        this.renamedFilePath,
-        this.renameGameId,
-        this.renameGameName
-      )
-      .then(() => {
-        if (this.fetchArtwork) {
-          this._libraryService
-            .downloadArtByGameId(this.renameGameId)
-            .then(() => {
-              (
-                document.getElementById('rename_tool') as HTMLDialogElement
-              ).close();
-            });
-        } else {
-          (document.getElementById('rename_tool') as HTMLDialogElement).close();
-        }
+    const jobs: NewImportJob[] = [
+      {
+        type: 'rename',
+        label: this.renameGameName || this.renameGameId,
+        filePath: this.renamedFilePath,
+        gameId: this.renameGameId,
+        gameName: this.renameGameName,
+        downloadArtwork: false,
+        // Invalid-file fixups use the old convention (keep the GAMEID. prefix).
+        keepOriginalName: false,
+      },
+    ];
+    if (this.fetchArtwork) {
+      jobs.push({
+        type: 'artwork',
+        label: this.renameGameName || this.renameGameId,
+        filePath: this.renamedFilePath,
+        gameId: this.renameGameId,
+        gameName: this.renameGameName,
+        downloadArtwork: false,
+        system: 'PS2',
       });
+    }
+    this._jobs.enqueue(jobs);
+    (document.getElementById('rename_tool') as HTMLDialogElement).close();
   }
 
   closeRenameTool() {

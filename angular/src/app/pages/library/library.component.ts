@@ -37,6 +37,28 @@ export class LibraryComponent {
     this.showRenameDialog = true;
   }
 
+  /** Queues an artwork-download job for every disc game in the library. */
+  downloadAllArt() {
+    const targets = this._libraryService.currentLibraryValue.filter(
+      (g) => g.system !== 'APPS' && g.gameId
+    );
+    if (targets.length === 0) {
+      window.alert('No games with a game ID to fetch artwork for.');
+      return;
+    }
+    this._jobs.enqueue(
+      targets.map((g) => ({
+        type: 'artwork',
+        label: g.title || g.gameId || g.filename,
+        filePath: g.path,
+        gameId: g.gameId,
+        gameName: g.title || '',
+        downloadArtwork: false,
+        system: g.system === 'PS1' ? 'PS1' : 'PS2',
+      }))
+    );
+  }
+
   /** Queues a ZSO compression job for every PS2 ISO in the library. */
   convertAllToZso() {
     const candidates = this._libraryService.currentLibraryValue.filter(

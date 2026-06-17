@@ -153,15 +153,30 @@ export class LibraryService {
     this.setCurrentAction('User choosing directory...');
     return window.libraryAPI.openAskDirectory().then(async (data: any) => {
       if (!data.canceled) {
+        const chosen = data.filePaths[0];
         this._logger.log(
           'libraryService',
-          `Directory has been chosen by user: ${data.filePaths[0]}`
+          `Directory has been chosen by user: ${chosen}`
         );
-        this.setCurrentDirectory(data.filePaths[0]);
-        this._settings.set('lastDirectory', data.filePaths[0]);
+
+        // Make sure the folder actually looks like an OPL root before
+        // mounting it; otherwise the scan silently finds nothing.
+        const proceed = await this.validateOplStructure(chosen);
+        if (!proceed) {
+          this._logger.log(
+            'libraryService',
+            `Mount aborted: ${chosen} was not confirmed as an OPL directory.`
+          );
+          this.setLoading(false);
+          this.setCurrentAction('');
+          return;
+        }
+
+        this.setCurrentDirectory(chosen);
+        this._settings.set('lastDirectory', chosen);
         this.setLoading(false);
         this.setCurrentAction('');
-        await this.getGamesFiles(data.filePaths[0]);
+        await this.getGamesFiles(chosen);
       } else {
         this._logger.error(
           'libraryService',
@@ -171,6 +186,61 @@ export class LibraryService {
         this.setCurrentAction('');
       }
     });
+  }
+
+  /**
+   * Verify the chosen folder contains the standard OPL subdirectories.
+   * If some are missing, warn the user that it may not be the right
+   * directory and offer to create the missing folders. If they decline,
+   * the folder is not mounted (returns false).
+   */
+  private async validateOplStructure(dirPath: string): Promise<boolean> {
+    const result = await window.libraryAPI
+      .checkOplStructure(dirPath)
+      .catch(() => null);
+
+    // If the check itself failed, don't block the user — behave as before.
+    if (
+      !result ||
+      !result.success ||
+      !result.missing ||
+      result.missing.length === 0
+    ) {
+      return true;
+    }
+
+    const missing = result.missing;
+    const confirmed = window.confirm(
+      `The selected folder is missing standard OPL folder(s):\n\n` +
+        `${missing.join(', ')}\n\n` +
+        `Make sure this is your OPL directory. Click OK to create the ` +
+        `missing folder(s) and continue, or Cancel to unmount.`
+    );
+
+    if (!confirmed) {
+      return false;
+    }
+
+    const createResult = await window.libraryAPI
+      .createOplFolders(dirPath, missing)
+      .catch(() => null);
+
+    if (!createResult || !createResult.success) {
+      window.alert(
+        'Failed to create the missing OPL folders. The folder will not be mounted.'
+      );
+      this._logger.error(
+        'libraryService',
+        `Failed to create OPL folders in ${dirPath}`
+      );
+      return false;
+    }
+
+    this._logger.log(
+      'libraryService',
+      `Created missing OPL folder(s): ${(createResult.created || []).join(', ')}`
+    );
+    return true;
   }
 
   public refreshGamesFiles() {
@@ -521,52 +591,11 @@ export class LibraryService {
     });
   }
 
-  public async renameInvalidGameFile(
-    path: string,
-    gameId: string,
-    gameName: string,
-    nameOnly: boolean = false
-  ) {
-    this._logger.log('renameInvalidGameFile', 'Renaming ' + path);
-    this.setLoading(true);
-    this.setCurrentAction('Renaming ' + path + '...');
-    this._logger.verbose(
-      'renameInvalidGameFile',
-      `${path} -> ${gameId}, ${gameName} (${nameOnly ? 'new' : 'old'} convention)`
-    );
-    return window.libraryAPI
-      .renameGamefile(path, gameId, gameName, nameOnly)
-      .then((res) => {
-        this.setCurrentAction('');
-        this.setLoading(false);
-        this.refreshGamesFiles();
-        return res;
-      });
-  }
-
-  public downloadArtByGameId(gameId: string, system?: 'PS1' | 'PS2') {
-    this._logger.log(
-      'downloadArtByGameId',
-      'Triggered download of art for ' + gameId
-    );
-    this.setLoading(true);
-    this.setCurrentAction('Downloading Art for ' + gameId + '...');
-    return window.libraryAPI
-      .downloadArtByGameId(`${this.currentDirectory}/ART`, gameId, system)
-      .then(async (res) => {
-        this.setCurrentAction('');
-        this.setLoading(false);
-        // Update only the affected game's artwork instead of refreshing
-        // the entire library, which would reset the scroll position.
-        await this.updateArtForGame(gameId);
-      });
-  }
-
   /**
    * Re-reads artwork for a single game and patches it into the current
    * library state without replacing the whole list, preserving scroll position.
    */
-  private async updateArtForGame(gameId: string) {
+  public async updateArtForGame(gameId: string) {
     if (!this.currentDirectory) return;
     const artFiles = await this.parseArtFiles(this.currentDirectory);
     const currentLibrary = this.librarySubject.getValue();
@@ -582,23 +611,6 @@ export class LibraryService {
       return game;
     });
     this.librarySubject.next(updatedLibrary);
-  }
-
-  public downloadAllArt() {
-    this._logger.log(
-      'downloadAllArt',
-      'Triggered downloading complete library art files...'
-    );
-    const games = this.librarySubject.getValue();
-    const targets = games.filter((game) => game.system !== 'APPS' && game.gameId);
-    this._logger.verbose(
-      'downloadAllArt',
-      `Fetching artwork for ${targets.length} game(s)`
-    );
-    const downloadPromises = targets.map((game) =>
-      this.downloadArtByGameId(game.gameId, game.system === 'PS1' ? 'PS1' : 'PS2')
-    );
-    return Promise.all(downloadPromises);
   }
 
   public tryDetermineGameIdFromHex(filepath: string) {
@@ -659,32 +671,30 @@ export class LibraryService {
   }
 
   /**
-   * Auto-corrects every invalid file in one pass: the game ID is discovered
-   * from each disc image (ISO via raw scan, ZSO via decompression), then the
-   * file is renamed into the chosen naming convention and, optionally, its
-   * artwork is fetched.
+   * Discovery half of bulk auto-correction: reads the game ID out of every
+   * invalid disc image (ISO via raw scan, ZSO via decompression) and returns
+   * the resolved targets. The actual renaming (and optional artwork fetch) is
+   * queued by the caller through the jobs service so it shows up in the queue.
    */
-  public async bulkAutoCorrection(
-    fetchArtwork: boolean,
-    convention: 'old' | 'new' = 'new'
-  ): Promise<{ corrected: number; skipped: number }> {
+  public async planBulkAutoCorrection(): Promise<{
+    resolved: { path: string; gameId: string; gameName: string }[];
+    skipped: number;
+  }> {
     this._logger.log(
-      'bulkAutoCorrection',
-      `Triggered bulk auto-correction (convention=${convention}, fetchArtwork=${fetchArtwork})`
+      'planBulkAutoCorrection',
+      'Discovering game IDs for invalid files…'
     );
     this.setLoading(true);
-    this.setCurrentAction('Auto-correcting invalid game files...');
+    this.setCurrentAction('Reading game IDs from invalid files...');
 
-    // Snapshot the list up front — renaming refreshes invalidFiles$, so iterating
-    // the live subject would process a shifting set.
+    // Snapshot the list up front — the live subject shifts as files get fixed.
     const files = [...this.currentInvalidFilesValue];
-    const nameOnly = convention === 'new';
-    let corrected = 0;
+    const resolved: { path: string; gameId: string; gameName: string }[] = [];
     let skipped = 0;
 
     try {
       for (const file of files) {
-        this.setCurrentAction('Processing ' + file.name + '...');
+        this.setCurrentAction('Reading ' + file.name + '...');
 
         // Auto-discovery only knows how to read PS2 disc images for now.
         const ext = (file.extension || '').toLowerCase();
@@ -699,37 +709,22 @@ export class LibraryService {
           continue;
         }
 
-        const renamed = await window.libraryAPI.renameGamefile(
-          file.path,
-          result.gameId,
-          result.gameName || file.name,
-          nameOnly
-        );
-        if (renamed?.success) {
-          corrected++;
-          if (fetchArtwork) {
-            await this.downloadArtByGameId(result.gameId);
-          }
-        } else {
-          skipped++;
-          this._logger.error(
-            'bulkAutoCorrection',
-            `Failed to rename ${file.name}: ${renamed?.message}`
-          );
-        }
+        resolved.push({
+          path: file.path,
+          gameId: result.gameId,
+          gameName: result.gameName || file.name,
+        });
       }
     } finally {
       this.setCurrentAction('');
       this.setLoading(false);
-      // Single refresh once everything is done, rather than per file.
-      this.refreshGamesFiles();
     }
 
     this._logger.log(
-      'bulkAutoCorrection',
-      `Done — corrected ${corrected}, skipped ${skipped}.`
+      'planBulkAutoCorrection',
+      `Resolved ${resolved.length}, skipped ${skipped}.`
     );
-    return { corrected, skipped };
+    return { resolved, skipped };
   }
 
   public async deleteApp(game: Game) {

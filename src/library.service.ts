@@ -191,6 +191,60 @@ export async function openAskDirectory(options: any) {
   return result;
 }
 
+// Standard OPL folder structure this toolbox manages. A valid OPL root is
+// expected to contain these subdirectories; OPL itself relies on them too.
+export const STANDARD_OPL_DIRS = [
+  "APPS",
+  "ART",
+  "CD",
+  "CFG",
+  "DVD",
+  "POPS",
+  "VCD",
+  "VMC",
+];
+
+// Inspect a directory and report which of the standard OPL folders are
+// present and which are missing, so the caller can warn the user before
+// mounting a folder that isn't actually an OPL root.
+export async function checkOplStructure(dirPath: string) {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const dirNames = new Set(
+      entries.filter((e) => e.isDirectory()).map((e) => e.name)
+    );
+    const existing = STANDARD_OPL_DIRS.filter((d) => dirNames.has(d));
+    const missing = STANDARD_OPL_DIRS.filter((d) => !dirNames.has(d));
+    log.verbose(
+      `OPL structure check for ${dirPath} — present: [${existing.join(", ")}], ` +
+        `missing: [${missing.join(", ")}]`
+    );
+    return { success: true, existing, missing };
+  } catch (err) {
+    log.error(`Failed to check OPL structure in ${dirPath}:`, err);
+    return { success: false, message: String(err) };
+  }
+}
+
+// Create the given standard OPL subdirectories under the OPL root, used to
+// repair a directory that is missing folders. Only known standard folder
+// names are honoured.
+export async function createOplFolders(dirPath: string, folders: string[]) {
+  try {
+    const created: string[] = [];
+    for (const folder of folders) {
+      if (!STANDARD_OPL_DIRS.includes(folder)) continue;
+      await fs.mkdir(path.join(dirPath, folder), { recursive: true });
+      created.push(folder);
+    }
+    log.info(`Created OPL folder(s) under ${dirPath}: [${created.join(", ")}]`);
+    return { success: true, created };
+  } catch (err) {
+    log.error(`Failed to create OPL folders in ${dirPath}:`, err);
+    return { success: false, message: String(err) };
+  }
+}
+
 export async function getGamesFiles(dirPath: string) {
   try {
     log.verbose(`Scanning game folders under ${dirPath} (CD, DVD, VCD, POPS)`);

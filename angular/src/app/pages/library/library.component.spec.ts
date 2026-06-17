@@ -56,7 +56,6 @@ describe('LibraryComponent', () => {
             library$: librarySubject.asObservable(),
             hasCurrentDirectory$: new BehaviorSubject<boolean>(true).asObservable(),
             refreshGamesFiles: jasmine.createSpy('refreshGamesFiles'),
-            downloadAllArt: jasmine.createSpy('downloadAllArt'),
           },
         },
       ],

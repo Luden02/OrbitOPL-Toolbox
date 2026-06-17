@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '../../../../shared/services/library.service';
-import { LogsService } from '../../../../shared/services/logs.service';
+import { JobsService } from '../../../../shared/services/jobs.service';
 import { Game } from '../../../../shared/types/game.type';
 
 type Convention = 'old' | 'new';
@@ -40,7 +40,7 @@ export class LibraryRenameDialogComponent implements OnInit {
 
   constructor(
     private readonly _library: LibraryService,
-    private readonly _logger: LogsService
+    private readonly _jobs: JobsService
   ) {}
 
   /** Per-game eligibility check shared by both bulk and single modes. */
@@ -101,45 +101,22 @@ export class LibraryRenameDialogComponent implements OnInit {
     }
   }
 
-  async run() {
+  run() {
     if (this.running || this.plan.length === 0) return;
-    this.running = true;
-    this.succeeded = 0;
-    this.failed = 0;
-    this.progress = 0;
-
-    for (let i = 0; i < this.plan.length; i++) {
-      const { game, target } = this.plan[i];
-      this.currentLabel = target;
-      try {
-        const res: any = await window.libraryAPI.renameGamefile(
-          game.path,
-          game.gameId,
-          game.title || game.gameId,
-          this.convention === 'new'
-        );
-        if (res?.success) {
-          this.succeeded++;
-        } else {
-          this.failed++;
-          this._logger.error(
-            'bulkRename',
-            `Failed to rename ${game.filename}: ${res?.message}`
-          );
-        }
-      } catch (err: any) {
-        this.failed++;
-        this._logger.error(
-          'bulkRename',
-          `Error renaming ${game.filename}: ${err?.message || err}`
-        );
-      }
-      this.progress = Math.round(((i + 1) / this.plan.length) * 100);
-    }
-
-    this.running = false;
-    this.done = true;
-    this._library.refreshGamesFiles();
+    // Hand the whole plan to the jobs queue — it renames serially and reports
+    // progress there. Close the dialog once everything is queued.
+    this._jobs.enqueue(
+      this.plan.map(({ game }) => ({
+        type: 'rename',
+        label: game.title || game.gameId || game.filename,
+        filePath: game.path,
+        gameId: game.gameId,
+        gameName: game.title || game.gameId,
+        downloadArtwork: false,
+        keepOriginalName: this.convention === 'new',
+      }))
+    );
+    this.close();
   }
 
   close() {

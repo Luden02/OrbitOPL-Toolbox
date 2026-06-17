@@ -3,7 +3,14 @@ import { BehaviorSubject, Observable, map } from 'rxjs';
 import { LogsService } from './logs.service';
 import { LibraryService } from './library.service';
 
-export type ImportJobType = 'ps2-dvd' | 'ps2-cd' | 'ps1' | 'zso' | 'apps';
+export type ImportJobType =
+  | 'ps2-dvd'
+  | 'ps2-cd'
+  | 'ps1'
+  | 'zso'
+  | 'apps'
+  | 'artwork'
+  | 'rename';
 export type JobStatus = 'queued' | 'running' | 'success' | 'error';
 
 export interface ImportJob {
@@ -17,6 +24,8 @@ export interface ImportJob {
   downloadArtwork: boolean;
   /** PS1 only: POPStarter device prefix (e.g. "XX." / "SB."). */
   elfPrefix?: string;
+  /** Artwork only: which art database to pull from (defaults to PS2). */
+  system?: 'PS1' | 'PS2';
   /** ZSO only: remove the source ISO once compression succeeds. */
   deleteOriginal?: boolean;
   /**
@@ -131,8 +140,15 @@ export class JobsService {
           stage: 'Completed',
           finishedAt: Date.now(),
         });
-        this._logger.log('jobsService', `Import succeeded: ${next.label}`);
-        this._library.refreshGamesFiles();
+        this._logger.log('jobsService', `Job succeeded: ${next.label}`);
+        // Artwork only touches one game's images — patch it in place so the
+        // library scroll position is preserved. Everything else changes the
+        // file set on disk and needs a full re-scan.
+        if (next.type === 'artwork') {
+          void this._library.updateArtForGame(next.gameId);
+        } else {
+          this._library.refreshGamesFiles();
+        }
       } else {
         this.patchJob(next.id, {
           status: 'error',
@@ -180,6 +196,10 @@ export class JobsService {
         return this.runZsoJob(job);
       case 'apps':
         return this.runAppsJob(job, dirPath);
+      case 'artwork':
+        return this.runArtworkJob(job, dirPath);
+      case 'rename':
+        return this.runRenameJob(job);
       case 'ps2-dvd':
       default:
         return this.runPs2DvdJob(job, dirPath);
@@ -189,6 +209,26 @@ export class JobsService {
   private async runAppsJob(job: ImportJob, dirPath: string) {
     this.patchJob(job.id, { stage: 'Copying ELF…', percent: 50 });
     return window.libraryAPI.importApp(dirPath, job.filePath, job.gameName);
+  }
+
+  private async runArtworkJob(job: ImportJob, dirPath: string) {
+    this.patchJob(job.id, { stage: 'Downloading artwork…', percent: 50 });
+    return window.libraryAPI.downloadArtByGameId(
+      `${dirPath}/ART`,
+      job.gameId,
+      job.system ?? 'PS2'
+    );
+  }
+
+  private async runRenameJob(job: ImportJob) {
+    this.patchJob(job.id, { stage: 'Renaming…', percent: 50 });
+    // keepOriginalName === OPL "new" convention: drop the GAMEID. prefix.
+    return window.libraryAPI.renameGamefile(
+      job.filePath,
+      job.gameId,
+      job.gameName,
+      !!job.keepOriginalName
+    );
   }
 
   private async runZsoJob(job: ImportJob) {

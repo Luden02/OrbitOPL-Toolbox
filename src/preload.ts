@@ -4,6 +4,10 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   openAskDirectory: () => ipcRenderer.invoke("open-ask-directory"),
   getGamesFiles: (dirPath: string) =>
     ipcRenderer.invoke("get-games-files", dirPath),
+  checkOplStructure: (dirPath: string) =>
+    ipcRenderer.invoke("check-opl-structure", dirPath),
+  createOplFolders: (dirPath: string, folders: string[]) =>
+    ipcRenderer.invoke("create-opl-folders", dirPath, folders),
   getULGames: (dirPath: string) =>
     ipcRenderer.invoke("get-ul-games", dirPath),
   getArtFolder: (dirPath: string) =>

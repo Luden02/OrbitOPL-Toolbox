@@ -90,10 +90,17 @@ export class GamecardComponent implements OnInit, OnChanges {
 
   fetchArtwork() {
     if (!this.game || this.isApp) return;
-    this._libraryService.downloadArtByGameId(
-      this.game.gameId,
-      this.game.system === 'PS1' ? 'PS1' : 'PS2'
-    );
+    this._jobs.enqueue([
+      {
+        type: 'artwork',
+        label: this.game.title || this.game.gameId || this.game.filename,
+        filePath: this.game.path,
+        gameId: this.game.gameId,
+        gameName: this.game.title || '',
+        downloadArtwork: false,
+        system: this.game.system === 'PS1' ? 'PS1' : 'PS2',
+      },
+    ]);
   }
 
   convertToZso() {
