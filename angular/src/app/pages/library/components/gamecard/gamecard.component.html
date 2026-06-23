@@ -1,22 +1,22 @@
-@if(viewMode === 'list') {
+@if(viewMode() === 'list') {
 <!-- ── List row ──────────────────────────────────────────────── -->
 <div class="game-row row-item">
   <figure class="row-art">
-    @if(displayArt) {
-    <img [src]="'data:image/png;base64,' + displayArt.base64" alt="" />
+    @if(displayArt()) {
+    <img [src]="'data:image/png;base64,' + displayArt()!.base64" alt="" />
     } @else {
     <div class="row-no-art">
       <i-lucide name="image-off" size="18"></i-lucide>
     </div>
     }
   </figure>
-  <div class="row-title" [title]="game?.title || game?.gameId || ''">
-    {{ game?.title || game?.gameId }}
+  <div class="row-title" [title]="game()?.title || game()?.gameId || ''">
+    {{ game()?.title || game()?.gameId }}
   </div>
-  <span class="row-meta font-mono">{{ game?.gameId }}</span>
-  <span class="chip chip-region font-mono">{{ game?.region }}</span>
-  <span class="row-meta font-mono">{{ game?.size }}</span>
-  <span class="chip font-mono">{{ game?.format || game?.extension }}</span>
+  <span class="row-meta font-mono">{{ game()?.gameId }}</span>
+  <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+  <span class="row-meta font-mono">{{ game()?.size }}</span>
+  <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
   <div class="dropdown dropdown-end row-actions">
     <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
       <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
@@ -25,7 +25,7 @@
       tabindex="-1"
       class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
     >
-      @if(!isApp) {
+      @if(!isApp() || isPs1LauncherApp()) {
       <li>
         <a (click)="fetchArtwork()"
           ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
@@ -37,14 +37,14 @@
         >
       </li>
       }
-      @if(canCompressZso) {
+      @if(canCompressZso()) {
       <li>
         <a (click)="convertToZso()"
           ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
         >
       </li>
       }
-      @if(canRenameConvention) {
+      @if(canRenameConvention()) {
       <li>
         <a (click)="openRename()"
           ><i-lucide name="text-cursor-input" [size]="16"></i-lucide>Rename to convention…</a
@@ -62,17 +62,14 @@
 } @else {
 <!-- ── Grid poster ───────────────────────────────────────────── -->
 <div class="tile poster">
-  <div class="poster-art">
-    <!-- Image goes in its own clipped wrapper so the dropdown menu can extend
-         past the tile bounds without getting cut off (overflow:hidden lives
-         on .poster-art-clip, not on .poster-art). -->
+  <div class="poster-art" [class.is-square]="game()?.isPs1Launcher">
     <div class="poster-art-clip">
-      @if(displayArt) {
-      <img [src]="'data:image/png;base64,' + displayArt.base64" alt="cover art" />
+      @if(displayArt()) {
+      <img [src]="'data:image/png;base64,' + displayArt()!.base64" alt="cover art" />
       } @else {
       <div class="poster-no-art">
         <i-lucide name="image-off" size="40"></i-lucide>
-        <span class="font-mono text-xs">{{ game?.gameId || game?.title }}</span>
+        <span class="font-mono text-xs">{{ game()?.gameId || game()?.title }}</span>
       </div>
       }
     </div>
@@ -80,8 +77,9 @@
     <!-- top overlays -->
     <span
       class="poster-system"
-      [class.is-ps1]="game?.system === 'PS1'"
-      >{{ game?.system === "PS1" ? "PS1" : game?.system === "APPS" ? "APP" : "PS2" }}</span
+      [class.is-ps1]="game()?.system === 'PS1'"
+      [class.is-ps1-app]="game()?.isPs1Launcher"
+      >{{ game()?.isPs1Launcher ? "PS1 App" : game()?.system === "PS1" ? "PS1" : game()?.system === "APPS" ? "APP" : "PS2" }}</span
     >
 
     <div class="dropdown dropdown-end poster-menu">
@@ -92,6 +90,7 @@
         tabindex="-1"
         class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
       >
+        @if(!isApp() || isPs1LauncherApp()) {
         <li>
           <a (click)="fetchArtwork()"
             ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
@@ -102,14 +101,15 @@
             ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
           >
         </li>
-        @if(canCompressZso) {
+        }
+        @if(canCompressZso()) {
         <li>
           <a (click)="convertToZso()"
             ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
           >
         </li>
         }
-        @if(canRenameConvention) {
+        @if(canRenameConvention()) {
         <li>
           <a (click)="openRename()"
             ><i-lucide name="text-cursor-input" [size]="16"></i-lucide>Rename to convention…</a
@@ -126,26 +126,26 @@
 
     <!-- bottom gradient + title -->
     <div class="poster-overlay">
-      <div class="poster-title" [title]="game?.title || game?.gameId || ''">
-        {{ game?.title || game?.gameId }}
+      <div class="poster-title" [title]="game()?.title || game()?.gameId || ''">
+        {{ game()?.title || game()?.gameId }}
       </div>
       <div class="poster-meta">
-        <span class="chip chip-region font-mono">{{ game?.region }}</span>
-        <span class="chip font-mono">{{ game?.format || game?.extension }}</span>
-        <span class="poster-size font-mono">{{ game?.size }}</span>
+        <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+        <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
+        <span class="poster-size font-mono">{{ game()?.size }}</span>
       </div>
     </div>
   </div>
 </div>
 }
 
-@if(showCfg && game) {
-<app-game-cfg-dialog [game]="game" (closed)="showCfg = false"></app-game-cfg-dialog>
+@if(showCfg && game()) {
+<app-game-cfg-dialog [game]="game()!" (closed)="showCfg = false"></app-game-cfg-dialog>
 }
 
-@if(showRename && game) {
+@if(showRename && game()) {
 <app-library-rename-dialog
-  [game]="game"
+  [game]="game()!"
   (closed)="showRename = false"
 ></app-library-rename-dialog>
 }

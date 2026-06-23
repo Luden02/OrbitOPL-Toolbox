@@ -545,6 +545,11 @@ export async function downloadArtByGameId(
 
   const saved = results.filter((r) => r.savedPath).length;
   log.info(`Artwork for ${gameId}: ${saved}/${types.length} file(s) downloaded`);
+  if (saved === 0) {
+    const msg = `No artwork found for ${gameId} in ${system} database.`;
+    log.warn(msg);
+    return { success: false, data: results, message: msg };
+  }
   return { success: true, data: results };
 }
 
@@ -880,6 +885,111 @@ export async function tryDetermineGameIdFromZso(filepath: string) {
   };
 }
 
+const VCD_HEADER_SIZE = 1048576; // 1 MB — VCD header before disc data
+
+/**
+ * Resolves a PS1 game ID from a VCD file by scanning the disc image data
+ * embedded after the 1 MB VCD header.
+ *
+ * VCD = POPStarter's container format: 1 MB TOC header followed by raw
+ * 2352-byte sectors from the original BIN. The PS1 game ID string lives in
+ * the ISO9660 volume descriptors / directory records of those sectors, so
+ * we scan from offset VCD_HEADER_SIZE using the same regex used for BIN files.
+ */
+export async function tryDeterminePs1GameIdFromVcd(
+  filepath: string
+): Promise<{
+  success: boolean;
+  gameId?: string;
+  formattedGameId?: string;
+  gameName?: string;
+  message?: string;
+}> {
+  let fileHandle: fs.FileHandle | undefined;
+
+  try {
+    fileHandle = await fs.open(filepath, "r");
+  } catch (err: any) {
+    log.error(`PS1 VCD scan: cannot open ${filepath}:`, err?.code || err?.message || err);
+    return {
+      success: false,
+      message: describeFileAccessError(err, filepath),
+    };
+  }
+
+  try {
+    log.verbose(`PS1 VCD scan: reading ${path.basename(filepath)} from offset 1 MB (VCD header skip)`);
+    const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
+    let position = VCD_HEADER_SIZE;
+    let carry = "";
+    const fileSize = (await fs.stat(filepath)).size;
+
+    while (position < fileSize) {
+      const { bytesRead } = await fileHandle.read(
+        buffer,
+        0,
+        FILE_SCAN_CHUNK_BYTES,
+        position
+      );
+
+      if (bytesRead === 0) {
+        break;
+      }
+
+      position += bytesRead;
+
+      const chunk = carry + buffer.subarray(0, bytesRead).toString("latin1");
+      PS1_GAME_ID_REGEX.lastIndex = 0;
+      const matches = chunk.match(PS1_GAME_ID_REGEX);
+
+      if (matches && matches.length > 0) {
+        const rawId = matches[0];
+        const gameId = rawId.replace("-", "_");
+        const lookupId = normaliseGameIdForLookup(gameId);
+        const gameName = await findPs1GameName(lookupId);
+
+        log.verbose(
+          `PS1 VCD scan: matched ${gameId} at offset ${position - bytesRead}` +
+            (gameName ? ` (${gameName})` : " (no title in games list)")
+        );
+        return {
+          success: true,
+          gameId,
+          formattedGameId: lookupId,
+          ...(gameName ? { gameName } : {}),
+        };
+      }
+
+      carry =
+        chunk.length > FILE_SCAN_OVERLAP_BYTES
+          ? chunk.slice(-FILE_SCAN_OVERLAP_BYTES)
+          : chunk;
+
+      // Safety bound — don't scan more than 64 MB of disc data for an ID
+      if (position - VCD_HEADER_SIZE > 64 * 1024 * 1024) {
+        log.verbose(`PS1 VCD scan: hit 64 MB safety bound for ${path.basename(filepath)}`);
+        break;
+      }
+    }
+
+    log.verbose(`PS1 VCD scan: no game ID found in ${path.basename(filepath)}`);
+    return {
+      success: false,
+      message: "Could not locate a PS1 game ID inside the VCD disc data.",
+    };
+  } catch (err: any) {
+    log.error(`PS1 VCD scan: read error on ${path.basename(filepath)}:`, err?.message || err);
+    return {
+      success: false,
+      message: err?.message || "Failed while reading VCD file contents.",
+    };
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close();
+    }
+  }
+}
+
 export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   let scanPath = filepath;
 
@@ -1017,7 +1127,8 @@ export async function openAskGameFiles(
 export async function deleteGameAndRelatedFiles(
   gamePath: string,
   artDir: string,
-  gameId: string
+  gameId: string,
+  launcherFolder?: string
 ) {
   log.info(`Deleting ${gameId} and related files: ${gamePath}`);
   try {
@@ -1043,25 +1154,23 @@ export async function deleteGameAndRelatedFiles(
       // ART directory may not exist — that's fine
     }
 
-    // PS1 VCDs are paired with an APPS/POPS_<sanitizedName>/ launcher created
-    // during import. Remove that folder too so PS1 deletes don't leave the
-    // launcher orphaned on disk.
-    if (path.extname(gamePath).toLowerCase() === ".vcd") {
-      const oplRoot = path.dirname(artDir); // artDir = <root>/ART
-      const base = path.basename(gamePath, path.extname(gamePath));
-      // Strip the "GAMEID." prefix if present; otherwise use the whole stem.
-      const prefix = `${gameId}.`;
-      const sanitizedName = base.startsWith(prefix)
-        ? base.slice(prefix.length)
-        : base;
-      if (sanitizedName) {
-        const appsLauncher = path.join(oplRoot, "APPS", `POPS_${sanitizedName}`);
+    // PS1 POPStarter VCDs (from POPS/ folder) are paired with an
+    // APPS/POPS_<name>/ launcher. The caller passes the exact folder name
+    // via launcherFolder — use it directly. VCD files from the VCD/ folder
+    // never have a paired launcher and pass undefined here.
+    if (launcherFolder) {
+      const oplRoot = path.dirname(artDir);
+      if (
+        !launcherFolder.includes("/") &&
+        !launcherFolder.includes("\\") &&
+        !launcherFolder.includes("..")
+      ) {
+        const appsLauncher = path.join(oplRoot, "APPS", launcherFolder);
         try {
           await fs.rm(appsLauncher, { recursive: true, force: true });
-          log.verbose(`Removed paired POPStarter launcher APPS/POPS_${sanitizedName}`);
+          log.verbose(`Removed paired POPStarter launcher APPS/${launcherFolder}`);
         } catch {
-          // Best-effort — the launcher may not exist (e.g. PS1 game imported
-          // outside this app), and that's fine.
+          // Best-effort — may not exist.
         }
       }
     }

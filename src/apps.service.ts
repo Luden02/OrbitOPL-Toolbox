@@ -50,55 +50,88 @@ function parseTitleCfg(raw: string): { title?: string; boot?: string } {
   return out;
 }
 
+/**
+ * Shared enumeration for APPS subfolders, filtered by `match`.
+ * Returns {@link AppInfo} for every subfolder matching the predicate.
+ */
+async function enumerateApps(
+  oplRoot: string,
+  match: (name: string) => boolean,
+): Promise<AppInfo[]> {
+  const dir = appsDir(oplRoot);
+  const items = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  const apps: AppInfo[] = [];
+
+  for (const item of items) {
+    if (!item.isDirectory()) continue;
+    if (!match(item.name)) continue;
+    const folderPath = path.join(dir, item.name);
+
+    let title = item.name;
+    let boot = "";
+    try {
+      const cfg = parseTitleCfg(
+        await fs.readFile(path.join(folderPath, "title.cfg"), "utf-8")
+      );
+      if (cfg.title) title = cfg.title;
+      if (cfg.boot) boot = cfg.boot;
+    } catch {
+      // No title.cfg — fall back to the first ELF in the folder.
+    }
+
+    if (!boot) {
+      const elf = (await fs.readdir(folderPath).catch(() => [])).find((f) =>
+        /\.elf$/i.test(f)
+      );
+      if (!elf) continue;
+      boot = elf;
+    }
+
+    const elfPath = path.join(folderPath, boot);
+    let sizeBytes = 0;
+    try {
+      sizeBytes = (await fs.stat(elfPath)).size;
+    } catch {
+      continue;
+    }
+
+    apps.push({ folder: item.name, title, boot, path: elfPath, sizeBytes });
+  }
+
+  apps.sort((a, b) => a.title.localeCompare(b.title));
+  return apps;
+}
+
+/**
+ * Returns PS1 POPStarter launchers from the APPS folder.
+ *
+ * These are the APPS/POPS_* folders normally skipped by getApps() — they
+ * correspond to PS1 VCD files in POPS/ and carry the POPStarter ELF along
+ * with the game title. The caller pairs them with VCD files to build proper
+ * PS1 game entries.
+ */
+export async function getPs1Launchers(
+  oplRoot: string
+): Promise<{ success: boolean; launchers: AppInfo[]; message?: string }> {
+  try {
+    const launchers = await enumerateApps(oplRoot, (name) => /^POPS_/i.test(name));
+    log.verbose(`Found ${launchers.length} PS1 POPStarter launcher(s) in APPS/POPS_*`);
+    return { success: true, launchers };
+  } catch (err: any) {
+    log.error(`Failed to enumerate PS1 launchers:`, err?.message || err);
+    return { success: false, launchers: [], message: err?.message || String(err) };
+  }
+}
+
 export async function getApps(
   oplRoot: string
 ): Promise<{ success: boolean; apps: AppInfo[]; message?: string }> {
   try {
-    const dir = appsDir(oplRoot);
-    const items = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
-    const apps: AppInfo[] = [];
-
-    for (const item of items) {
-      if (!item.isDirectory()) continue;
-      // Skip POPStarter launchers for PS1 games — those folders are created
-      // alongside each PS1 VCD and are already represented by their PS1 entry
-      // in the library. Showing them here would duplicate every PS1 title.
-      if (/^POPS_/i.test(item.name)) continue;
-      const folderPath = path.join(dir, item.name);
-
-      let title = item.name;
-      let boot = "";
-      try {
-        const cfg = parseTitleCfg(
-          await fs.readFile(path.join(folderPath, "title.cfg"), "utf-8")
-        );
-        if (cfg.title) title = cfg.title;
-        if (cfg.boot) boot = cfg.boot;
-      } catch {
-        // No title.cfg — fall back to the first ELF in the folder.
-      }
-
-      if (!boot) {
-        const elf = (await fs.readdir(folderPath).catch(() => [])).find((f) =>
-          /\.elf$/i.test(f)
-        );
-        if (!elf) continue; // not a launchable app folder
-        boot = elf;
-      }
-
-      const elfPath = path.join(folderPath, boot);
-      let sizeBytes = 0;
-      try {
-        sizeBytes = (await fs.stat(elfPath)).size;
-      } catch {
-        continue; // boot target missing — skip
-      }
-
-      apps.push({ folder: item.name, title, boot, path: elfPath, sizeBytes });
-    }
-
-    apps.sort((a, b) => a.title.localeCompare(b.title));
-    log.verbose(`Found ${apps.length} homebrew app(s) in ${dir}`);
+    // Skip POPStarter launchers for PS1 games — those folders are created
+    // alongside each PS1 VCD and are already represented by their PS1 entry
+    // in the library. Showing them here would duplicate every PS1 title.
+    const apps = await enumerateApps(oplRoot, (name) => !/^POPS_/i.test(name));
+    log.verbose(`Found ${apps.length} homebrew app(s) in ${appsDir(oplRoot)}`);
     return { success: true, apps };
   } catch (err: any) {
     log.error(`Failed to enumerate apps in ${appsDir(oplRoot)}:`, err?.message || err);

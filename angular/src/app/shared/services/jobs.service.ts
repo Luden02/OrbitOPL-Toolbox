@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
 import { LogsService } from './logs.service';
 import { LibraryService } from './library.service';
+import { ConfirmDialogService } from './confirm-dialog.service';
 
 export type ImportJobType =
   | 'ps2-dvd'
@@ -11,7 +12,7 @@ export type ImportJobType =
   | 'apps'
   | 'artwork'
   | 'rename';
-export type JobStatus = 'queued' | 'running' | 'success' | 'error';
+export type JobStatus = 'queued' | 'running' | 'success' | 'error' | 'cancelled';
 
 export interface ImportJob {
   id: string;
@@ -34,6 +35,13 @@ export interface ImportJob {
    * SYSTEM.CNF).
    */
   keepOriginalName?: boolean;
+  /**
+   * Artwork only: overrides the local filename stem (sans _COV.png suffix).
+   * For PS1 launcher apps this is the boot ELF name (e.g.
+   * "XX.SCUS_944.02.SomeGame.ELF") so the saved file matches the art
+   * matching logic in updateArtForGame.
+   */
+  saveAsName?: string;
   status: JobStatus;
   percent: number;
   stage: string;
@@ -75,7 +83,8 @@ export class JobsService {
 
   constructor(
     private readonly _logger: LogsService,
-    private readonly _library: LibraryService
+    private readonly _library: LibraryService,
+    private readonly _confirm: ConfirmDialogService
   ) {}
 
   /** Queue one or more imports and kick the worker if idle. */
@@ -133,18 +142,27 @@ export class JobsService {
 
     try {
       const result = await this.runJob(next);
-      if (result?.success) {
+      if (result?.cancelled) {
+        this.patchJob(next.id, {
+          status: 'cancelled',
+          percent: 100,
+          stage: 'Cancelled',
+          finishedAt: Date.now(),
+        });
+        this._logger.log('jobsService', `Job cancelled: ${next.label}`);
+      } else if (result?.success) {
         this.patchJob(next.id, {
           status: 'success',
           percent: 100,
           stage: 'Completed',
+          message: result?.message,
           finishedAt: Date.now(),
         });
         this._logger.log('jobsService', `Job succeeded: ${next.label}`);
         // Artwork only touches one game's images — patch it in place so the
         // library scroll position is preserved. Everything else changes the
         // file set on disk and needs a full re-scan.
-        if (next.type === 'artwork') {
+        if (next.type === 'artwork' && result?.artRefresh !== false) {
           void this._library.updateArtForGame(next.gameId);
         } else {
           this._library.refreshGamesFiles();
@@ -158,7 +176,7 @@ export class JobsService {
         });
         this._logger.error(
           'jobsService',
-          `Import failed for ${next.label}: ${result?.message}`
+          `Job failed for ${next.label} (${next.type}): ${result?.message}`
         );
       }
     } catch (error: any) {
@@ -170,7 +188,7 @@ export class JobsService {
       });
       this._logger.error(
         'jobsService',
-        `Import error for ${next.label}: ${error?.message || error}`
+        `Job threw for ${next.label} (${next.type}): ${error?.message || error}`
       );
     } finally {
       this.isProcessing = false;
@@ -181,7 +199,7 @@ export class JobsService {
 
   private async runJob(
     job: ImportJob
-  ): Promise<{ success: boolean; message?: string }> {
+  ): Promise<{ success: boolean; message?: string; artRefresh?: boolean; cancelled?: boolean }> {
     const dirPath = this._library.currentDirectoryValue;
     if (!dirPath) {
       return { success: false, message: 'No library directory mounted.' };
@@ -212,12 +230,96 @@ export class JobsService {
   }
 
   private async runArtworkJob(job: ImportJob, dirPath: string) {
-    this.patchJob(job.id, { stage: 'Downloading artwork…', percent: 50 });
-    return window.libraryAPI.downloadArtByGameId(
-      `${dirPath}/ART`,
-      job.gameId,
-      job.system ?? 'PS2'
+    this.patchJob(job.id, { stage: 'Checking existing artwork…', percent: 10 });
+
+    const artDir = `${dirPath}/ART`;
+    const saveAsName = job.saveAsName;
+    const localName = saveAsName || job.gameId;
+    const types = ['COV', 'ICO', 'SCR'];
+    const expectedFiles = types.map((t) => `${localName}_${t}.png`);
+
+    this._logger.log(
+      'jobsService',
+      `FetchArtwork for "${job.label}": gameId=${job.gameId}, saveAsName=${saveAsName ?? '(none)'}, localName=${localName}, expectedFiles=[${expectedFiles.join(', ')}]`
     );
+
+    const existing = await window.libraryAPI.checkArtFilesExist(artDir, expectedFiles);
+
+    this._logger.log(
+      'jobsService',
+      `checkArtFilesExist returned ${existing.length} existing file(s) for "${job.label}": [${existing.join(', ')}]`
+    );
+
+    let shouldDownload = true;
+    let isOverwrite = false;
+
+    if (existing.length > 0) {
+      const confirmed = await this._confirm.confirm({
+        title: 'Overwrite Artwork',
+        message: `Artwork already exists for "${job.label}". Overwrite?`,
+        detail: existing.join('\n'),
+        confirmLabel: 'Overwrite',
+      });
+      this._logger.log(
+        'jobsService',
+        `Confirm dialog result for "${job.label}": confirmed=${confirmed}`
+      );
+      if (confirmed) {
+        isOverwrite = true;
+      } else {
+        shouldDownload = false;
+      }
+    }
+
+    if (!shouldDownload) {
+      this._logger.log(
+        'jobsService',
+        `Artwork download cancelled by user for "${job.label}" — existing files left untouched`
+      );
+      return { success: false, cancelled: true, message: 'Cancelled by user.' };
+    }
+
+    this.patchJob(job.id, { stage: 'Downloading artwork…', percent: 50 });
+
+    const result = await window.libraryAPI.downloadArtByGameId(
+      artDir,
+      job.gameId,
+      job.system ?? 'PS2',
+      saveAsName
+    );
+
+    if (result?.data) {
+      const saved = result.data.filter((r: any) => r.savedPath);
+      const failed = result.data.filter((r: any) => r.error);
+      this._logger.log(
+        'jobsService',
+        `Artwork download complete for "${job.label}": ${saved.length} saved, ${failed.length} failed`
+      );
+      if (saveAsName && saveAsName !== job.gameId) {
+        this._logger.log(
+          'jobsService',
+          `Artwork saved with name pattern "${saveAsName}_*.png" (gameId: ${job.gameId})`
+        );
+      }
+      for (const item of saved) {
+        this._logger.log('jobsService', `  ✓ ${item.type}: ${item.savedPath}`);
+      }
+      for (const item of failed) {
+        this._logger.log('jobsService', `  ✗ ${item.type}: ${item.error}`);
+      }
+
+      if (saved.length === 0) {
+        return {
+          success: false,
+          message: `No artwork found for ${job.label} (${job.gameId}) in the ${job.system ?? 'PS2'} database.`,
+        };
+      }
+    }
+
+    const message = isOverwrite
+      ? 'Artwork overwritten.'
+      : 'Artwork downloaded.';
+    return { success: true, message };
   }
 
   private async runRenameJob(job: ImportJob) {

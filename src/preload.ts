@@ -28,8 +28,11 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   downloadArtByGameId: (
     dirPath: string,
     gameId: string,
-    system?: "PS1" | "PS2"
-  ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system),
+    system?: "PS1" | "PS2",
+    saveAsName?: string
+  ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system, saveAsName),
+  checkArtFilesExist: (artDir: string, filenames: string[]) =>
+    ipcRenderer.invoke("check-art-files-exist", artDir, filenames),
   tryDetermineGameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-gameid-from-hex", filepath),
   resolveIsoGameId: (filepath: string) =>
@@ -38,6 +41,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("open-ask-game-files", isGameCd, isGameDvd),
   tryDeterminePs1GameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-ps1-gameid-from-hex", filepath),
+  tryDeterminePs1GameIdFromVcd: (filepath: string) =>
+    ipcRenderer.invoke("try-determine-ps1-gameid-from-vcd", filepath),
   importPs1Game: (
     cueFilePath: string,
     oplRoot: string,
@@ -108,12 +113,16 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.removeAllListeners("zso-compress-progress");
   },
   getApps: (oplRoot: string) => ipcRenderer.invoke("get-apps", oplRoot),
+  getPs1Launchers: (oplRoot: string) =>
+    ipcRenderer.invoke("get-ps1-launchers", oplRoot),
   openAskElfFiles: () => ipcRenderer.invoke("open-ask-elf-files"),
   importApp: (oplRoot: string, elfPath: string, title: string) =>
     ipcRenderer.invoke("import-app", oplRoot, elfPath, title),
   deleteApp: (oplRoot: string, folder: string) =>
     ipcRenderer.invoke("delete-app", oplRoot, folder),
   listVmc: (oplRoot: string) => ipcRenderer.invoke("list-vmc", oplRoot),
+  checkPopsVmc: (oplRoot: string, gameTitle: string) =>
+    ipcRenderer.invoke("check-pops-vmc", oplRoot, gameTitle),
   createVmc: (oplRoot: string, name: string, sizeMb: number) =>
     ipcRenderer.invoke("create-vmc", oplRoot, name, sizeMb),
   deleteVmc: (oplRoot: string, name: string) =>
@@ -128,13 +137,15 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   deleteGameAndRelatedFiles: (
     gamePath: string,
     artDir: string,
-    gameId: string
+    gameId: string,
+    launcherFolder?: string
   ) =>
     ipcRenderer.invoke(
       "delete-game-and-related-files",
       gamePath,
       artDir,
-      gameId
+      gameId,
+      launcherFolder
     ),
   moveFile: (sourcePath: string, destPath: string) =>
     ipcRenderer.invoke("move-file", sourcePath, destPath),

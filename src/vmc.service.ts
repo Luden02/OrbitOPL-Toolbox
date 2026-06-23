@@ -36,6 +36,30 @@ function vmcDir(oplRoot: string): string {
   return path.join(oplRoot, "VMC");
 }
 
+/**
+ * Check for per-game POPStarter VMC files in POPS/<subfolder>/.
+ * POPStarter stores VMCs as SLOT0.VMC / SLOT1.VMC (or .bin) inside a
+ * subfolder named after the game, directly under the POPS directory at
+ * the device root — NOT under VMC/POPS/.
+ */
+export async function checkPopsVmc(
+  oplRoot: string,
+  subfolder: string
+): Promise<{ success: boolean; slot0: string | null; slot1: string | null }> {
+  try {
+    const dir = path.join(oplRoot, "POPS", subfolder);
+    // Accept .VMC or .bin — both are used by POPStarter setups
+    const files = await fs.readdir(dir).catch(() => []);
+    const slot0 = files.find((f) => /^SLOT0\.(VMC|BIN)$/i.test(f)) ?? null;
+    const slot1 = files.find((f) => /^SLOT1\.(VMC|BIN)$/i.test(f)) ?? null;
+    log.verbose(`POPS VMC check for "${subfolder}": slot0="${slot0}", slot1="${slot1}" (dir=${dir})`);
+    return { success: true, slot0, slot1 };
+  } catch (err: any) {
+    log.verbose(`POPS VMC check for "${subfolder}" failed: ${err?.message || err}`);
+    return { success: false, slot0: null, slot1: null };
+  }
+}
+
 export async function listVmc(
   oplRoot: string
 ): Promise<{ success: boolean; cards: VmcInfo[]; message?: string }> {

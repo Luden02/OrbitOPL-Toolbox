@@ -1,8 +1,9 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { Game, gameArt } from '../../../../shared/types/game.type';
 
 import { LibraryService } from '../../../../shared/services/library.service';
 import { JobsService } from '../../../../shared/services/jobs.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
 import { LibraryRenameDialogComponent } from '../rename-dialog/rename-dialog.component';
@@ -19,124 +20,140 @@ export type GamecardViewMode = 'grid' | 'list';
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
 })
-export class GamecardComponent implements OnInit, OnChanges {
-  @Input() game: Game | undefined;
-  @Input() viewMode: GamecardViewMode = 'grid';
+export class GamecardComponent {
+  readonly game = input<Game | undefined>(undefined);
+  readonly viewMode = input<GamecardViewMode>('grid');
 
-  constructor(
-    public readonly _libraryService: LibraryService,
-    private readonly _jobs: JobsService
-  ) {}
+  readonly displayArt = computed(() => {
+    const g = this.game();
+    const vm = this.viewMode();
+    if (g && Array.isArray(g.art)) {
+      const artType = vm === 'list' ? 'ICO' : 'COV';
+      return g.art.find((a) => a.type?.toUpperCase() === artType);
+    }
+    return undefined;
+  });
 
-  /** Homebrew apps are managed differently from disc games. */
-  get isApp(): boolean {
-    return this.game?.system === 'APPS';
-  }
+  readonly isApp = computed(
+    () => this.game()?.system === 'APPS' && !this.game()?.isPs1Launcher,
+  );
 
-  /** Only PS2 ISO images can be compressed to ZSO. */
-  get canCompressZso(): boolean {
-    if (!this.game) return false;
-    const system = this.game.system ?? 'PS2';
-    const isIso =
-      this.game.format === 'ISO' ||
-      this.game.extension?.toLowerCase() === 'iso';
+  readonly isPs1LauncherApp = computed(
+    () => this.game()?.system === 'APPS' && !!this.game()?.isPs1Launcher,
+  );
+
+  readonly canCompressZso = computed(() => {
+    const g = this.game();
+    if (!g) return false;
+    const system = g.system ?? 'PS2';
+    const isIso = g.format === 'ISO' || g.extension?.toLowerCase() === 'iso';
     return system === 'PS2' && isIso;
-  }
+  });
 
-  /** Old/new naming convention only applies to PS2 disc images. */
-  get canRenameConvention(): boolean {
-    if (!this.game) return false;
-    const system = this.game.system ?? 'PS2';
+  readonly canRenameConvention = computed(() => {
+    const g = this.game();
+    if (!g) return false;
+    const system = g.system ?? 'PS2';
     return (
       system === 'PS2' &&
-      (this.game.format === 'ISO' || this.game.format === 'ZSO') &&
-      !!this.game.gameId &&
-      !!this.game.title
+      (g.format === 'ISO' || g.format === 'ZSO') &&
+      !!g.gameId &&
+      !!g.title
     );
-  }
+  });
 
-  public displayArt: gameArt | undefined;
   public showCfg = false;
   public showRename = false;
 
+  constructor(
+    public readonly _libraryService: LibraryService,
+    private readonly _jobs: JobsService,
+    private readonly _confirm: ConfirmDialogService,
+  ) {}
+
   openCfg() {
-    if (this.game) this.showCfg = true;
+    if (this.game()) this.showCfg = true;
   }
 
   openRename() {
-    if (this.game) this.showRename = true;
-  }
-
-  ngOnInit() {
-    this.updateDisplayArt();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['game'] || changes['viewMode']) {
-      this.updateDisplayArt();
-    }
-  }
-
-  private updateDisplayArt() {
-    if (this.game && Array.isArray(this.game.art)) {
-      const artType = this.viewMode === 'list' ? 'ICO' : 'COV';
-      this.displayArt = this.game.art.find(
-        (a) => a.type?.toUpperCase() === artType
-      );
-    } else {
-      this.displayArt = undefined;
-    }
+    if (this.game()) this.showRename = true;
   }
 
   fetchArtwork() {
-    if (!this.game || this.isApp) return;
+    const g = this.game();
+    if (!g) return;
+    if (this.isApp()) return;
     this._jobs.enqueue([
       {
         type: 'artwork',
-        label: this.game.title || this.game.gameId || this.game.filename,
-        filePath: this.game.path,
-        gameId: this.game.gameId,
-        gameName: this.game.title || '',
+        label: g.title || g.gameId || g.filename,
+        filePath: g.path,
+        gameId: g.gameId,
+        gameName: g.title || '',
         downloadArtwork: false,
-        system: this.game.system === 'PS1' ? 'PS1' : 'PS2',
+        system: this.isPs1LauncherApp()
+          ? 'PS1'
+          : g.system === 'PS1'
+            ? 'PS1'
+            : 'PS2',
+        saveAsName: this.isPs1LauncherApp() ? g.ps1LauncherBoot : undefined,
       },
     ]);
   }
 
   convertToZso() {
-    if (!this.game || !this.canCompressZso) return;
+    const g = this.game();
+    if (!g || !this.canCompressZso()) return;
     const confirmed = window.confirm(
-      `Compress "${this.game.title || this.game.gameId}" to ZSO?\n\n` +
-        `This creates a smaller .zso and removes the original .iso once it succeeds.`
+      `Compress "${g.title || g.gameId}" to ZSO?\n\n` +
+        `This creates a smaller .zso and removes the original .iso once it succeeds.`,
     );
     if (!confirmed) return;
     this._jobs.enqueue([
       {
         type: 'zso',
-        label: this.game.title || this.game.gameId || this.game.filename,
-        filePath: this.game.path,
-        gameId: this.game.gameId,
-        gameName: this.game.title || '',
+        label: g.title || g.gameId || g.filename,
+        filePath: g.path,
+        gameId: g.gameId,
+        gameName: g.title || '',
         downloadArtwork: false,
         deleteOriginal: true,
       },
     ]);
   }
 
-  confirmDelete() {
-    if (!this.game) return;
-    if (this.isApp) {
-      const confirmed = window.confirm(
-        `Delete the app "${this.game.title}"?\nThis removes its APPS folder.`
-      );
-      if (confirmed) this._libraryService.deleteApp(this.game);
+  async confirmDelete() {
+    const g = this.game();
+    if (!g) return;
+    if (g.isPs1Launcher) {
+      const confirmed = await this._confirm.confirm({
+        title: 'Delete PS1 Game',
+        message: `Delete PS1 game "${g.title}"?`,
+        detail:
+          'This removes the VCD file, its launcher app, and associated artwork.',
+        confirmLabel: 'Delete',
+      });
+      if (confirmed) this._libraryService.deleteGame(g);
       return;
     }
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${this.game.title || this.game.gameId}"?\nThis will also remove associated artwork.`
-    );
+    if (this.isApp()) {
+      const confirmed = await this._confirm.confirm({
+        title: 'Delete App',
+        message: `Delete the app "${g.title}"?`,
+        detail: 'This removes its APPS folder.',
+        confirmLabel: 'Delete',
+      });
+      if (confirmed) this._libraryService.deleteApp(g);
+      return;
+    }
+    const confirmed = await this._confirm.confirm({
+      title: 'Delete Game',
+      message: `Are you sure you want to delete "${g.title || g.gameId}"?`,
+      detail: 'This will also remove associated artwork.',
+      confirmLabel: 'Delete',
+    });
     if (confirmed) {
-      this._libraryService.deleteGame(this.game);
+      this._libraryService.deleteGame(g);
     }
   }
 }

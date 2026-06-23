@@ -1,10 +1,4 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnInit,
-  Output,
-} from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '../../../../shared/types/game.type';
 import {
@@ -24,9 +18,12 @@ import { VmcInfo, VmcService } from '../../../../shared/services/vmc.service';
   templateUrl: './game-cfg-dialog.component.html',
   styleUrl: './game-cfg-dialog.component.scss',
 })
-export class GameCfgDialogComponent implements OnInit {
-  @Input({ required: true }) game!: Game;
-  @Output() closed = new EventEmitter<void>();
+export class GameCfgDialogComponent {
+  readonly game = input.required<Game>();
+  readonly closed = output<void>();
+
+  private readonly _cfg: CfgService;
+  private readonly _vmc: VmcService;
 
   readonly compatModes = COMPAT_MODES;
 
@@ -36,24 +33,10 @@ export class GameCfgDialogComponent implements OnInit {
   vmc0 = '';
   vmc1 = '';
   cards: VmcInfo[] = [];
+  slot0Cards: VmcInfo[] = [];
+  slot1Cards: VmcInfo[] = [];
   loading = true;
   saving = false;
-
-  constructor(
-    private readonly _cfg: CfgService,
-    private readonly _vmc: VmcService
-  ) {}
-
-  async ngOnInit() {
-    this.cards = await this._vmc.refresh();
-    this.entries = await this._cfg.getGameCfg(this.game.gameId);
-    this.title = this.entries[CFG_KEY_NAME] ?? '';
-    const compatVal = parseInt(this.entries[CFG_KEY_COMPAT] ?? '0', 10) || 0;
-    this.compat = this.compatModes.map((m) => (compatVal & (1 << m.bit)) !== 0);
-    this.vmc0 = this.entries[CFG_KEY_VMC0] ?? '';
-    this.vmc1 = this.entries[CFG_KEY_VMC1] ?? '';
-    this.loading = false;
-  }
 
   private readonly knownKeys = [
     CFG_KEY_NAME,
@@ -62,7 +45,45 @@ export class GameCfgDialogComponent implements OnInit {
     CFG_KEY_VMC1,
   ];
 
-  /** Card names to offer, including any assigned card no longer on disk. */
+  constructor(cfg: CfgService, vmc: VmcService) {
+    this._cfg = cfg;
+    this._vmc = vmc;
+  }
+
+  async ngOnInit() {
+    const g = this.game();
+    this.entries = await this._cfg.getGameCfg(g.gameId);
+    this.title = this.entries[CFG_KEY_NAME] ?? '';
+
+    if (g.isPs1Launcher) {
+      const vmcSub = g.ps1VmcSub ?? '';
+      if (vmcSub) {
+        const vmcs = await this._vmc.checkPops(vmcSub);
+        if (vmcs.slot0) {
+          this.slot0Cards = [{ name: vmcs.slot0, sizeBytes: 0, sizeMb: 0 }];
+          this.vmc0 = vmcs.slot0;
+        }
+        if (vmcs.slot1) {
+          this.slot1Cards = [{ name: vmcs.slot1, sizeBytes: 0, sizeMb: 0 }];
+          this.vmc1 = vmcs.slot1;
+        }
+      }
+    } else {
+      this.cards = await this._vmc.refresh();
+      this.vmc0 = this.entries[CFG_KEY_VMC0] ?? '';
+      this.vmc1 = this.entries[CFG_KEY_VMC1] ?? '';
+    }
+
+    if (!g.isPs1Launcher) {
+      const compatVal = parseInt(this.entries[CFG_KEY_COMPAT] ?? '0', 10) || 0;
+      this.compat = this.compatModes.map(
+        (m) => (compatVal & (1 << m.bit)) !== 0,
+      );
+    }
+
+    this.loading = false;
+  }
+
   get cardNames(): string[] {
     const names = new Set(this.cards.map((c) => c.name));
     if (this.vmc0) names.add(this.vmc0);
@@ -70,9 +91,17 @@ export class GameCfgDialogComponent implements OnInit {
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }
 
+  get slot0Names(): string[] {
+    return this.slot0Cards.map((c) => c.name);
+  }
+
+  get slot1Names(): string[] {
+    return this.slot1Cards.map((c) => c.name);
+  }
+
   get otherKeyCount(): number {
     return Object.keys(this.entries).filter(
-      (k) => !this.knownKeys.includes(k)
+      (k) => !this.knownKeys.includes(k),
     ).length;
   }
 
@@ -84,21 +113,35 @@ export class GameCfgDialogComponent implements OnInit {
     if (trimmed) next[CFG_KEY_NAME] = trimmed;
     else delete next[CFG_KEY_NAME];
 
-    let mask = 0;
-    this.compatModes.forEach((m, i) => {
-      if (this.compat[i]) mask |= 1 << m.bit;
-    });
-    if (mask > 0) next[CFG_KEY_COMPAT] = String(mask);
-    else delete next[CFG_KEY_COMPAT];
+    if (!this.game().isPs1Launcher) {
+      let mask = 0;
+      this.compatModes.forEach((m, i) => {
+        if (this.compat[i]) mask |= 1 << m.bit;
+      });
+      if (mask > 0) next[CFG_KEY_COMPAT] = String(mask);
+      else delete next[CFG_KEY_COMPAT];
+    } else {
+      delete next[CFG_KEY_COMPAT];
+    }
 
-    if (this.vmc0) next[CFG_KEY_VMC0] = this.vmc0;
-    else delete next[CFG_KEY_VMC0];
-    if (this.vmc1) next[CFG_KEY_VMC1] = this.vmc1;
-    else delete next[CFG_KEY_VMC1];
+    if (!this.game().isPs1Launcher) {
+      if (this.vmc0) next[CFG_KEY_VMC0] = this.vmc0;
+      else delete next[CFG_KEY_VMC0];
+      if (this.vmc1) next[CFG_KEY_VMC1] = this.vmc1;
+      else delete next[CFG_KEY_VMC1];
+    } else {
+      delete next[CFG_KEY_VMC0];
+      delete next[CFG_KEY_VMC1];
+    }
 
-    await this._cfg.saveGameCfg(this.game.gameId, next);
+    await this._cfg.saveGameCfg(this.game().gameId, next);
     this.saving = false;
     this.closed.emit();
+  }
+
+  onCompatChange(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    if (input) this.compat[index] = input.checked;
   }
 
   close() {

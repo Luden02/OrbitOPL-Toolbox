@@ -1,0 +1,40 @@
+<div class="cd-backdrop" (click)="close(false)"></div>
+<div
+  #modal
+  class="cd-modal glass-strong"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="options().title"
+  (keydown)="onKeydown($event)"
+>
+  <!-- Header -->
+  <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
+    <i-lucide name="triangle-alert" size="18" class="text-error"></i-lucide>
+    <div class="min-w-0">
+      <h2 class="truncate font-display text-sm font-semibold tracking-wide">
+        {{ options().title }}
+      </h2>
+    </div>
+    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close(false)">
+      <i-lucide name="x" size="16"></i-lucide>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="flex flex-col gap-3 px-5 py-4">
+    <p class="text-sm leading-relaxed">{{ options().message }}</p>
+    @if (options().detail) {
+      <p class="text-xs text-base-content/55 whitespace-pre-wrap">{{ options().detail }}</p>
+    }
+  </div>
+
+  <!-- Footer -->
+  <div class="flex justify-end gap-2 border-t border-base-content/10 px-5 py-3">
+    <button #cancelBtn class="btn btn-ghost btn-sm" (click)="close(false)">
+      {{ options().cancelLabel || 'Cancel' }}
+    </button>
+    <button class="btn btn-error btn-sm" (click)="close(true)">
+      {{ options().confirmLabel || 'OK' }}
+    </button>
+  </div>
+</div>
