@@ -27,4 +27,38 @@
 
 .rename-body {
   overflow-y: auto;
+  overflow-wrap: break-word;
+}
+
+.log-area {
+  overflow-y: auto;
+  max-height: 18rem;
+  padding: 0.5rem;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.log-line {
+  display: flex;
+}
+
+.log-time {
+  flex-shrink: 0;
+  width: 4.2rem;
+  opacity: 0.35;
+  user-select: none;
+}
+
+.log-text {
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.log-cursor {
+  opacity: 0.5;
+}
+
+.rename-body .font-mono {
+  overflow-wrap: break-word;
 }

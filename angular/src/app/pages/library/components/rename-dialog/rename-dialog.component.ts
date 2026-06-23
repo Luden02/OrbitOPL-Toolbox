@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '../../../../shared/services/library.service';
 import { JobsService } from '../../../../shared/services/jobs.service';
@@ -12,6 +12,20 @@ interface RenamePlanItem {
   target: string;
 }
 
+interface Ps1RenamePreview {
+  vcd: string;
+  popsFolder: string;
+  appsFolder: string;
+}
+
+interface LogEntry {
+  time: string;
+  text: string;
+  type: 'info' | 'success' | 'error' | 'step' | 'change';
+  oldText?: string;
+  newText?: string;
+}
+
 @Component({
   selector: 'app-library-rename-dialog',
   imports: [LucideAngularModule],
@@ -19,10 +33,9 @@ interface RenamePlanItem {
   styleUrl: './rename-dialog.component.scss',
 })
 export class LibraryRenameDialogComponent implements OnInit {
-  /** When provided, the dialog operates on this single game instead of the
-   *  whole library. */
   @Input() game?: Game;
   @Output() closed = new EventEmitter<void>();
+  @ViewChild('logArea') logAreaRef?: ElementRef<HTMLElement>;
 
   convention: Convention = 'new';
   running = false;
@@ -32,10 +45,14 @@ export class LibraryRenameDialogComponent implements OnInit {
   progress = 0;
   currentLabel = '';
 
-  /** Pre-computed plan: only entries whose filename would actually change. */
-  private plan: RenamePlanItem[] = [];
+  ps1NewTitle = '';
+  ps1Preview: Ps1RenamePreview | null = null;
+  private initialPs1NewTitle = '';
 
-  /** Same in both modes — eligible PS2 disc images on disk. */
+  ps1DialogState: 'input' | 'running' | 'done' = 'input';
+  ps1Log: LogEntry[] = [];
+
+  private plan: RenamePlanItem[] = [];
   private candidates: Game[] = [];
 
   constructor(
@@ -43,8 +60,10 @@ export class LibraryRenameDialogComponent implements OnInit {
     private readonly _jobs: JobsService
   ) {}
 
-  /** Per-game eligibility check shared by both bulk and single modes. */
   private isEligible(g: Game): boolean {
+    if (g.isPs1Launcher) {
+      return !!g.path && !!g.gameId && !!g.title;
+    }
     return (
       (g.system ?? 'PS2') === 'PS2' &&
       (g.format === 'ISO' || g.format === 'ZSO') &&
@@ -58,15 +77,54 @@ export class LibraryRenameDialogComponent implements OnInit {
     return !!this.game;
   }
 
+  get isPs1Launcher(): boolean {
+    return !!this.game?.isPs1Launcher;
+  }
+
+  get hasChanges(): boolean {
+    if (this.isPs1Launcher) {
+      return (
+        !!this.ps1NewTitle &&
+        this.ps1NewTitle.trim() !== '' &&
+        this.ps1NewTitle.trim() !== this.initialPs1NewTitle
+      );
+    }
+    return this.plan.length > 0;
+  }
+
+  get ps1CloseAllowed(): boolean {
+    return !this.isPs1Launcher || this.ps1DialogState === 'input';
+  }
+
+  get ps1VcdFilename(): string {
+    const g = this.game;
+    if (!g || !g.isPs1Launcher) return '';
+    return g.filename;
+  }
+
   ngOnInit() {
     const pool = this.game ? [this.game] : this._library.currentLibraryValue;
     this.candidates = pool.filter((g) => this.isEligible(g));
-    this.rebuildPlan();
+    if (this.isPs1Launcher && this.game) {
+      const ext = this.game.extension || '.VCD';
+      this.ps1NewTitle = this.game.filename.endsWith(ext)
+        ? this.game.filename.slice(0, -ext.length)
+        : this.game.filename;
+      this.initialPs1NewTitle = this.ps1NewTitle;
+      this.buildPs1Preview();
+    } else {
+      this.rebuildPlan();
+    }
   }
 
   setConvention(c: Convention) {
     this.convention = c;
     this.rebuildPlan();
+  }
+
+  onTitleChange(value: string) {
+    this.ps1NewTitle = value;
+    this.buildPs1Preview();
   }
 
   get planCount(): number {
@@ -78,33 +136,163 @@ export class LibraryRenameDialogComponent implements OnInit {
   }
 
   private sanitize(name: string): string {
-    // Mirrors sanitizeGameFilename on the main side.
     return name
       .replace(/[\\/:*?"<>|]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
+  private buildPs1Preview() {
+    const g = this.game;
+    if (!g || !g.isPs1Launcher) return;
+
+    const oldTitle = g.title || '';
+    const newTitle = this.sanitize(this.ps1NewTitle || '') || '(invalid)';
+    const ext = g.extension || '.VCD';
+
+    const oldVcd = g.filename;
+    const newVcd = `${newTitle}${ext}`;
+
+    const oldAppsFolder = `POPS_${oldTitle}`;
+    const newAppsFolder = `POPS_${newTitle}`;
+
+    const oldPopsFolder = oldTitle;
+    const newPopsFolder = newTitle;
+
+    this.ps1Preview = {
+      vcd: `POPS/${oldVcd} → POPS/${newVcd}`,
+      popsFolder: `POPS/${oldPopsFolder}/ → POPS/${newPopsFolder}/`,
+      appsFolder: `APPS/${oldAppsFolder}/ → APPS/${newAppsFolder}/`,
+    };
+  }
+
   private rebuildPlan() {
     this.plan = [];
     for (const game of this.candidates) {
-      const ext = game.extension; // includes leading dot
+      if (game.isPs1Launcher) continue;
+      const ext = game.extension;
       const safeTitle = this.sanitize(game.title || game.gameId);
       const target =
         this.convention === 'new'
           ? `${safeTitle}${ext}`
           : `${game.gameId}.${safeTitle}${ext}`;
-      const current = `${game.filename}`; // already includes extension
+      const current = `${game.filename}`;
       if (current !== target) {
         this.plan.push({ game, current, target });
       }
     }
   }
 
+  private addLog(text: string, type: LogEntry['type'] = 'info', oldText?: string, newText?: string) {
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US', { hour12: false });
+    if (oldText !== undefined && newText !== undefined) {
+      this.ps1Log = [...this.ps1Log, { time, text, type, oldText, newText }];
+    } else {
+      this.ps1Log = [...this.ps1Log, { time, text, type }];
+    }
+    setTimeout(() => {
+      this.logAreaRef?.nativeElement.scrollTo({ top: this.logAreaRef.nativeElement.scrollHeight, behavior: 'smooth' });
+    });
+  }
+
+  private parseChangeMsg(full: string) {
+    const arrowIdx = full.indexOf('\u2192');
+    if (arrowIdx === -1) return;
+    const before = full.slice(0, arrowIdx).trimEnd();
+    const after = full.slice(arrowIdx + 1).trim();
+    const colonIdx = before.lastIndexOf(':');
+    if (colonIdx === -1) return;
+    const prefix = before.slice(0, colonIdx + 1) + ' ';
+    const oldText = before.slice(colonIdx + 1).trim();
+    return { prefix, oldText, newText: after };
+  }
+
+  private async runPs1() {
+    const g = this.game;
+    if (!g || !g.isPs1Launcher || !g.path || !g.gameId) return;
+
+    const newTitle = this.sanitize(this.ps1NewTitle || '');
+    if (!newTitle || this.ps1NewTitle.trim() === this.initialPs1NewTitle) return;
+
+    this.running = true;
+    this.ps1DialogState = 'running';
+    this.ps1Log = [];
+
+    this.addLog(`Renaming "${g.title}" → "${newTitle}"`, 'step');
+
+    window.libraryAPI.onRenamePs1Progress((progress) => {
+      const isChange = progress.stage.startsWith('Renaming VCD:')
+        || progress.stage.startsWith('Renaming VMC')
+        || progress.stage.startsWith('Renaming APPS folder')
+        || progress.stage.startsWith('Renaming ELF:')
+        || progress.stage.startsWith('Updating title.cfg');
+      if (isChange) {
+        const p = this.parseChangeMsg(progress.stage);
+        if (p) {
+          this.addLog(p.prefix, 'change', p.oldText, p.newText);
+        } else {
+          this.addLog(progress.stage, 'change');
+        }
+      } else {
+        this.addLog(progress.stage, 'info');
+      }
+    });
+
+    try {
+      this.addLog('Step 1 — Renaming folders', 'step');
+      const step1 = await window.libraryAPI.renamePs1LauncherStep1(
+        g.path, g.gameId, newTitle
+      );
+
+      if (!step1.success) {
+        this.addLog(`Failed: ${step1.message}`, 'error');
+        this.ps1DialogState = 'done';
+        this.running = false;
+        return;
+      }
+      this.addLog('Folders renamed', 'success');
+
+      if (step1.oldElfFile && step1.newElfFile && step1.oldElfFile !== step1.newElfFile) {
+        this.addLog('ELF: ', 'change', step1.oldElfFile, step1.newElfFile);
+      }
+
+      this.addLog('Step 2 — Updating APPS contents (ELF, title.cfg)', 'step');
+      const step2 = await window.libraryAPI.renamePs1LauncherStep2({
+        newAppsFolder: step1.newAppsFolder!,
+        oldElfFile: step1.oldElfFile,
+        newElfFile: step1.newElfFile,
+        newCfgContent: step1.newCfgContent,
+        newTitle,
+      });
+
+      if (step2.success) {
+        this.addLog('Internal changes applied', 'success');
+        this.addLog('Rename complete!', 'success');
+      } else {
+        this.addLog(`Failed: ${step2.message}`, 'error');
+      }
+
+      this.ps1DialogState = 'done';
+      this.running = false;
+    } catch (err: any) {
+      this.addLog(`Error: ${err?.message || err}`, 'error');
+      this.ps1DialogState = 'done';
+      this.running = false;
+    } finally {
+      window.libraryAPI.removeAllRenamePs1ProgressListeners();
+    }
+  }
+
   run() {
-    if (this.running || this.plan.length === 0) return;
-    // Hand the whole plan to the jobs queue — it renames serially and reports
-    // progress there. Close the dialog once everything is queued.
+    if (this.running) return;
+
+    if (this.isPs1Launcher && this.game) {
+      void this.runPs1();
+      return;
+    }
+
+    if (this.plan.length === 0) return;
     this._jobs.enqueue(
       this.plan.map(({ game }) => ({
         type: 'rename',

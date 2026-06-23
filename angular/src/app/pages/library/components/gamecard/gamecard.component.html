@@ -21,40 +21,28 @@
     <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
       <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
     </div>
-    <ul
-      tabindex="-1"
-      class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
-    >
+    <ul tabindex="-1" class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl">
       @if(!isApp() || isPs1LauncherApp()) {
       <li>
-        <a (click)="fetchArtwork()"
-          ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
-        >
+        <a (click)="fetchArtwork()"><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a>
       </li>
       <li>
-        <a (click)="openCfg()"
-          ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
-        >
+        <a (click)="openCfg()"><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a>
       </li>
       }
       @if(canCompressZso()) {
       <li>
-        <a (click)="convertToZso()"
-          ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
-        >
+        <a (click)="convertToZso()"><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a>
       </li>
       }
       @if(canRenameConvention()) {
       <li>
-        <a (click)="openRename()"
-          ><i-lucide name="text-cursor-input" [size]="16"></i-lucide>Rename to convention…</a
-        >
+        <a (click)="openRename()"><i-lucide name="text-cursor-input" [size]="16"></i-lucide>{{ game()?.isPs1Launcher ?
+          'Rename game…' : 'Rename to convention…' }}</a>
       </li>
       }
       <li>
-        <a class="text-error" (click)="confirmDelete()"
-          ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
-        >
+        <a class="text-error" (click)="confirmDelete()"><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a>
       </li>
     </ul>
   </div>
@@ -75,51 +63,36 @@
     </div>
 
     <!-- top overlays -->
-    <span
-      class="poster-system"
-      [class.is-ps1]="game()?.system === 'PS1'"
-      [class.is-ps1-app]="game()?.isPs1Launcher"
-      >{{ game()?.isPs1Launcher ? "PS1 App" : game()?.system === "PS1" ? "PS1" : game()?.system === "APPS" ? "APP" : "PS2" }}</span
-    >
+    <span class="poster-system" [class.is-ps1]="game()?.system === 'PS1'" [class.is-ps1-app]="game()?.isPs1Launcher">{{
+      game()?.isPs1Launcher ? "PS1 App" : game()?.system === "PS1" ? "PS1" : game()?.system === "APPS" ? "APP" : "PS2"
+      }}</span>
 
     <div class="dropdown dropdown-end poster-menu">
       <div tabindex="0" role="button" class="btn btn-xs btn-square glass-strong">
         <i-lucide name="ellipsis" size="15"></i-lucide>
       </div>
-      <ul
-        tabindex="-1"
-        class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
-      >
+      <ul tabindex="-1" class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl">
         @if(!isApp() || isPs1LauncherApp()) {
         <li>
-          <a (click)="fetchArtwork()"
-            ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a
-          >
+          <a (click)="fetchArtwork()"><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a>
         </li>
         <li>
-          <a (click)="openCfg()"
-            ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a
-          >
+          <a (click)="openCfg()"><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a>
         </li>
         }
         @if(canCompressZso()) {
         <li>
-          <a (click)="convertToZso()"
-            ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a
-          >
+          <a (click)="convertToZso()"><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a>
         </li>
         }
         @if(canRenameConvention()) {
         <li>
-          <a (click)="openRename()"
-            ><i-lucide name="text-cursor-input" [size]="16"></i-lucide>Rename to convention…</a
-          >
+          <a (click)="openRename()"><i-lucide name="text-cursor-input" [size]="16"></i-lucide>{{ game()?.isPs1Launcher ?
+            'Rename game…' : 'Rename to convention…' }}</a>
         </li>
         }
         <li>
-          <a class="text-error" (click)="confirmDelete()"
-            ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
-          >
+          <a class="text-error" (click)="confirmDelete()"><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a>
         </li>
       </ul>
     </div>
@@ -140,12 +113,11 @@
 }
 
 @if(showCfg && game()) {
-<app-game-cfg-dialog [game]="game()!" (closed)="showCfg = false"></app-game-cfg-dialog>
+<app-game-cfg-dialog [game]="game()!"
+  (closed)="showCfg = false; _libraryService.refreshGamesFiles()"></app-game-cfg-dialog>
 }
 
 @if(showRename && game()) {
-<app-library-rename-dialog
-  [game]="game()!"
-  (closed)="showRename = false"
-></app-library-rename-dialog>
+<app-library-rename-dialog [game]="game()!"
+  (closed)="showRename = false; _libraryService.refreshGamesFiles()"></app-library-rename-dialog>
 }

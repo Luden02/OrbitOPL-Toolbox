@@ -1,12 +1,6 @@
-<div class="cd-backdrop" (click)="close(false)"></div>
-<div
-  #modal
-  class="cd-modal glass-strong"
-  role="dialog"
-  aria-modal="true"
-  [attr.aria-label]="options().title"
-  (keydown)="onKeydown($event)"
->
+<div class="cd-backdrop" (click)="options().backdropClose !== false && close(false)"></div>
+<div #modal class="cd-modal glass-strong" role="dialog" aria-modal="true" [attr.aria-label]="options().title"
+  (keydown)="onKeydown($event)">
   <!-- Header -->
   <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
     <i-lucide name="triangle-alert" size="18" class="text-error"></i-lucide>
@@ -24,7 +18,7 @@
   <div class="flex flex-col gap-3 px-5 py-4">
     <p class="text-sm leading-relaxed">{{ options().message }}</p>
     @if (options().detail) {
-      <p class="text-xs text-base-content/55 whitespace-pre-wrap">{{ options().detail }}</p>
+    <p class="text-xs text-base-content/55 whitespace-pre-wrap">{{ options().detail }}</p>
     }
   </div>
 

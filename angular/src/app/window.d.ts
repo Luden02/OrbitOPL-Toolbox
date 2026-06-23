@@ -20,6 +20,31 @@ declare interface Window {
       gameName: string,
       nameOnly?: boolean,
     ) => Promise<any>;
+    renamePs1LauncherStep1: (
+      vcdPath: string,
+      gameId: string,
+      newTitle: string,
+    ) => Promise<{
+      success: boolean;
+      newVcdPath?: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newAppsFolder?: string;
+      safeNewTitle?: string;
+      message?: string;
+    }>;
+    renamePs1LauncherStep2: (params: {
+      newAppsFolder: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newTitle: string;
+    }) => Promise<{ success: boolean; message?: string }>;
+    onRenamePs1Progress: (
+      callback: (progress: { percent: number; stage: string }) => void,
+    ) => void;
+    removeAllRenamePs1ProgressListeners: () => void;
     downloadArtByGameId: (
       dirPath: string,
       gameId: string,
@@ -98,6 +123,10 @@ declare interface Window {
       }[];
       message?: string;
     }>;
+    updatePs1TitleCfg: (
+      launcherPath: string,
+      newTitle: string,
+    ) => Promise<{ success: boolean; message?: string }>;
     openAskElfFiles: () => Promise<any>;
     importApp: (
       oplRoot: string,

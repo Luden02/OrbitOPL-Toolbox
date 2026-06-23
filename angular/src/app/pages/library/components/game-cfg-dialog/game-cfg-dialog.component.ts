@@ -29,6 +29,7 @@ export class GameCfgDialogComponent {
 
   entries: GameCfg = {};
   title = '';
+  private initialTitle = '';
   compat: boolean[] = new Array(8).fill(false);
   vmc0 = '';
   vmc1 = '';
@@ -54,6 +55,7 @@ export class GameCfgDialogComponent {
     const g = this.game();
     this.entries = await this._cfg.getGameCfg(g.gameId);
     this.title = this.entries[CFG_KEY_NAME] ?? '';
+    this.initialTitle = this.title;
 
     if (g.isPs1Launcher) {
       const vmcSub = g.ps1VmcSub ?? '';
@@ -105,6 +107,13 @@ export class GameCfgDialogComponent {
     ).length;
   }
 
+  get hasChanges(): boolean {
+    if (this.game().isPs1Launcher) {
+      return this.title.trim() !== this.initialTitle;
+    }
+    return true;
+  }
+
   async save() {
     this.saving = true;
     const next: GameCfg = { ...this.entries };
@@ -135,6 +144,12 @@ export class GameCfgDialogComponent {
     }
 
     await this._cfg.saveGameCfg(this.game().gameId, next);
+
+    if (this.game().isPs1Launcher && this.game().ps1LauncherPath) {
+      const titleCfgTitle = trimmed || this.game().gameId;
+      await window.libraryAPI.updatePs1TitleCfg(this.game().ps1LauncherPath!, titleCfgTitle);
+    }
+
     this.saving = false;
     this.closed.emit();
   }

@@ -25,6 +25,8 @@ import {
   openAskGameFiles,
   resolveIsoGameId,
   renameGamefile,
+  renamePs1LauncherStep1,
+  renamePs1LauncherStep2,
   tryDetermineGameIdFromHex,
   tryDeterminePs1GameIdFromHex,
   tryDeterminePs1GameIdFromVcd,
@@ -41,7 +43,7 @@ import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { checkPopsVmc, createVmc, deleteVmc, listVmc } from "./vmc.service";
-import { deleteApp, getApps, getPs1Launchers, importApp } from "./apps.service";
+import { deleteApp, getApps, getPs1Launchers, importApp, updatePs1TitleCfg } from "./apps.service";
 import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
@@ -275,6 +277,38 @@ ipcMain.handle(
 );
 
 ipcMain.handle(
+  "rename-ps1-launcher-step1",
+  async (
+    event,
+    vcdPath: string,
+    gameId: string,
+    newTitle: string
+  ) => {
+    return renamePs1LauncherStep1(vcdPath, gameId, newTitle, (percent, stage) => {
+      event.sender.send("rename-ps1-progress", { percent, stage });
+    });
+  }
+);
+
+ipcMain.handle(
+  "rename-ps1-launcher-step2",
+  async (
+    event,
+    params: {
+      newAppsFolder: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newTitle: string;
+    }
+  ) => {
+    return renamePs1LauncherStep2(params, (percent, stage) => {
+      event.sender.send("rename-ps1-progress", { percent, stage });
+    });
+  }
+);
+
+ipcMain.handle(
   "download-art-by-gameid",
   async (event, dirPath: string, gameId: string, system?: "PS1" | "PS2", saveAsName?: string) => {
     return downloadArtByGameId(dirPath, gameId, system || "PS2", saveAsName);
@@ -399,6 +433,13 @@ ipcMain.handle("get-apps", async (_event, oplRoot: string) => {
 ipcMain.handle("get-ps1-launchers", async (_event, oplRoot: string) => {
   return getPs1Launchers(oplRoot);
 });
+
+ipcMain.handle(
+  "update-ps1-title-cfg",
+  async (_event, launcherPath: string, newTitle: string) => {
+    return updatePs1TitleCfg(launcherPath, newTitle);
+  }
+);
 
 ipcMain.handle("try-determine-ps1-gameid-from-vcd", async (_event, filepath: string) => {
   return tryDeterminePs1GameIdFromVcd(filepath);

@@ -173,6 +173,54 @@ export async function importApp(
   }
 }
 
+/**
+ * Updates the `title=` / `Title=` lines in a PS1 launcher's `title.cfg`,
+ * preserving the original key casing. Adds both lines if neither exists.
+ * Creates a new `title.cfg` if one does not exist.
+ */
+export async function updatePs1TitleCfg(
+  launcherPath: string,
+  newTitle: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const cfgPath = path.join(launcherPath, "title.cfg");
+    let oldContent: string;
+    try {
+      oldContent = await fs.readFile(cfgPath, "utf-8");
+    } catch {
+      await fs.writeFile(cfgPath, `title=${newTitle}\nTitle=${newTitle}\n`, "utf-8");
+      log.info(`Created title.cfg for ${path.basename(launcherPath)}`);
+      return { success: true };
+    }
+
+    const seenKeys = new Map<string, string>();
+    const cfgLines = oldContent.split("\n").map((line) => {
+      const t = line.trimEnd();
+      const eq = t.indexOf("=");
+      if (eq === -1) return line;
+      const k = t.slice(0, eq).trim();
+      const lower = k.toLowerCase();
+      if (!seenKeys.has(lower)) seenKeys.set(lower, k);
+      if (lower === "title") {
+        return k === "Title" ? `Title=${newTitle}` : `title=${newTitle}`;
+      }
+      return line;
+    });
+
+    if (!seenKeys.has("title")) {
+      cfgLines.push(`title=${newTitle}`);
+      cfgLines.push(`Title=${newTitle}`);
+    }
+
+    await fs.writeFile(cfgPath, cfgLines.join("\n"), "utf-8");
+    log.info(`Updated title.cfg for ${path.basename(launcherPath)}`);
+    return { success: true };
+  } catch (err: any) {
+    log.error(`Failed to update title.cfg:`, err?.message || err);
+    return { success: false, message: err?.message || String(err) };
+  }
+}
+
 export async function deleteApp(
   oplRoot: string,
   folder: string

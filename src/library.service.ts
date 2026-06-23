@@ -619,6 +619,248 @@ export async function renameGamefile(
   }
 }
 
+export async function renamePs1LauncherStep1(
+  vcdPath: string,
+  gameId: string,
+  newTitle: string,
+  onProgress?: (percent: number, stage: string) => void
+): Promise<{
+  success: boolean;
+  newVcdPath?: string;
+  oldElfFile?: string;
+  newElfFile?: string;
+  newCfgContent?: string;
+  newAppsFolder?: string;
+  safeNewTitle?: string;
+  message?: string;
+}> {
+  const safeNewTitle = sanitizeGameFilename(newTitle);
+  if (!safeNewTitle) {
+    return { success: false, message: "The new name is empty or invalid after sanitization." };
+  }
+
+  const popsDir = path.dirname(vcdPath);
+  const oplRoot = path.resolve(popsDir, "..");
+  const vcdBasename = path.basename(vcdPath);
+  const vcdExt = path.extname(vcdBasename);
+  const vcdStem = vcdBasename.slice(0, -vcdExt.length);
+  const prefix = `${gameId}.`;
+  const oldTitle = vcdStem.startsWith(prefix) ? vcdStem.slice(prefix.length) : vcdStem;
+
+  if (!oldTitle) {
+    return { success: false, message: "Could not derive the current game title from the VCD filename." };
+  }
+  if (oldTitle === safeNewTitle) {
+    return { success: false, message: "The new name is identical to the current name." };
+  }
+
+  log.info(`PS1 rename step 1: "${oldTitle}" → "${safeNewTitle}" (gameId=${gameId})`);
+
+  const newVcdBasename = `${safeNewTitle}${vcdExt}`;
+  const newVcdPath = path.join(popsDir, newVcdBasename);
+  const appsDir = path.join(oplRoot, "APPS");
+  const oldAppsFolder = path.join(appsDir, `POPS_${oldTitle}`);
+  const newAppsFolder = path.join(appsDir, `POPS_${safeNewTitle}`);
+
+  // ── Rename the VCD file ─────────────────────────────────────────────
+  onProgress?.(15, `Renaming VCD: ${vcdBasename} → ${newVcdBasename}`);
+  try {
+    await fs.rename(vcdPath, newVcdPath);
+    log.verbose(`VCD renamed: ${vcdBasename} → ${newVcdBasename}`);
+  } catch (err: any) {
+    log.error(`Failed to rename VCD: ${err?.message || err}`);
+    return { success: false, message: `Failed to rename VCD: ${err?.message || err}` };
+  }
+
+  // ── Rename POPS VMC subfolder (if exists) ───────────────────────────
+  onProgress?.(25, `Renaming VMC folder: ${oldTitle}/ → ${safeNewTitle}/`);
+  try {
+    await fs.access(path.join(popsDir, oldTitle));
+    await fs.rename(path.join(popsDir, oldTitle), path.join(popsDir, safeNewTitle));
+    log.verbose(`POPS VMC subfolder renamed`);
+  } catch { /* doesn't exist — fine */ }
+
+  // ── Read OLD APPS folder contents before renaming ──────────────────
+  onProgress?.(35, "Reading APPS launcher folder contents…");
+  let oldElfFile: string | undefined;
+  let oldTitleCfgContent: string | undefined;
+  let readOk = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const files = await fs.readdir(oldAppsFolder);
+      oldElfFile = files.find((f) => /\.ELF$/i.test(f));
+      try {
+        oldTitleCfgContent = await fs.readFile(path.join(oldAppsFolder, "title.cfg"), "utf-8");
+      } catch {
+        oldTitleCfgContent = "";
+      }
+      readOk = true;
+      break;
+    } catch {
+      if (attempt < 4) await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+  if (!readOk) {
+    return { success: false, message: `Cannot read APPS folder "${oldAppsFolder}".` };
+  }
+
+  // ── Pre-compute new values ──────────────────────────────────────────
+  let newElfFile: string | undefined;
+  if (oldElfFile && /\.ELF$/i.test(oldElfFile)) {
+    const elfExt = path.extname(oldElfFile);
+    const elfStem = oldElfFile.slice(0, -elfExt.length);
+    const gIdx = elfStem.indexOf(gameId);
+    if (gIdx !== -1) {
+      newElfFile = `${elfStem.slice(0, gIdx)}${gameId}.${safeNewTitle}${elfExt}`;
+    } else {
+      // Fallback: try replacing oldTitle directly in the ELF stem
+      const tIdx = elfStem.lastIndexOf(oldTitle);
+      if (tIdx !== -1) {
+        newElfFile = `${elfStem.slice(0, tIdx)}${safeNewTitle}${elfExt}`;
+        log.verbose(`ELF name derived via oldTitle fallback: ${oldElfFile} → ${newElfFile}`);
+      } else {
+        log.warn(`ELF name lacks gameId "${gameId}" and oldTitle "${oldTitle}" — keeping existing`);
+        newElfFile = oldElfFile;
+      }
+    }
+  }
+
+  const bootVal = newElfFile ? `boot=${newElfFile}` : undefined;
+  const seenKeys = new Map<string, string>(); // lowercase key → original key text
+  const cfgLines = (oldTitleCfgContent ?? "").split("\n").map((line) => {
+    const t = line.trimEnd();
+    const eq = t.indexOf("=");
+    if (eq === -1) return line;
+    const k = t.slice(0, eq).trim();
+    const lower = k.toLowerCase();
+    if (!seenKeys.has(lower)) seenKeys.set(lower, k);
+    if (lower === "title") {
+      return k === "Title" ? `Title=${newTitle}` : `title=${newTitle}`;
+    }
+    if (lower === "boot" && bootVal) return bootVal;
+    return line;
+  });
+  const add: string[] = [];
+  if (!seenKeys.has("title")) { add.push(`title=${newTitle}`); add.push(`Title=${newTitle}`); }
+  if (!seenKeys.has("boot") && bootVal) add.push(bootVal);
+  const newCfgContent =
+    add.length > 0
+      ? cfgLines.join("\n") + (cfgLines.length && cfgLines[cfgLines.length - 1] !== "" ? "\n" : "") + add.join("\n") + "\n"
+      : cfgLines.join("\n");
+
+  // ── Rename the APPS launcher folder ─────────────────────────────────
+  onProgress?.(50, `Renaming APPS folder: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  try {
+    await fs.rename(oldAppsFolder, newAppsFolder);
+    log.verbose(`APPS folder renamed: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  } catch (err: any) {
+    log.error(`Failed to rename APPS launcher folder: ${err?.message || err}`);
+    return { success: false, message: `Failed to rename APPS launcher folder: ${err?.message || err}` };
+  }
+
+  log.info(`PS1 rename step 1 complete for "${oldTitle}" → "${safeNewTitle}"`);
+  return {
+    success: true,
+    newVcdPath,
+    oldElfFile,
+    newElfFile,
+    newCfgContent,
+    newAppsFolder,
+    safeNewTitle,
+  };
+}
+
+export async function renamePs1LauncherStep2(
+  params: {
+    newAppsFolder: string;
+    oldElfFile?: string;
+    newElfFile?: string;
+    newCfgContent?: string;
+    newTitle: string;
+  },
+  onProgress?: (percent: number, stage: string) => void
+): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const { newAppsFolder, oldElfFile, newElfFile, newCfgContent, newTitle } = params;
+
+  log.info(`PS1 rename step 2: applying internal changes to ${newAppsFolder}`);
+
+  // ── Wait for the folder to be fully accessible ──────────────────────
+  onProgress?.(10, "Waiting for APPS folder to be ready…");
+  await new Promise((r) => setTimeout(r, 800));
+
+  let appsReady = false;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      await fs.access(newAppsFolder, fs.constants.F_OK);
+      const files = await fs.readdir(newAppsFolder);
+      if (oldElfFile && !files.some((f) => /\.ELF$/i.test(f))) {
+        throw new Error("ELF not yet visible");
+      }
+      appsReady = true;
+      break;
+    } catch {
+      if (attempt < 9) await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  if (!appsReady) {
+    return { success: false, message: `APPS folder "${newAppsFolder}" is not ready.` };
+  }
+
+  // ── Rename the ELF file ────────────────────────────────────────────
+  if (oldElfFile && newElfFile && oldElfFile !== newElfFile) {
+    onProgress?.(40, `Renaming ELF: ${oldElfFile} → ${newElfFile}`);
+    const oldPath = path.join(newAppsFolder, oldElfFile);
+    const newPath = path.join(newAppsFolder, newElfFile);
+    let done = false;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await fs.rename(oldPath, newPath);
+        await fs.access(newPath, fs.constants.F_OK);
+        done = true;
+        break;
+      } catch {
+        if (attempt < 4) await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    if (!done) {
+      log.error(`ELF rename failed after retries: ${oldElfFile} → ${newElfFile}`);
+      return { success: false, message: `Failed to rename ELF after multiple attempts.` };
+    }
+    log.verbose(`ELF renamed: ${oldElfFile} → ${newElfFile}`);
+  }
+
+  // ── Write title.cfg ─────────────────────────────────────────────────
+  if (newCfgContent !== undefined) {
+    onProgress?.(70, "Updating title.cfg (title, Title, boot)");
+    const cfgPath = path.join(newAppsFolder, "title.cfg");
+    let done = false;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await fs.writeFile(cfgPath, newCfgContent, "utf-8");
+        const verify = await fs.readFile(cfgPath, "utf-8");
+        if (verify === newCfgContent) {
+          done = true;
+          break;
+        }
+      } catch {
+        if (attempt < 4) await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    if (!done) {
+      log.error(`title.cfg write failed after retries`);
+      return { success: false, message: `Failed to update title.cfg after multiple attempts.` };
+    }
+    log.verbose(`title.cfg updated`);
+  }
+
+  onProgress?.(100, "Rename complete");
+  log.info(`PS1 rename step 2 complete`);
+  return { success: true };
+}
+
 /**
  * Turns a low-level fs error into a message that explains the likely cause.
  * The common one on macOS: the user picks a .cue in the file dialog (granting

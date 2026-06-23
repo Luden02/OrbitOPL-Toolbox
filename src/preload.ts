@@ -25,6 +25,25 @@ contextBridge.exposeInMainWorld("libraryAPI", {
       gameName,
       !!nameOnly
     ),
+  renamePs1LauncherStep1: (vcdPath: string, gameId: string, newTitle: string) =>
+    ipcRenderer.invoke("rename-ps1-launcher-step1", vcdPath, gameId, newTitle),
+  renamePs1LauncherStep2: (params: {
+    newAppsFolder: string;
+    oldElfFile?: string;
+    newElfFile?: string;
+    newCfgContent?: string;
+    newTitle: string;
+  }) => ipcRenderer.invoke("rename-ps1-launcher-step2", params),
+  onRenamePs1Progress: (
+    callback: (progress: { percent: number; stage: string }) => void
+  ) => {
+    ipcRenderer.on("rename-ps1-progress", (_event, progress) =>
+      callback(progress)
+    );
+  },
+  removeAllRenamePs1ProgressListeners: () => {
+    ipcRenderer.removeAllListeners("rename-ps1-progress");
+  },
   downloadArtByGameId: (
     dirPath: string,
     gameId: string,
@@ -115,6 +134,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   getApps: (oplRoot: string) => ipcRenderer.invoke("get-apps", oplRoot),
   getPs1Launchers: (oplRoot: string) =>
     ipcRenderer.invoke("get-ps1-launchers", oplRoot),
+  updatePs1TitleCfg: (launcherPath: string, newTitle: string) =>
+    ipcRenderer.invoke("update-ps1-title-cfg", launcherPath, newTitle),
   openAskElfFiles: () => ipcRenderer.invoke("open-ask-elf-files"),
   importApp: (oplRoot: string, elfPath: string, title: string) =>
     ipcRenderer.invoke("import-app", oplRoot, elfPath, title),

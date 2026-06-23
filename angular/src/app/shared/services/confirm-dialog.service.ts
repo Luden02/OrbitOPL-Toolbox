@@ -14,6 +14,8 @@ export interface ConfirmDialogOptions {
   detail?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Allow closing by clicking the backdrop. Defaults to true. */
+  backdropClose?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -32,10 +32,14 @@
         [value]="title"
         (input)="title = titleInput.value"
       />
-      <span class="label text-xs"
-        >Shown in OPL instead of the filename. Leave blank to keep the
-        default.</span
-      >
+      <p class="label-info text-xs">
+        @if (game().isPs1Launcher) {
+        This only modifies the title shown in OPL and OrbitOPL list. It
+        does not rename the VCD file.
+        } @else {
+        Shown in OPL instead of the filename. Leave blank to keep the default.
+        }
+      </p>
     </fieldset>
 
     <!-- Compatibility modes — not applicable to PS1 launcher apps -->
@@ -75,6 +79,7 @@
           <select
             #slot1Select
             class="select w-full"
+            [disabled]="game().isPs1Launcher"
             (change)="vmc0 = slot1Select.value"
           >
             <option value="">(none)</option>
@@ -88,6 +93,7 @@
           <select
             #slot2Select
             class="select w-full"
+            [disabled]="game().isPs1Launcher"
             (change)="vmc1 = slot2Select.value"
           >
             <option value="">(none)</option>
@@ -117,7 +123,7 @@
     <button class="btn btn-ghost btn-sm" (click)="close()" [disabled]="saving">
       Cancel
     </button>
-    <button class="btn btn-primary btn-sm" (click)="save()" [disabled]="saving">
+    <button class="btn btn-primary btn-sm" (click)="save()" [disabled]="saving || !hasChanges">
       @if (saving) {
       <span class="loading loading-spinner loading-xs"></span>
       } @else {

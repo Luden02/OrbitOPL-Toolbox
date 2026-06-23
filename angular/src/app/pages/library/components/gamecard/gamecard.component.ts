@@ -53,6 +53,9 @@ export class GamecardComponent {
   readonly canRenameConvention = computed(() => {
     const g = this.game();
     if (!g) return false;
+    if (g.isPs1Launcher) {
+      return !!g.path && !!g.gameId && !!g.title;
+    }
     const system = g.system ?? 'PS2';
     return (
       system === 'PS2' &&
