@@ -829,7 +829,7 @@ export class LibraryService {
     }
   }
 
-  public async deleteGame(game: Game) {
+  public async deleteGame(game: Game, skipRefresh = false) {
     this._logger.log('deleteGame', `Deleting game: ${game.gameId} (${game.title})`);
     this.setLoading(true);
     this.setCurrentAction(`Deleting ${game.title || game.gameId}...`);
@@ -845,10 +845,13 @@ export class LibraryService {
 
       if (result.success) {
         this._logger.log('deleteGame', `Successfully deleted ${game.gameId}`);
-        this.refreshGamesFiles();
+        if (!skipRefresh) {
+          this.refreshGamesFiles();
+        }
       } else {
         this._logger.error('deleteGame', `Failed to delete: ${result.message}`);
       }
+      return result;
     } catch (error: any) {
       this._logger.error('deleteGame', `Error: ${error?.message || error}`);
     } finally {

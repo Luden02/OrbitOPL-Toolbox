@@ -121,3 +121,8 @@
 <app-library-rename-dialog [game]="game()!"
   (closed)="showRename = false; _libraryService.refreshGamesFiles()"></app-library-rename-dialog>
 }
+
+@if(showDeleteDialog && game()) {
+<app-ps1-delete-dialog [game]="game()!"
+  (closed)="showDeleteDialog = false"></app-ps1-delete-dialog>
+}

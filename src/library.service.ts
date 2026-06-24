@@ -1372,25 +1372,59 @@ export async function openAskGameFiles(
   return result;
 }
 
+export interface DeleteEntry {
+  label: string;
+  path?: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteGameResult {
+  success: boolean;
+  message?: string;
+  entries: DeleteEntry[];
+}
+
 export async function deleteGameAndRelatedFiles(
   gamePath: string,
   artDir: string,
   gameId: string,
   launcherFolder?: string
-) {
+): Promise<DeleteGameResult> {
   log.info(`Deleting ${gameId} and related files: ${gamePath}`);
-  try {
-    // Delete the game file
-    await fs.unlink(gamePath);
-    log.verbose(`Removed disc image ${path.basename(gamePath)}`);
+  const entries: DeleteEntry[] = [];
 
-    // Delete related artwork files (e.g., SLUS_123.45_COV.png)
+  const addEntry = (label: string, success: boolean, path?: string, error?: string) => {
+    entries.push({ label, path, success, error });
+  };
+
+  const oplRoot = path.dirname(artDir);
+
+  // Helper: show path relative to OPL root
+  const rel = (p: string) => path.relative(oplRoot, p);
+
+  // 1. Delete the game file (VCD in POPS/)
+  let hasCriticalError = false;
+  try {
+    await fs.unlink(gamePath);
+    log.verbose(`Removed game file ${path.basename(gamePath)}`);
+    addEntry("VCD", true, rel(gamePath));
+  } catch (err: any) {
+    hasCriticalError = true;
+    log.error(`Failed to remove game file ${path.basename(gamePath)}:`, err?.message || err);
+    addEntry("VCD", false, rel(gamePath), err?.message || String(err));
+  }
+
+  // 2. For non-PS1 games only, delete related artwork files
+  if (!launcherFolder) {
     try {
       const artFiles = await fs.readdir(artDir);
       const relatedArt = artFiles.filter((f) => f.startsWith(gameId + "_"));
+      let deleted = 0;
       for (const artFile of relatedArt) {
         try {
           await fs.unlink(path.join(artDir, artFile));
+          deleted++;
         } catch {
           // Ignore individual art file deletion failures
         }
@@ -1398,37 +1432,79 @@ export async function deleteGameAndRelatedFiles(
       if (relatedArt.length > 0) {
         log.verbose(`Removed ${relatedArt.length} artwork file(s) for ${gameId}`);
       }
+      addEntry("Artwork", true, deleted > 0 ? `${deleted} file(s)` : "None found");
     } catch {
-      // ART directory may not exist — that's fine
+      addEntry("Artwork", true, "No artwork directory");
     }
+  }
 
-    // PS1 POPStarter VCDs (from POPS/ folder) are paired with an
-    // APPS/POPS_<name>/ launcher. The caller passes the exact folder name
-    // via launcherFolder — use it directly. VCD files from the VCD/ folder
-    // never have a paired launcher and pass undefined here.
-    if (launcherFolder) {
-      const oplRoot = path.dirname(artDir);
-      if (
-        !launcherFolder.includes("/") &&
-        !launcherFolder.includes("\\") &&
-        !launcherFolder.includes("..")
-      ) {
-        const appsLauncher = path.join(oplRoot, "APPS", launcherFolder);
-        try {
-          await fs.rm(appsLauncher, { recursive: true, force: true });
-          log.verbose(`Removed paired POPStarter launcher APPS/${launcherFolder}`);
-        } catch {
-          // Best-effort — may not exist.
-        }
+  // 3. Delete POPStarter launcher folder (APPS/POPS_<name>/)
+  if (launcherFolder) {
+    if (
+      !launcherFolder.includes("/") &&
+      !launcherFolder.includes("\\") &&
+      !launcherFolder.includes("..")
+    ) {
+      const appsLauncher = path.join(oplRoot, "APPS", launcherFolder);
+      try {
+        await fs.rm(appsLauncher, { recursive: true, force: true });
+        log.verbose(`Removed launcher folder ${rel(appsLauncher)}`);
+        addEntry("Launcher folder", true, rel(appsLauncher));
+      } catch (err: any) {
+        log.error(`Failed to remove launcher ${rel(appsLauncher)}:`, err?.message || err);
+        addEntry("Launcher folder", false, rel(appsLauncher), err?.message || String(err));
       }
     }
-
-    log.info(`Deleted ${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    log.error(`Failed to delete ${gameId} (${gamePath}):`, err?.message || err);
-    return { success: false, message: err?.message || String(err) };
   }
+
+  // 4. Delete per-game POPS subfolder (POPS/<title>/) containing VMC files etc.
+  if (launcherFolder) {
+    const vcdName = path.basename(gamePath);
+    const ext = path.extname(vcdName);
+    const gameTitle = vcdName.slice(0, -ext.length);
+    const popsDir = path.dirname(gamePath);
+    const popsSubdir = path.join(popsDir, gameTitle);
+
+    try {
+      await fs.access(popsSubdir);
+      // Folder exists — enumerate and delete each file inside
+      const files = await fs.readdir(popsSubdir);
+      for (const f of files) {
+        const filePath = path.join(popsSubdir, f);
+        try {
+          await fs.unlink(filePath);
+          log.verbose(`Removed file ${rel(filePath)}`);
+          addEntry("POPS subfolder file", true, rel(filePath));
+        } catch (err: any) {
+          addEntry("POPS subfolder file", false, rel(filePath), err?.message || String(err));
+        }
+      }
+      // Remove the now-empty folder
+      try {
+        await fs.rmdir(popsSubdir);
+        log.verbose(`Removed POPS subfolder ${rel(popsSubdir)}`);
+        addEntry("POPS subfolder", true, rel(popsSubdir));
+      } catch (err: any) {
+        addEntry("POPS subfolder", false, rel(popsSubdir), err?.message || String(err));
+      }
+    } catch {
+      // Folder doesn't exist — not an error
+      addEntry("POPS subfolder", true, "Not present");
+    }
+  }
+
+  if (hasCriticalError) {
+    log.error(`Failed to delete game file for ${gameId}`);
+    return { success: false, message: entries.find((e) => e.label === "Game file")?.error, entries };
+  }
+
+  const allSuccess = entries.every((e) => e.success);
+  if (!allSuccess) {
+    log.info(`Deleted ${gameId} with some non-critical errors`);
+  } else {
+    log.info(`Deleted ${gameId} successfully`);
+  }
+  return { success: true, entries };
 }
 
 export async function moveFile(

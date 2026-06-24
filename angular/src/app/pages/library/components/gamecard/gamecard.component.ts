@@ -7,6 +7,7 @@ import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog
 import { LucideAngularModule } from 'lucide-angular';
 import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
 import { LibraryRenameDialogComponent } from '../rename-dialog/rename-dialog.component';
+import { Ps1DeleteDialogComponent } from '../ps1-delete-dialog/ps1-delete-dialog.component';
 
 export type GamecardViewMode = 'grid' | 'list';
 
@@ -16,6 +17,7 @@ export type GamecardViewMode = 'grid' | 'list';
     LucideAngularModule,
     GameCfgDialogComponent,
     LibraryRenameDialogComponent,
+    Ps1DeleteDialogComponent,
   ],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
@@ -67,6 +69,7 @@ export class GamecardComponent {
 
   public showCfg = false;
   public showRename = false;
+  public showDeleteDialog = false;
 
   constructor(
     public readonly _libraryService: LibraryService,
@@ -133,10 +136,10 @@ export class GamecardComponent {
         title: 'Delete PS1 Game',
         message: `Delete PS1 game "${g.title}"?`,
         detail:
-          'This removes the VCD file and its launcher app.',
+          'This removes the VCD file, launcher app, VMC folder, and artwork.',
         confirmLabel: 'Delete',
       });
-      if (confirmed) this._libraryService.deleteGame(g);
+      if (confirmed) this.showDeleteDialog = true;
       return;
     }
     if (this.isApp()) {
