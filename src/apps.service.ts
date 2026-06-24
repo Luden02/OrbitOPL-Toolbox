@@ -20,6 +20,8 @@ export interface AppInfo {
   /** Absolute path to the boot ELF, when it exists. */
   path: string;
   sizeBytes: number;
+  /** Optional PS1 game ID from title.cfg GameID= attribute. */
+  gameId?: string;
 }
 
 function appsDir(oplRoot: string): string {
@@ -37,8 +39,8 @@ function sanitizeAppName(name: string): string {
   );
 }
 
-function parseTitleCfg(raw: string): { title?: string; boot?: string } {
-  const out: { title?: string; boot?: string } = {};
+function parseTitleCfg(raw: string): { title?: string; boot?: string; gameId?: string } {
+  const out: { title?: string; boot?: string; gameId?: string } = {};
   for (const line of raw.split(/\r?\n/)) {
     const eq = line.indexOf("=");
     if (eq <= 0) continue;
@@ -46,6 +48,7 @@ function parseTitleCfg(raw: string): { title?: string; boot?: string } {
     const val = line.slice(eq + 1).trim();
     if (key === "title") out.title = val;
     else if (key === "boot") out.boot = val;
+    else if (key === "gameid") out.gameId = val;
   }
   return out;
 }
@@ -69,12 +72,14 @@ async function enumerateApps(
 
     let title = item.name;
     let boot = "";
+    let gameId: string | undefined;
     try {
       const cfg = parseTitleCfg(
         await fs.readFile(path.join(folderPath, "title.cfg"), "utf-8")
       );
       if (cfg.title) title = cfg.title;
       if (cfg.boot) boot = cfg.boot;
+      if (cfg.gameId) gameId = cfg.gameId;
     } catch {
       // No title.cfg — fall back to the first ELF in the folder.
     }
@@ -95,7 +100,7 @@ async function enumerateApps(
       continue;
     }
 
-    apps.push({ folder: item.name, title, boot, path: elfPath, sizeBytes });
+    apps.push({ folder: item.name, title, boot, path: elfPath, sizeBytes, gameId });
   }
 
   apps.sort((a, b) => a.title.localeCompare(b.title));

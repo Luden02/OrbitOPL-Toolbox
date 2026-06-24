@@ -120,6 +120,7 @@ declare interface Window {
         boot: string;
         path: string;
         sizeBytes: number;
+        gameId?: string;
       }[];
       message?: string;
     }>;

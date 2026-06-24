@@ -664,9 +664,10 @@ export async function renamePs1LauncherStep1(
 
   // ── Rename the VCD file ─────────────────────────────────────────────
   onProgress?.(15, `Renaming VCD: ${vcdBasename} → ${newVcdBasename}`);
+  log.info(`Renaming VCD: ${vcdBasename} → ${newVcdBasename}`);
   try {
     await fs.rename(vcdPath, newVcdPath);
-    log.verbose(`VCD renamed: ${vcdBasename} → ${newVcdBasename}`);
+    log.info(`VCD renamed: ${vcdBasename} → ${newVcdBasename}`);
   } catch (err: any) {
     log.error(`Failed to rename VCD: ${err?.message || err}`);
     return { success: false, message: `Failed to rename VCD: ${err?.message || err}` };
@@ -674,6 +675,7 @@ export async function renamePs1LauncherStep1(
 
   // ── Rename POPS VMC subfolder (if exists) ───────────────────────────
   onProgress?.(25, `Renaming VMC folder: ${oldTitle}/ → ${safeNewTitle}/`);
+  log.info(`Renaming VMC folder: ${oldTitle}/ → ${safeNewTitle}/`);
   try {
     await fs.access(path.join(popsDir, oldTitle));
     await fs.rename(path.join(popsDir, oldTitle), path.join(popsDir, safeNewTitle));
@@ -743,6 +745,7 @@ export async function renamePs1LauncherStep1(
   const add: string[] = [];
   if (!seenKeys.has("title")) { add.push(`title=${newTitle}`); add.push(`Title=${newTitle}`); }
   if (!seenKeys.has("boot") && bootVal) add.push(bootVal);
+  if (!seenKeys.has("gameid")) add.push(`GameID=${gameId}`);
   const newCfgContent =
     add.length > 0
       ? cfgLines.join("\n") + (cfgLines.length && cfgLines[cfgLines.length - 1] !== "" ? "\n" : "") + add.join("\n") + "\n"
@@ -750,9 +753,10 @@ export async function renamePs1LauncherStep1(
 
   // ── Rename the APPS launcher folder ─────────────────────────────────
   onProgress?.(50, `Renaming APPS folder: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  log.info(`Renaming APPS folder: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
   try {
     await fs.rename(oldAppsFolder, newAppsFolder);
-    log.verbose(`APPS folder renamed: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+    log.info(`APPS folder renamed: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
   } catch (err: any) {
     log.error(`Failed to rename APPS launcher folder: ${err?.message || err}`);
     return { success: false, message: `Failed to rename APPS launcher folder: ${err?.message || err}` };
@@ -812,6 +816,7 @@ export async function renamePs1LauncherStep2(
   // ── Rename the ELF file ────────────────────────────────────────────
   if (oldElfFile && newElfFile && oldElfFile !== newElfFile) {
     onProgress?.(40, `Renaming ELF: ${oldElfFile} → ${newElfFile}`);
+    log.info(`Renaming ELF: ${oldElfFile} → ${newElfFile}`);
     const oldPath = path.join(newAppsFolder, oldElfFile);
     const newPath = path.join(newAppsFolder, newElfFile);
     let done = false;
@@ -829,12 +834,13 @@ export async function renamePs1LauncherStep2(
       log.error(`ELF rename failed after retries: ${oldElfFile} → ${newElfFile}`);
       return { success: false, message: `Failed to rename ELF after multiple attempts.` };
     }
-    log.verbose(`ELF renamed: ${oldElfFile} → ${newElfFile}`);
+    log.info(`ELF renamed: ${oldElfFile} → ${newElfFile}`);
   }
 
   // ── Write title.cfg ─────────────────────────────────────────────────
   if (newCfgContent !== undefined) {
     onProgress?.(70, "Updating title.cfg (title, Title, boot)");
+    log.info("Updating title.cfg (title, Title, boot)");
     const cfgPath = path.join(newAppsFolder, "title.cfg");
     let done = false;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -853,7 +859,7 @@ export async function renamePs1LauncherStep2(
       log.error(`title.cfg write failed after retries`);
       return { success: false, message: `Failed to update title.cfg after multiple attempts.` };
     }
-    log.verbose(`title.cfg updated`);
+    log.info(`title.cfg updated`);
   }
 
   onProgress?.(100, "Rename complete");
