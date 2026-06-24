@@ -835,7 +835,9 @@ export class LibraryService {
     this.setCurrentAction(`Deleting ${game.title || game.gameId}...`);
 
     try {
-      const artDir = `${this.currentDirectory}/ART`;
+      const currentDir = this.currentDirectory ?? '';
+      const sep = currentDir.includes('\\') ? '\\' : '/';
+      const artDir = `${currentDir.replace(/[\\/]$/, '')}${sep}ART`;
       const result = await window.libraryAPI.deleteGameAndRelatedFiles(
         game.path,
         artDir,

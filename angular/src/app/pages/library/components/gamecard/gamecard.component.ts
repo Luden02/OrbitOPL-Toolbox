@@ -97,11 +97,7 @@ export class GamecardComponent {
         gameId: g.gameId,
         gameName: g.title || '',
         downloadArtwork: false,
-        system: this.isPs1LauncherApp()
-          ? 'PS1'
-          : g.system === 'PS1'
-            ? 'PS1'
-            : 'PS2',
+        system: g.system === 'PS1' || this.isPs1LauncherApp() ? 'PS1' : 'PS2',
         saveAsName: this.isPs1LauncherApp() ? g.ps1LauncherBoot : undefined,
       },
     ]);
@@ -136,7 +132,7 @@ export class GamecardComponent {
         title: 'Delete PS1 Game',
         message: `Delete PS1 game "${g.title}"?`,
         detail:
-          'This removes the VCD file, launcher app, VMC folder, and artwork.',
+          'This removes the VCD file, launcher app, POPS subfolder (VMCs, configs), and artwork.',
         confirmLabel: 'Delete',
       });
       if (confirmed) this.showDeleteDialog = true;

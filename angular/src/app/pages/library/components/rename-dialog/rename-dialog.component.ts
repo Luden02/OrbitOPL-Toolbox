@@ -1,4 +1,13 @@
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild,
+} from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '../../../../shared/services/library.service';
 import { JobsService } from '../../../../shared/services/jobs.service';
@@ -32,7 +41,7 @@ interface LogEntry {
   templateUrl: './rename-dialog.component.html',
   styleUrl: './rename-dialog.component.scss',
 })
-export class LibraryRenameDialogComponent implements OnInit {
+export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   @Input() game?: Game;
   @Output() closed = new EventEmitter<void>();
   @ViewChild('logArea') logAreaRef?: ElementRef<HTMLElement>;
@@ -54,10 +63,12 @@ export class LibraryRenameDialogComponent implements OnInit {
 
   private plan: RenamePlanItem[] = [];
   private candidates: Game[] = [];
+  private destroyed = false;
+  private progressCb: ((progress: any) => void) | null = null;
 
   constructor(
     private readonly _library: LibraryService,
-    private readonly _jobs: JobsService
+    private readonly _jobs: JobsService,
   ) {}
 
   private isEligible(g: Game): boolean {
@@ -100,6 +111,20 @@ export class LibraryRenameDialogComponent implements OnInit {
     const g = this.game;
     if (!g || !g.isPs1Launcher) return '';
     return g.filename;
+  }
+
+  get lastLogType(): LogEntry['type'] | null {
+    return this.ps1Log.length > 0
+      ? this.ps1Log[this.ps1Log.length - 1].type
+      : null;
+  }
+
+  ngOnDestroy() {
+    this.destroyed = true;
+    if (this.progressCb) {
+      window.libraryAPI.removeAllRenamePs1ProgressListeners();
+      this.progressCb = null;
+    }
   }
 
   ngOnInit() {
@@ -183,7 +208,12 @@ export class LibraryRenameDialogComponent implements OnInit {
     }
   }
 
-  private addLog(text: string, type: LogEntry['type'] = 'info', oldText?: string, newText?: string) {
+  private addLog(
+    text: string,
+    type: LogEntry['type'] = 'info',
+    oldText?: string,
+    newText?: string,
+  ) {
     const now = new Date();
     const time = now.toLocaleTimeString('en-US', { hour12: false });
     if (oldText !== undefined && newText !== undefined) {
@@ -192,7 +222,10 @@ export class LibraryRenameDialogComponent implements OnInit {
       this.ps1Log = [...this.ps1Log, { time, text, type }];
     }
     requestAnimationFrame(() => {
-      this.logAreaRef?.nativeElement.scrollTo({ top: this.logAreaRef.nativeElement.scrollHeight, behavior: 'instant' });
+      this.logAreaRef?.nativeElement.scrollTo({
+        top: this.logAreaRef.nativeElement.scrollHeight,
+        behavior: 'instant',
+      });
     });
   }
 
@@ -213,7 +246,8 @@ export class LibraryRenameDialogComponent implements OnInit {
     if (!g || !g.isPs1Launcher || !g.path || !g.gameId) return;
 
     const newTitle = this.sanitize(this.ps1NewTitle || '');
-    if (!newTitle || this.ps1NewTitle.trim() === this.initialPs1NewTitle) return;
+    if (!newTitle || this.ps1NewTitle.trim() === this.initialPs1NewTitle)
+      return;
 
     this.running = true;
     this.ps1DialogState = 'running';
@@ -221,12 +255,14 @@ export class LibraryRenameDialogComponent implements OnInit {
 
     this.addLog(`Renaming "${g.title}" → "${newTitle}"`, 'step');
 
-    window.libraryAPI.onRenamePs1Progress((progress) => {
-      const isChange = progress.stage.startsWith('Renaming VCD:')
-        || progress.stage.startsWith('Renaming VMC')
-        || progress.stage.startsWith('Renaming APPS folder')
-        || progress.stage.startsWith('Renaming ELF:')
-        || progress.stage.startsWith('Updating title.cfg');
+    this.progressCb = (progress) => {
+      if (this.destroyed) return;
+      const isChange =
+        progress.stage.startsWith('Renaming VCD:') ||
+        progress.stage.startsWith('Renaming VMC') ||
+        progress.stage.startsWith('Renaming APPS folder') ||
+        progress.stage.startsWith('Renaming ELF:') ||
+        progress.stage.startsWith('Updating title.cfg');
       if (isChange) {
         const p = this.parseChangeMsg(progress.stage);
         if (p) {
@@ -237,12 +273,15 @@ export class LibraryRenameDialogComponent implements OnInit {
       } else {
         this.addLog(progress.stage, 'info');
       }
-    });
+    };
+    window.libraryAPI.onRenamePs1Progress(this.progressCb);
 
     try {
       this.addLog('Step 1 — Renaming folders', 'step');
       const step1 = await window.libraryAPI.renamePs1LauncherStep1(
-        g.path, g.gameId, newTitle
+        g.path,
+        g.gameId,
+        newTitle,
       );
 
       if (!step1.success) {
@@ -253,13 +292,24 @@ export class LibraryRenameDialogComponent implements OnInit {
       }
       this.addLog('Folders renamed', 'success');
 
-      if (step1.oldElfFile && step1.newElfFile && step1.oldElfFile !== step1.newElfFile) {
+      if (
+        step1.oldElfFile &&
+        step1.newElfFile &&
+        step1.oldElfFile !== step1.newElfFile
+      ) {
         this.addLog('ELF: ', 'change', step1.oldElfFile, step1.newElfFile);
+      }
+
+      if (!step1.newAppsFolder) {
+        this.addLog('Internal error: newAppsFolder missing', 'error');
+        this.ps1DialogState = 'done';
+        this.running = false;
+        return;
       }
 
       this.addLog('Step 2 — Updating APPS contents (ELF, title.cfg)', 'step');
       const step2 = await window.libraryAPI.renamePs1LauncherStep2({
-        newAppsFolder: step1.newAppsFolder!,
+        newAppsFolder: step1.newAppsFolder,
         oldElfFile: step1.oldElfFile,
         newElfFile: step1.newElfFile,
         newCfgContent: step1.newCfgContent,
@@ -302,7 +352,7 @@ export class LibraryRenameDialogComponent implements OnInit {
         gameName: game.title || game.gameId,
         downloadArtwork: false,
         keepOriginalName: this.convention === 'new',
-      }))
+      })),
     );
     this.close();
   }

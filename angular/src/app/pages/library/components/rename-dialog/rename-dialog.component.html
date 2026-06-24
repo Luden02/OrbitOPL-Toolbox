@@ -79,16 +79,14 @@
     }
 
     @if (ps1DialogState === 'done') {
-    <div class="rounded-md border p-3 text-sm" [class.border-success/30]="ps1Log[ps1Log.length - 1]?.type === 'success'"
-      [class.bg-success/5]="ps1Log[ps1Log.length - 1]?.type === 'success'"
-      [class.border-error/30]="ps1Log[ps1Log.length - 1]?.type === 'error'"
-      [class.bg-error/5]="ps1Log[ps1Log.length - 1]?.type === 'error'">
+    <div class="rounded-md border p-3 text-sm" [class.border-success/30]="lastLogType === 'success'"
+      [class.bg-success/5]="lastLogType === 'success'" [class.border-error/30]="lastLogType === 'error'"
+      [class.bg-error/5]="lastLogType === 'error'">
       <div class="flex items-center gap-2">
-        <i-lucide [name]="ps1Log[ps1Log.length - 1]?.type === 'error' ? 'triangle-alert' : 'circle-check'" size="18"
-          [class.text-success]="ps1Log[ps1Log.length - 1]?.type !== 'error'"
-          [class.text-error]="ps1Log[ps1Log.length - 1]?.type === 'error'"></i-lucide>
+        <i-lucide [name]="lastLogType === 'error' ? 'triangle-alert' : 'circle-check'" size="18"
+          [class.text-success]="lastLogType !== 'error'" [class.text-error]="lastLogType === 'error'"></i-lucide>
         <span class="font-semibold">
-          {{ ps1Log[ps1Log.length - 1]?.type === 'error' ? 'Failed' : 'Done' }}
+          {{ lastLogType === 'error' ? 'Failed' : 'Done' }}
         </span>
       </div>
     </div>

@@ -12,7 +12,12 @@ export type ImportJobType =
   | 'apps'
   | 'artwork'
   | 'rename';
-export type JobStatus = 'queued' | 'running' | 'success' | 'error' | 'cancelled';
+export type JobStatus =
+  | 'queued'
+  | 'running'
+  | 'success'
+  | 'error'
+  | 'cancelled';
 
 export interface ImportJob {
   id: string;
@@ -74,8 +79,8 @@ export class JobsService {
       map(
         (jobs) =>
           jobs.filter((j) => j.status === 'queued' || j.status === 'running')
-            .length
-      )
+            .length,
+      ),
     );
   }
 
@@ -84,7 +89,7 @@ export class JobsService {
   constructor(
     private readonly _logger: LogsService,
     private readonly _library: LibraryService,
-    private readonly _confirm: ConfirmDialogService
+    private readonly _confirm: ConfirmDialogService,
   ) {}
 
   /** Queue one or more imports and kick the worker if idle. */
@@ -106,8 +111,8 @@ export class JobsService {
   public clearFinished(): void {
     this.jobsSubject.next(
       this.jobsSubject.value.filter(
-        (j) => j.status === 'queued' || j.status === 'running'
-      )
+        (j) => j.status === 'queued' || j.status === 'running',
+      ),
     );
   }
 
@@ -115,16 +120,14 @@ export class JobsService {
   public removeJob(id: string): void {
     this.jobsSubject.next(
       this.jobsSubject.value.filter(
-        (j) => j.id !== id || j.status === 'running'
-      )
+        (j) => j.id !== id || j.status === 'running',
+      ),
     );
   }
 
   private patchJob(id: string, patch: Partial<ImportJob>): void {
     this.jobsSubject.next(
-      this.jobsSubject.value.map((j) =>
-        j.id === id ? { ...j, ...patch } : j
-      )
+      this.jobsSubject.value.map((j) => (j.id === id ? { ...j, ...patch } : j)),
     );
   }
 
@@ -138,7 +141,11 @@ export class JobsService {
     }
 
     this.isProcessing = true;
-    this.patchJob(next.id, { status: 'running', stage: 'Starting…', percent: 0 });
+    this.patchJob(next.id, {
+      status: 'running',
+      stage: 'Starting…',
+      percent: 0,
+    });
 
     try {
       const result = await this.runJob(next);
@@ -176,7 +183,7 @@ export class JobsService {
         });
         this._logger.error(
           'jobsService',
-          `Job failed for ${next.label} (${next.type}): ${result?.message}`
+          `Job failed for ${next.label} (${next.type}): ${result?.message}`,
         );
       }
     } catch (error: any) {
@@ -188,7 +195,7 @@ export class JobsService {
       });
       this._logger.error(
         'jobsService',
-        `Job threw for ${next.label} (${next.type}): ${error?.message || error}`
+        `Job threw for ${next.label} (${next.type}): ${error?.message || error}`,
       );
     } finally {
       this.isProcessing = false;
@@ -198,8 +205,13 @@ export class JobsService {
   }
 
   private async runJob(
-    job: ImportJob
-  ): Promise<{ success: boolean; message?: string; artRefresh?: boolean; cancelled?: boolean }> {
+    job: ImportJob,
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    artRefresh?: boolean;
+    cancelled?: boolean;
+  }> {
     const dirPath = this._library.currentDirectoryValue;
     if (!dirPath) {
       return { success: false, message: 'No library directory mounted.' };
@@ -240,14 +252,17 @@ export class JobsService {
 
     this._logger.log(
       'jobsService',
-      `FetchArtwork for "${job.label}": gameId=${job.gameId}, saveAsName=${saveAsName ?? '(none)'}, localName=${localName}, expectedFiles=[${expectedFiles.join(', ')}]`
+      `FetchArtwork for "${job.label}": gameId=${job.gameId}, saveAsName=${saveAsName ?? '(none)'}, localName=${localName}, expectedFiles=[${expectedFiles.join(', ')}]`,
     );
 
-    const existing = await window.libraryAPI.checkArtFilesExist(artDir, expectedFiles);
+    const existing = await window.libraryAPI.checkArtFilesExist(
+      artDir,
+      expectedFiles,
+    );
 
     this._logger.log(
       'jobsService',
-      `checkArtFilesExist returned ${existing.length} existing file(s) for "${job.label}": [${existing.join(', ')}]`
+      `checkArtFilesExist returned ${existing.length} existing file(s) for "${job.label}": [${existing.join(', ')}]`,
     );
 
     let shouldDownload = true;
@@ -262,7 +277,7 @@ export class JobsService {
       });
       this._logger.log(
         'jobsService',
-        `Confirm dialog result for "${job.label}": confirmed=${confirmed}`
+        `Confirm dialog result for "${job.label}": confirmed=${confirmed}`,
       );
       if (confirmed) {
         isOverwrite = true;
@@ -274,7 +289,7 @@ export class JobsService {
     if (!shouldDownload) {
       this._logger.log(
         'jobsService',
-        `Artwork download cancelled by user for "${job.label}" — existing files left untouched`
+        `Artwork download cancelled by user for "${job.label}" — existing files left untouched`,
       );
       return { success: false, cancelled: true, message: 'Cancelled by user.' };
     }
@@ -285,7 +300,7 @@ export class JobsService {
       artDir,
       job.gameId,
       job.system ?? 'PS2',
-      saveAsName
+      saveAsName,
     );
 
     if (result?.data) {
@@ -293,12 +308,12 @@ export class JobsService {
       const failed = result.data.filter((r: any) => r.error);
       this._logger.log(
         'jobsService',
-        `Artwork download complete for "${job.label}": ${saved.length} saved, ${failed.length} failed`
+        `Artwork download complete for "${job.label}": ${saved.length} saved, ${failed.length} failed`,
       );
       if (saveAsName && saveAsName !== job.gameId) {
         this._logger.log(
           'jobsService',
-          `Artwork saved with name pattern "${saveAsName}_*.png" (gameId: ${job.gameId})`
+          `Artwork saved with name pattern "${saveAsName}_*.png" (gameId: ${job.gameId})`,
         );
       }
       for (const item of saved) {
@@ -329,7 +344,7 @@ export class JobsService {
       job.filePath,
       job.gameId,
       job.gameName,
-      !!job.keepOriginalName
+      !!job.keepOriginalName,
     );
   }
 
@@ -339,13 +354,13 @@ export class JobsService {
       this.patchJob(job.id, {
         percent: progress.percent,
         stage: progress.stage,
-      })
+      }),
     );
     try {
       return await window.libraryAPI.compressIsoToZso(
         job.filePath,
         zsoPath,
-        job.deleteOriginal ?? true
+        job.deleteOriginal ?? true,
       );
     } finally {
       window.libraryAPI.removeAllZsoCompressProgressListeners();
@@ -357,7 +372,7 @@ export class JobsService {
       this.patchJob(job.id, {
         percent: progress.percent,
         stage: progress.stage,
-      })
+      }),
     );
     try {
       return await window.libraryAPI.importPs2CdGame(
@@ -365,7 +380,7 @@ export class JobsService {
         dirPath,
         job.gameId,
         job.gameName,
-        job.downloadArtwork
+        job.downloadArtwork,
       );
     } finally {
       window.libraryAPI.removeAllPs2CdImportProgressListeners();
@@ -377,14 +392,14 @@ export class JobsService {
       this.patchJob(job.id, {
         percent: progress.percent,
         stage: progress.stage,
-      })
+      }),
     );
     try {
       return await window.libraryAPI.importPs1Game(
         job.filePath,
         dirPath,
         job.elfPrefix || 'XX.',
-        job.downloadArtwork
+        job.downloadArtwork,
       );
     } finally {
       window.libraryAPI.removeAllPs1ImportProgressListeners();
@@ -392,20 +407,21 @@ export class JobsService {
   }
 
   private async runPs2DvdJob(job: ImportJob, dirPath: string) {
-    const destinationDir = `${dirPath}/DVD`;
+    const sep = dirPath.includes('\\') ? '\\' : '/';
+    const destinationDir = `${dirPath.replace(/[\\/]$/, '')}${sep}DVD`;
 
     window.libraryAPI.onMoveFileProgress((progress) =>
       this.patchJob(job.id, {
         percent: progress.percent,
         stage: `Copying ${progress.copiedMB}/${progress.totalMB} MB`,
-      })
+      }),
     );
 
     try {
       this.patchJob(job.id, { stage: 'Copying file…' });
       const moveResult: any = await window.libraryAPI.moveFile(
         job.filePath,
-        destinationDir
+        destinationDir,
       );
       if (!moveResult?.success) {
         return {
@@ -416,7 +432,7 @@ export class JobsService {
 
       const movedPath =
         moveResult.newPath ||
-        `${destinationDir}/${job.filePath.split(/[\\/]/).pop()}`;
+        `${destinationDir}${sep}${job.filePath.split(/[\\/]/).pop()}`;
 
       this.patchJob(job.id, { stage: 'Renaming…' });
       // In "new OPL convention" mode the rename drops the GAMEID. prefix so
@@ -425,7 +441,7 @@ export class JobsService {
         movedPath,
         job.gameId,
         job.gameName,
-        !!job.keepOriginalName
+        !!job.keepOriginalName,
       );
       if (!renameResult?.success) {
         return {
@@ -439,7 +455,7 @@ export class JobsService {
         await window.libraryAPI.downloadArtByGameId(
           `${dirPath}/ART`,
           job.gameId,
-          'PS2'
+          'PS2',
         );
       }
 

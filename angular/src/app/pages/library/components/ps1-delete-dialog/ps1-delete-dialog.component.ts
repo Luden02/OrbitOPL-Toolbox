@@ -17,17 +17,17 @@ interface DeleteEntry {
   styleUrl: './ps1-delete-dialog.component.scss',
 })
 export class Ps1DeleteDialogComponent implements OnInit {
-  @Input() game!: Game;
+  @Input({ required: true }) game!: Game;
   @Output() closed = new EventEmitter<void>();
 
   entries: DeleteEntry[] = [];
   deleting = true;
   overallSuccess = false;
 
-  constructor(private readonly _library: LibraryService) {}
+  constructor(private readonly _libraryService: LibraryService) {}
 
   async ngOnInit() {
-    const result = await this._library.deleteGame(this.game, true);
+    const result = await this._libraryService.deleteGame(this.game, true);
     if (result?.entries) {
       this.entries = result.entries;
       this.overallSuccess = !!result.success;
@@ -37,7 +37,7 @@ export class Ps1DeleteDialogComponent implements OnInit {
 
   close() {
     if (this.deleting) return;
-    this._library.refreshGamesFiles();
+    this._libraryService.refreshGamesFiles();
     this.closed.emit();
   }
 }

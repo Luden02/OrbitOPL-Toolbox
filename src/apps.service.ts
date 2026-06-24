@@ -237,7 +237,12 @@ export async function deleteApp(
       log.warn(`Rejected app delete for suspicious folder name: "${folder}"`);
       return { success: false, message: "Invalid app folder." };
     }
-    await fs.rm(path.join(appsDir(oplRoot), folder), {
+    const target = path.resolve(appsDir(oplRoot), folder);
+    if (!target.startsWith(appsDir(oplRoot) + path.sep)) {
+      log.warn(`Path traversal blocked for app folder: "${folder}"`);
+      return { success: false, message: "Invalid app folder." };
+    }
+    await fs.rm(target, {
       recursive: true,
       force: true,
     });

@@ -261,16 +261,16 @@ export async function getGamesFiles(dirPath: string) {
     // Only include files, skip directories
     const items = [
       ...items_cd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/CD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "CD") })
       ),
       ...items_dvd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/DVD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "DVD") })
       ),
       ...items_vcd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/VCD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "VCD") })
       ),
       ...items_pops.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/POPS" })
+        Object.assign(item, { parentDir: path.join(dirPath, "POPS") })
       ),
     ].filter((item) => {
       if (!item.isFile() || item.name.startsWith(".")) return false;
@@ -285,13 +285,14 @@ export async function getGamesFiles(dirPath: string) {
     const files = [];
 
     for (const item of items) {
-      const stats = await fs.stat(item.parentDir + "/" + item.name);
+      const fullPath = path.join(item.parentDir, item.name);
+      const stats = await fs.stat(fullPath);
 
       const itemInfo = {
         extension: path.extname(item.name),
         name: path.parse(item.name).name,
         parentPath: item.parentDir,
-        path: item.parentDir + "/" + item.name,
+        path: fullPath,
         stats,
       };
 
@@ -1440,19 +1441,19 @@ export async function deleteGameAndRelatedFiles(
 
   // 3. Delete POPStarter launcher folder (APPS/POPS_<name>/)
   if (launcherFolder) {
-    if (
-      !launcherFolder.includes("/") &&
-      !launcherFolder.includes("\\") &&
-      !launcherFolder.includes("..")
-    ) {
-      const appsLauncher = path.join(oplRoot, "APPS", launcherFolder);
+    const appsBase = path.join(oplRoot, "APPS");
+    const resolved = path.resolve(appsBase, launcherFolder);
+    if (!resolved.startsWith(appsBase + path.sep)) {
+      log.warn(`Path traversal attempt blocked: "${launcherFolder}" — refusing to delete`);
+      addEntry("Launcher folder", false, launcherFolder, "Path traversal blocked");
+    } else {
       try {
-        await fs.rm(appsLauncher, { recursive: true, force: true });
-        log.verbose(`Removed launcher folder ${rel(appsLauncher)}`);
-        addEntry("Launcher folder", true, rel(appsLauncher));
+        await fs.rm(resolved, { recursive: true, force: true });
+        log.verbose(`Removed launcher folder ${rel(resolved)}`);
+        addEntry("Launcher folder", true, rel(resolved));
       } catch (err: any) {
-        log.error(`Failed to remove launcher ${rel(appsLauncher)}:`, err?.message || err);
-        addEntry("Launcher folder", false, rel(appsLauncher), err?.message || String(err));
+        log.error(`Failed to remove launcher ${rel(resolved)}:`, err?.message || err);
+        addEntry("Launcher folder", false, rel(resolved), err?.message || String(err));
       }
     }
   }
