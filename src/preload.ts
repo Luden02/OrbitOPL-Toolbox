@@ -134,8 +134,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   getApps: (oplRoot: string) => ipcRenderer.invoke("get-apps", oplRoot),
   getPs1Launchers: (oplRoot: string) =>
     ipcRenderer.invoke("get-ps1-launchers", oplRoot),
-  updatePs1TitleCfg: (launcherPath: string, newTitle: string) =>
-    ipcRenderer.invoke("update-ps1-title-cfg", launcherPath, newTitle),
+  updatePs1TitleCfg: (launcherPath: string, newTitle: string, gameId?: string) =>
+    ipcRenderer.invoke("update-ps1-title-cfg", launcherPath, newTitle, gameId),
   openAskElfFiles: () => ipcRenderer.invoke("open-ask-elf-files"),
   importApp: (oplRoot: string, elfPath: string, title: string) =>
     ipcRenderer.invoke("import-app", oplRoot, elfPath, title),

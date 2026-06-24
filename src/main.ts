@@ -436,8 +436,8 @@ ipcMain.handle("get-ps1-launchers", async (_event, oplRoot: string) => {
 
 ipcMain.handle(
   "update-ps1-title-cfg",
-  async (_event, launcherPath: string, newTitle: string) => {
-    return updatePs1TitleCfg(launcherPath, newTitle);
+  async (_event, launcherPath: string, newTitle: string, gameId?: string) => {
+    return updatePs1TitleCfg(launcherPath, newTitle, gameId);
   }
 );
 

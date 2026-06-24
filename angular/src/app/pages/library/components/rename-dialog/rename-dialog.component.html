@@ -51,9 +51,9 @@
     }
     }
 
-    @if (ps1DialogState === 'running') {
+    @if (ps1DialogState === 'running' || ps1DialogState === 'done') {
     <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
-      @for (entry of ps1Log; track entry) {
+      @for (entry of ps1Log; track $index) {
       <div class="log-line" [class.text-info]="entry.type === 'step'" [class.text-warning]="entry.type === 'change'"
         [class.text-success]="entry.type === 'success'" [class.text-error]="entry.type === 'error'"
         [class.font-semibold]="entry.type === 'step'">
@@ -70,33 +70,15 @@
         }
       </div>
       }
-      <div class="log-line log-cursor">
-        <span class="loading loading-dots loading-xs"></span>
-      </div>
+    </div>
+
+    @if (ps1DialogState === 'running') {
+    <div class="log-line log-cursor">
+      <span class="loading loading-dots loading-xs"></span>
     </div>
     }
 
     @if (ps1DialogState === 'done') {
-    <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
-      @for (entry of ps1Log; track entry) {
-      <div class="log-line" [class.text-info]="entry.type === 'step'" [class.text-warning]="entry.type === 'change'"
-        [class.text-success]="entry.type === 'success'" [class.text-error]="entry.type === 'error'"
-        [class.font-semibold]="entry.type === 'step'">
-        <span class="log-time">{{ entry.time }}</span>
-        @if (entry.oldText && entry.newText) {
-        <span class="log-text">
-          <span class="opacity-80">{{ entry.text }}</span>
-          <span class="text-error/80">{{ entry.oldText }}</span>
-          <span class="opacity-40"> → </span>
-          <span class="text-success">{{ entry.newText }}</span>
-        </span>
-        } @else {
-        <span class="log-text">{{ entry.text }}</span>
-        }
-      </div>
-      }
-    </div>
-
     <div class="rounded-md border p-3 text-sm" [class.border-success/30]="ps1Log[ps1Log.length - 1]?.type === 'success'"
       [class.bg-success/5]="ps1Log[ps1Log.length - 1]?.type === 'success'"
       [class.border-error/30]="ps1Log[ps1Log.length - 1]?.type === 'error'"
@@ -110,6 +92,7 @@
         </span>
       </div>
     </div>
+    }
     }
 
     <!-- ════════════════════════════════════════════════════════════════

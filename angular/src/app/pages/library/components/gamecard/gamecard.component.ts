@@ -133,7 +133,7 @@ export class GamecardComponent {
         title: 'Delete PS1 Game',
         message: `Delete PS1 game "${g.title}"?`,
         detail:
-          'This removes the VCD file, its launcher app, and associated artwork.',
+          'This removes the VCD file and its launcher app.',
         confirmLabel: 'Delete',
       });
       if (confirmed) this._libraryService.deleteGame(g);

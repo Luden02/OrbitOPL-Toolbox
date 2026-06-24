@@ -186,6 +186,7 @@ export async function importApp(
 export async function updatePs1TitleCfg(
   launcherPath: string,
   newTitle: string,
+  gameId?: string,
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const cfgPath = path.join(launcherPath, "title.cfg");
@@ -193,7 +194,7 @@ export async function updatePs1TitleCfg(
     try {
       oldContent = await fs.readFile(cfgPath, "utf-8");
     } catch {
-      await fs.writeFile(cfgPath, `title=${newTitle}\nTitle=${newTitle}\n`, "utf-8");
+      await fs.writeFile(cfgPath, `title=${newTitle}\nTitle=${newTitle}\n${gameId ? `GameID=${gameId}\n` : ''}`, "utf-8");
       log.info(`Created title.cfg for ${path.basename(launcherPath)}`);
       return { success: true };
     }

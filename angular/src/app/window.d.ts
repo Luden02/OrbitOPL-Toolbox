@@ -127,6 +127,7 @@ declare interface Window {
     updatePs1TitleCfg: (
       launcherPath: string,
       newTitle: string,
+      gameId?: string,
     ) => Promise<{ success: boolean; message?: string }>;
     openAskElfFiles: () => Promise<any>;
     importApp: (

@@ -122,33 +122,34 @@ export class GameCfgDialogComponent {
     if (trimmed) next[CFG_KEY_NAME] = trimmed;
     else delete next[CFG_KEY_NAME];
 
-    if (!this.game().isPs1Launcher) {
-      let mask = 0;
-      this.compatModes.forEach((m, i) => {
-        if (this.compat[i]) mask |= 1 << m.bit;
-      });
-      if (mask > 0) next[CFG_KEY_COMPAT] = String(mask);
-      else delete next[CFG_KEY_COMPAT];
-    } else {
+    const g = this.game();
+    if (g.isPs1Launcher) {
       delete next[CFG_KEY_COMPAT];
-    }
-
-    if (!this.game().isPs1Launcher) {
-      if (this.vmc0) next[CFG_KEY_VMC0] = this.vmc0;
-      else delete next[CFG_KEY_VMC0];
-      if (this.vmc1) next[CFG_KEY_VMC1] = this.vmc1;
-      else delete next[CFG_KEY_VMC1];
-    } else {
       delete next[CFG_KEY_VMC0];
       delete next[CFG_KEY_VMC1];
+      await this._cfg.saveGameCfg(g.gameId, next);
+      if (g.ps1LauncherPath) {
+        await window.libraryAPI.updatePs1TitleCfg(g.ps1LauncherPath, trimmed || g.gameId, g.gameId);
+      }
+      this.saving = false;
+      this.closed.emit();
+      return;
     }
 
-    await this._cfg.saveGameCfg(this.game().gameId, next);
+    // PS2 only below
+    let mask = 0;
+    this.compatModes.forEach((m, i) => {
+      if (this.compat[i]) mask |= 1 << m.bit;
+    });
+    if (mask > 0) next[CFG_KEY_COMPAT] = String(mask);
+    else delete next[CFG_KEY_COMPAT];
 
-    if (this.game().isPs1Launcher && this.game().ps1LauncherPath) {
-      const titleCfgTitle = trimmed || this.game().gameId;
-      await window.libraryAPI.updatePs1TitleCfg(this.game().ps1LauncherPath!, titleCfgTitle);
-    }
+    if (this.vmc0) next[CFG_KEY_VMC0] = this.vmc0;
+    else delete next[CFG_KEY_VMC0];
+    if (this.vmc1) next[CFG_KEY_VMC1] = this.vmc1;
+    else delete next[CFG_KEY_VMC1];
+
+    await this._cfg.saveGameCfg(g.gameId, next);
 
     this.saving = false;
     this.closed.emit();

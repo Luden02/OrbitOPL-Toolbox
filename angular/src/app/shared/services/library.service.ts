@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { LogsService } from './logs.service';
 import { SettingsService } from './settings.service';
 import { BehaviorSubject, map, Observable } from 'rxjs';
-import { Game, GameFormat, RawGameFile, gameArt } from '../types/game.type';
+import { Game, GameFormat, Ps1LauncherInfo, RawGameFile, gameArt } from '../types/game.type';
 
 @Injectable({
   providedIn: 'root',
@@ -295,7 +295,7 @@ export class LibraryService {
             ps1LaunchersResult?.success && ps1LaunchersResult.launchers
               ? ps1LaunchersResult.launchers
               : [];
-          const ps1LauncherMap = new Map<string, { folder: string; title: string; boot: string; path: string; gameId?: string }>();
+          const ps1LauncherMap = new Map<string, Ps1LauncherInfo>();
           for (const launcher of ps1Launchers) {
             const name = launcher.folder.replace(/^POPS_/i, '');
             ps1LauncherMap.set(name.toLowerCase(), launcher);
@@ -484,7 +484,7 @@ export class LibraryService {
    */
   private async parseSingleFile(
     file: RawGameFile,
-    ps1LauncherMap?: Map<string, { folder: string; title: string; boot: string; path: string; gameId?: string }>
+    ps1LauncherMap?: Map<string, Ps1LauncherInfo>
   ): Promise<Game | null> {
     const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/i);
     const ext = file.extension?.toLowerCase();
@@ -501,7 +501,7 @@ export class LibraryService {
 
     let gameId: string;
     let title: string;
-    let ps1Launcher: { folder: string; title: string; boot: string; path: string; gameId?: string } | undefined;
+    let ps1Launcher: Ps1LauncherInfo | undefined;
 
     if (gameIdMatch) {
       gameId = gameIdMatch[1];
@@ -516,19 +516,18 @@ export class LibraryService {
       gameId = resolved.gameId;
       title = resolved.gameName || file.name;
     } else {
-      this.setCurrentAction(`Resolving VCD ${file.name}…`);
-      const resolved = await window.libraryAPI.tryDeterminePs1GameIdFromVcd(file.path);
       if (ps1LauncherMap) {
         ps1Launcher = ps1LauncherMap.get(file.name.toLowerCase());
       }
-      if (resolved?.success && resolved.gameId) {
-        gameId = resolved.gameId;
-        title = resolved.gameName || file.name;
-      } else if (ps1Launcher?.gameId) {
+      if (ps1Launcher?.gameId) {
         gameId = ps1Launcher.gameId;
         title = file.name;
       } else {
-        return null;
+        this.setCurrentAction(`Resolving VCD ${file.name}…`);
+        const resolved = await window.libraryAPI.tryDeterminePs1GameIdFromVcd(file.path);
+        if (!resolved?.success || !resolved.gameId) return null;
+        gameId = resolved.gameId;
+        title = resolved.gameName || file.name;
       }
     }
 
@@ -552,12 +551,13 @@ export class LibraryService {
     };
 
     if (hasLauncher) {
-      gameEntry.title = ps1Launcher!.title;
-      gameEntry.ps1LauncherPath = ps1Launcher!.path.replace(/[\\/][^\\/]+\.elf$/i, '');
-      gameEntry.ps1LauncherBoot = ps1Launcher!.boot;
+      const l = ps1Launcher!;
+      gameEntry.title = l.title;
+      gameEntry.ps1LauncherPath = l.path.replace(/[\\/][^\\/]+\.elf$/i, '');
+      gameEntry.ps1LauncherBoot = l.boot;
       gameEntry.isPs1Launcher = true;
-      gameEntry.appFolder = ps1Launcher!.folder;
-      gameEntry.ps1VmcSub = ps1Launcher!.folder.replace(/^POPS_/i, '');
+      gameEntry.appFolder = l.folder;
+      gameEntry.ps1VmcSub = l.folder.replace(/^POPS_/i, '');
     }
 
     return gameEntry;
@@ -586,7 +586,7 @@ export class LibraryService {
     gamefiles: RawGameFile[],
     ulGames: Game[] = [],
     apps: Game[] = [],
-    ps1LauncherMap?: Map<string, { folder: string; title: string; boot: string; path: string; gameId?: string }>
+    ps1LauncherMap?: Map<string, Ps1LauncherInfo>
   ) {
     this.setLoading(true);
     this.setCurrentAction('Mapping gamefiles to Game Objects...');

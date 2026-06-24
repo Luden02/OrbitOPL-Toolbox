@@ -191,8 +191,8 @@ export class LibraryRenameDialogComponent implements OnInit {
     } else {
       this.ps1Log = [...this.ps1Log, { time, text, type }];
     }
-    setTimeout(() => {
-      this.logAreaRef?.nativeElement.scrollTo({ top: this.logAreaRef.nativeElement.scrollHeight, behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      this.logAreaRef?.nativeElement.scrollTo({ top: this.logAreaRef.nativeElement.scrollHeight, behavior: 'instant' });
     });
   }
 

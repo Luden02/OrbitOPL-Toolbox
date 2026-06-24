@@ -1,5 +1,13 @@
 export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL' | 'POPS' | 'APP';
 
+export type Ps1LauncherInfo = {
+  folder: string;
+  title: string;
+  boot: string;
+  path: string;
+  gameId?: string;
+};
+
 export type Game = {
   filename: string;
   size?: string;
