@@ -30,7 +30,7 @@ export class GameCfgDialogComponent {
   entries: GameCfg = {};
   title = '';
   private initialTitle = '';
-  compat: boolean[] = new Array(8).fill(false);
+  compat: boolean[] = new Array(COMPAT_MODES.length).fill(false);
   vmc0 = '';
   vmc1 = '';
   cards: VmcInfo[] = [];

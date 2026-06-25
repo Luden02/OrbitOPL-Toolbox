@@ -1,5 +1,10 @@
-import { Component, computed, input } from '@angular/core';
-import { Game, gameArt } from '@shared/types/game.type';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
+import { Game } from '@shared/types/game.type';
 
 import { LibraryService } from '@shared/services/library.service';
 import { JobsService } from '@shared/services/jobs.service';
@@ -21,6 +26,7 @@ export type GamecardViewMode = 'grid' | 'list';
   ],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GamecardComponent {
   readonly game = input<Game | undefined>(undefined);
@@ -36,13 +42,28 @@ export class GamecardComponent {
     return undefined;
   });
 
-  readonly isApp = computed(
-    () => this.game()?.system === 'APPS' && !this.game()?.isPs1Launcher,
-  );
+  readonly artSrc = computed(() => {
+    const a = this.displayArt();
+    return a ? `data:image/png;base64,${a.base64}` : null;
+  });
 
-  readonly isPs1LauncherApp = computed(
-    () => this.game()?.system === 'APPS' && !!this.game()?.isPs1Launcher,
-  );
+  readonly displaySystemLabel = computed(() => {
+    const g = this.game();
+    if (g?.isPs1Launcher) return 'PS1 App';
+    if (g?.system === 'PS1') return 'PS1';
+    if (g?.system === 'APPS') return 'APP';
+    return 'PS2';
+  });
+
+  readonly isApp = computed(() => {
+    const g = this.game();
+    return g?.system === 'APPS' && !g?.isPs1Launcher;
+  });
+
+  readonly isPs1LauncherApp = computed(() => {
+    const g = this.game();
+    return g?.system === 'APPS' && !!g?.isPs1Launcher;
+  });
 
   readonly canCompressZso = computed(() => {
     const g = this.game();
@@ -103,13 +124,16 @@ export class GamecardComponent {
     ]);
   }
 
-  convertToZso() {
+  async convertToZso() {
     const g = this.game();
     if (!g || !this.canCompressZso()) return;
-    const confirmed = window.confirm(
-      `Compress "${g.title || g.gameId}" to ZSO?\n\n` +
-        `This creates a smaller .zso and removes the original .iso once it succeeds.`,
-    );
+    const confirmed = await this._confirm.confirm({
+      title: 'Convert to ZSO',
+      message: `Compress "${g.title || g.gameId}" to ZSO?`,
+      detail:
+        'This creates a smaller .zso and removes the original .iso once it succeeds.',
+      confirmLabel: 'Convert',
+    });
     if (!confirmed) return;
     this._jobs.enqueue([
       {

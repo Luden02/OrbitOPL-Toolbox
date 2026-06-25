@@ -10,17 +10,17 @@
 
   <div class="delete-body flex flex-col gap-4 px-5 py-4">
     <div class="rounded-md border border-base-content/10 bg-base-100/30 p-3 text-sm">
-      <span class="font-semibold">{{ game.title || game.gameId }}</span>
-      <span class="ml-2 text-xs text-base-content/50">{{ game.gameId }}</span>
+      <span class="font-semibold">{{ game().title || game().gameId }}</span>
+      <span class="ml-2 text-xs text-base-content/50">{{ game().gameId }}</span>
     </div>
 
+    @if (deleting) {
+    <div class="flex items-center gap-2 p-4 text-sm text-base-content/60">
+      <span class="loading loading-spinner loading-sm"></span>
+      Deleting…
+    </div>
+    } @else {
     <div class="log-area rounded-md border border-base-content/10 bg-base-100/30">
-      @if (deleting) {
-      <div class="flex items-center gap-2 p-4 text-sm text-base-content/60">
-        <span class="loading loading-spinner loading-sm"></span>
-        Deleting…
-      </div>
-      } @else {
       @for (entry of entries; track entry.label) {
       <div class="log-entry" [class.is-success]="entry.success" [class.is-error]="!entry.success">
         <div class="log-primary">
@@ -45,10 +45,8 @@
         }
       </div>
       }
-      }
     </div>
 
-    @if (!deleting) {
     <div class="rounded-md border p-3 text-sm" [class.border-success/30]="overallSuccess"
       [class.bg-success/5]="overallSuccess" [class.border-error/30]="!overallSuccess"
       [class.bg-error/5]="!overallSuccess">

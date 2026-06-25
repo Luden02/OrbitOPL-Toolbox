@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '@shared/types/game.type';
 import { LibraryService } from '@shared/services/library.service';
@@ -16,9 +16,9 @@ interface DeleteEntry {
   templateUrl: './ps1-delete-dialog.component.html',
   styleUrl: './ps1-delete-dialog.component.scss',
 })
-export class Ps1DeleteDialogComponent implements OnInit {
-  @Input({ required: true }) game!: Game;
-  @Output() closed = new EventEmitter<void>();
+export class Ps1DeleteDialogComponent {
+  readonly game = input.required<Game>();
+  readonly closed = output<void>();
 
   entries: DeleteEntry[] = [];
   deleting = true;
@@ -27,12 +27,19 @@ export class Ps1DeleteDialogComponent implements OnInit {
   constructor(private readonly _libraryService: LibraryService) {}
 
   async ngOnInit() {
-    const result = await this._libraryService.deleteGame(this.game, true);
-    if (result?.entries) {
-      this.entries = result.entries;
-      this.overallSuccess = !!result.success;
+    try {
+      const result = await this._libraryService.deleteGame(this.game(), true);
+      if (result?.entries) {
+        this.entries = result.entries;
+        this.overallSuccess = !!result.success;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.entries = [{ label: 'Error', success: false, error: msg }];
+      this.overallSuccess = false;
+    } finally {
+      this.deleting = false;
     }
-    this.deleting = false;
   }
 
   close() {

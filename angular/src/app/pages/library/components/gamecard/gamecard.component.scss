@@ -85,7 +85,7 @@
 
 .poster-system.is-ps1-app {
   background: oklch(66.696% 0.11697 186.07);
-  box-shadow: 0 2px 8px -2px #00ab9f;
+  box-shadow: 0 2px 8px -2px oklch(66.696% 0.11697 186.07 / 0.8);
 }
 
 /* Kebab menu — fades in on hover */

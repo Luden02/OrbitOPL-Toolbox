@@ -1,12 +1,11 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild,
+  inject,
+  input,
+  output,
+  viewChild,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '@shared/services/library.service';
@@ -27,6 +26,10 @@ interface Ps1RenamePreview {
   appsFolder: string;
 }
 
+interface Ps1RenameProgress {
+  stage: string;
+}
+
 interface LogEntry {
   time: string;
   text: string;
@@ -41,10 +44,10 @@ interface LogEntry {
   templateUrl: './rename-dialog.component.html',
   styleUrl: './rename-dialog.component.scss',
 })
-export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
-  @Input() game?: Game;
-  @Output() closed = new EventEmitter<void>();
-  @ViewChild('logArea') logAreaRef?: ElementRef<HTMLElement>;
+export class LibraryRenameDialogComponent {
+  readonly game = input<Game>();
+  readonly closed = output<void>();
+  readonly logAreaRef = viewChild<ElementRef<HTMLElement>>('logArea');
 
   convention: Convention = 'new';
   running = false;
@@ -64,10 +67,11 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   private plan: RenamePlanItem[] = [];
   private candidates: Game[] = [];
   private destroyed = false;
-  private progressCb: ((progress: any) => void) | null = null;
+  private readonly _destroyRef = inject(DestroyRef);
+  private progressCb: ((progress: Ps1RenameProgress) => void) | null = null;
 
   constructor(
-    private readonly _library: LibraryService,
+    private readonly _libraryService: LibraryService,
     private readonly _jobs: JobsService,
   ) {}
 
@@ -85,11 +89,11 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   }
 
   get isSingle(): boolean {
-    return !!this.game;
+    return !!this.game();
   }
 
   get isPs1Launcher(): boolean {
-    return !!this.game?.isPs1Launcher;
+    return !!this.game()?.isPs1Launcher;
   }
 
   get hasChanges(): boolean {
@@ -108,7 +112,7 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   }
 
   get ps1VcdFilename(): string {
-    const g = this.game;
+    const g = this.game();
     if (!g || !g.isPs1Launcher) return '';
     return g.filename;
   }
@@ -119,27 +123,28 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
       : null;
   }
 
-  ngOnDestroy() {
-    this.destroyed = true;
-    if (this.progressCb) {
-      window.libraryAPI.removeAllRenamePs1ProgressListeners();
-      this.progressCb = null;
-    }
-  }
-
   ngOnInit() {
-    const pool = this.game ? [this.game] : this._library.currentLibraryValue;
+    const g = this.game();
+    const pool = g ? [g] : this._libraryService.currentLibraryValue;
     this.candidates = pool.filter((g) => this.isEligible(g));
-    if (this.isPs1Launcher && this.game) {
-      const ext = this.game.extension || '.VCD';
-      this.ps1NewTitle = this.game.filename.endsWith(ext)
-        ? this.game.filename.slice(0, -ext.length)
-        : this.game.filename;
+    if (this.isPs1Launcher && g) {
+      const ext = g.extension || '.VCD';
+      this.ps1NewTitle = g.filename.endsWith(ext)
+        ? g.filename.slice(0, -ext.length)
+        : g.filename;
       this.initialPs1NewTitle = this.ps1NewTitle;
       this.buildPs1Preview();
     } else {
       this.rebuildPlan();
     }
+
+    this._destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      if (this.progressCb) {
+        window.libraryAPI.removeAllRenamePs1ProgressListeners();
+        this.progressCb = null;
+      }
+    });
   }
 
   setConvention(c: Convention) {
@@ -168,7 +173,7 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   }
 
   private buildPs1Preview() {
-    const g = this.game;
+    const g = this.game();
     if (!g || !g.isPs1Launcher) return;
 
     const oldTitle = g.title || '';
@@ -222,8 +227,8 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
       this.ps1Log = [...this.ps1Log, { time, text, type }];
     }
     requestAnimationFrame(() => {
-      this.logAreaRef?.nativeElement.scrollTo({
-        top: this.logAreaRef.nativeElement.scrollHeight,
+      this.logAreaRef()?.nativeElement.scrollTo({
+        top: this.logAreaRef()?.nativeElement.scrollHeight ?? 0,
         behavior: 'instant',
       });
     });
@@ -242,7 +247,7 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   }
 
   private async runPs1() {
-    const g = this.game;
+    const g = this.game();
     if (!g || !g.isPs1Launcher || !g.path || !g.gameId) return;
 
     const newTitle = this.sanitize(this.ps1NewTitle || '');
@@ -325,8 +330,9 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
 
       this.ps1DialogState = 'done';
       this.running = false;
-    } catch (err: any) {
-      this.addLog(`Error: ${err?.message || err}`, 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.addLog(`Error: ${msg}`, 'error');
       this.ps1DialogState = 'done';
       this.running = false;
     } finally {
@@ -337,7 +343,7 @@ export class LibraryRenameDialogComponent implements OnInit, OnDestroy {
   run() {
     if (this.running) return;
 
-    if (this.isPs1Launcher && this.game) {
+    if (this.isPs1Launcher && this.game()) {
       void this.runPs1();
       return;
     }

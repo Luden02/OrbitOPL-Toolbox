@@ -2,9 +2,9 @@
 <!-- ── List row ──────────────────────────────────────────────── -->
 <div class="game-row row-item">
   <figure class="row-art">
-    @if(displayArt()) {
-    <img [src]="'data:image/png;base64,' + displayArt()!.base64" alt="" />
-    } @else {
+      @if(displayArt()) {
+      <img [src]="artSrc()" alt="" />
+      } @else {
     <div class="row-no-art">
       <i-lucide name="image-off" size="18"></i-lucide>
     </div>
@@ -53,7 +53,7 @@
   <div class="poster-art" [class.is-square]="game()?.isPs1Launcher">
     <div class="poster-art-clip">
       @if(displayArt()) {
-      <img [src]="'data:image/png;base64,' + displayArt()!.base64" alt="cover art" />
+      <img [src]="artSrc()" alt="cover art" />
       } @else {
       <div class="poster-no-art">
         <i-lucide name="image-off" size="40"></i-lucide>
@@ -64,7 +64,7 @@
 
     <!-- top overlays -->
     <span class="poster-system" [class.is-ps1]="game()?.system === 'PS1'" [class.is-ps1-app]="game()?.isPs1Launcher">{{
-      game()?.isPs1Launcher ? "PS1 App" : game()?.system === "PS1" ? "PS1" : game()?.system === "APPS" ? "APP" : "PS2"
+      displaySystemLabel()
       }}</span>
 
     <div class="dropdown dropdown-end poster-menu">

@@ -6,7 +6,7 @@
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.55);
+  background: oklch(0% 0 0 / 0.55);
   backdrop-filter: blur(2px);
 }
 
@@ -21,7 +21,7 @@
   display: flex;
   flex-direction: column;
   border-radius: 1rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px oklch(0% 0 0 / 0.5);
   overflow: hidden;
 }
 
@@ -41,7 +41,7 @@
 
 .log-entry {
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.08);
+  border-bottom: 1px solid oklch(var(--bc) / 0.08);
 }
 
 .log-entry:last-child {
@@ -49,11 +49,11 @@
 }
 
 .log-entry.is-success {
-  background: rgba(74, 222, 128, 0.04);
+  background: oklch(var(--su) / 0.04);
 }
 
 .log-entry.is-error {
-  background: rgba(248, 113, 113, 0.06);
+  background: oklch(var(--er) / 0.06);
 }
 
 .log-primary {
@@ -70,11 +70,11 @@
 }
 
 .log-entry.is-success .entry-icon {
-  color: #4ade80;
+  color: var(--su);
 }
 
 .log-entry.is-error .entry-icon {
-  color: #f87171;
+  color: var(--er);
 }
 
 .entry-label {
@@ -85,11 +85,11 @@
 }
 
 .log-entry.is-success .entry-label {
-  color: #4ade80;
+  color: var(--su);
 }
 
 .log-entry.is-error .entry-label {
-  color: #f87171;
+  color: var(--er);
 }
 
 .log-secondary {
