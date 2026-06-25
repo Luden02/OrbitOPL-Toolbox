@@ -13,7 +13,7 @@
     "build:watch": "tsc -w",
     "build:info": "node scripts/generate-build-info.js",
     "app:serve": "npm run build:info && concurrently \"npm run angular:serve\" \"npm run build:watch\" \"wait-on http://localhost:4200 && npm run electron:serve\"",
-    "angular:serve": "cd angular && ng serve",
+    "angular:serve": "cd angular && npx ng serve",
     "electron:serve": "electron ./dist/src/main.js --serve",
     "start": "npm run build:info && npm run build && electron ./dist/src/main.js",
     "package:win": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && electron-builder --win",

@@ -132,7 +132,7 @@ export class GamecardComponent {
         title: 'Delete PS1 Game',
         message: `Delete PS1 game "${g.title}"?`,
         detail:
-          'This removes the VCD file, launcher app, POPS subfolder (VMCs, configs), and artwork.',
+          'This removes the VCD file, launcher app and POPS subfolder elements (VMCs, CHEATS.TXT, etc.)',
         confirmLabel: 'Delete',
       });
       if (confirmed) this.showDeleteDialog = true;
