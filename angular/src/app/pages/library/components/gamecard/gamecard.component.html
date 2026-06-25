@@ -18,7 +18,7 @@
   <span class="chip chip-region font-mono">{{ game()?.region }}</span>
   }
   <span class="row-meta font-mono">{{ game()?.size }}</span>
-  <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
+  <span class="chip font-mono">{{ game()?.system === 'APPS' && !game()?.isPs1Launcher ? 'ELF' : (game()?.format || game()?.extension) }}</span>
   <div class="dropdown dropdown-end row-actions">
     <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
       <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
@@ -108,7 +108,7 @@
         @if(!isApp()) {
         <span class="chip chip-region font-mono">{{ game()?.region }}</span>
         }
-        <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
+        <span class="chip font-mono">{{ game()?.system === 'APPS' && !game()?.isPs1Launcher ? 'ELF' : (game()?.format || game()?.extension) }}</span>
         <span class="poster-size font-mono">{{ game()?.size }}</span>
       </div>
     </div>
