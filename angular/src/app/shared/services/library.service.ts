@@ -574,6 +574,11 @@ export class LibraryService {
         game.art = artFiles.filter(
           (art: gameArt) => art.name === bootName + '_' + (art.type || ''),
         );
+      } else if (game.system === 'APPS' && game.filename) {
+        // Regular ELF apps: art files follow <boot>.ELF_<TYPE>.png convention
+        game.art = artFiles.filter(
+          (art: gameArt) => art.gameId === game.filename,
+        );
       } else {
         game.art = artFiles.filter(
           (art: gameArt) => art.gameId === game.gameId,

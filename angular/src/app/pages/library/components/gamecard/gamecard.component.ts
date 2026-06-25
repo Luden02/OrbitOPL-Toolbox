@@ -15,6 +15,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
 import { LibraryRenameDialogComponent } from '../rename-dialog/rename-dialog.component';
 import { Ps1DeleteDialogComponent } from '../ps1-delete-dialog/ps1-delete-dialog.component';
+import { AppDeleteDialogComponent } from '../app-delete-dialog/app-delete-dialog.component';
 
 export type GamecardViewMode = 'grid' | 'list';
 
@@ -25,6 +26,7 @@ export type GamecardViewMode = 'grid' | 'list';
     GameCfgDialogComponent,
     LibraryRenameDialogComponent,
     Ps1DeleteDialogComponent,
+    AppDeleteDialogComponent,
   ],
   templateUrl: './gamecard.component.html',
   styleUrl: './gamecard.component.scss',
@@ -93,6 +95,7 @@ export class GamecardComponent {
   public showCfg = false;
   public showRename = false;
   public showDeleteDialog = false;
+  public showAppDeleteDialog = false;
 
   private readonly _cdr = inject(ChangeDetectorRef);
 
@@ -176,10 +179,13 @@ export class GamecardComponent {
       const confirmed = await this._confirm.confirm({
         title: 'Delete App',
         message: `Delete the app "${g.title}"?`,
-        detail: 'This removes its APPS folder.',
+        detail: 'This removes its APPS folder, files and associated artwork.',
         confirmLabel: 'Delete',
       });
-      if (confirmed) this._libraryService.deleteApp(g);
+      if (confirmed) {
+        this.showAppDeleteDialog = true;
+        this._cdr.markForCheck();
+      }
       return;
     }
     const confirmed = await this._confirm.confirm({

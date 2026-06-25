@@ -148,6 +148,15 @@ declare interface Window {
       oplRoot: string,
       folder: string,
     ) => Promise<{ success: boolean; message?: string }>;
+    deleteAppWithProgress: (
+      oplRoot: string,
+      folder: string,
+      bootName: string,
+    ) => Promise<{ success: boolean; entries: Array<{ label: string; path?: string; success: boolean; error?: string }> }>;
+    onDeleteAppProgress: (
+      callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void,
+    ) => void;
+    removeAllDeleteAppProgressListeners: () => void;
     listVmc: (oplRoot: string) => Promise<{
       success: boolean;
       cards: { name: string; sizeBytes: number; sizeMb: number }[];

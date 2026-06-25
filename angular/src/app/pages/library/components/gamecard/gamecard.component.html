@@ -14,7 +14,9 @@
     {{ game()?.title || game()?.gameId }}
   </div>
   <span class="row-meta font-mono">{{ game()?.gameId }}</span>
+  @if(!isApp()) {
   <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+  }
   <span class="row-meta font-mono">{{ game()?.size }}</span>
   <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
   <div class="dropdown dropdown-end row-actions">
@@ -50,7 +52,7 @@
 } @else {
 <!-- ── Grid poster ───────────────────────────────────────────── -->
 <div class="tile poster">
-  <div class="poster-art" [class.is-square]="game()?.isPs1Launcher">
+  <div class="poster-art" [class.is-square]="game()?.system === 'APPS'">
     <div class="poster-art-clip">
       @if(displayArt()) {
       <img [src]="artSrc()" alt="cover art" />
@@ -63,7 +65,7 @@
     </div>
 
     <!-- top overlays -->
-    <span class="poster-system" [class.is-ps1]="game()?.system === 'PS1'" [class.is-ps1-app]="game()?.isPs1Launcher">{{
+    <span class="poster-system" [class.is-ps1]="game()?.system === 'PS1'" [class.is-ps1-app]="game()?.system === 'APPS'">{{
       displaySystemLabel()
       }}</span>
 
@@ -103,7 +105,9 @@
         {{ game()?.title || game()?.gameId }}
       </div>
       <div class="poster-meta">
+        @if(!isApp()) {
         <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+        }
         <span class="chip font-mono">{{ game()?.format || game()?.extension }}</span>
         <span class="poster-size font-mono">{{ game()?.size }}</span>
       </div>
@@ -125,4 +129,9 @@
 @if(showDeleteDialog && game()) {
 <app-ps1-delete-dialog [game]="game()!"
   (closed)="showDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-ps1-delete-dialog>
+}
+
+@if(showAppDeleteDialog && game()) {
+<app-app-delete-dialog [game]="game()!"
+  (closed)="showAppDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-app-delete-dialog>
 }

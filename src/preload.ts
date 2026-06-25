@@ -149,6 +149,16 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("import-app", oplRoot, elfPath, title),
   deleteApp: (oplRoot: string, folder: string) =>
     ipcRenderer.invoke("delete-app", oplRoot, folder),
+  deleteAppWithProgress: (oplRoot: string, folder: string, bootName: string) =>
+    ipcRenderer.invoke("delete-app-with-progress", oplRoot, folder, bootName),
+  onDeleteAppProgress: (
+    callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void
+  ) => {
+    ipcRenderer.on("delete-app-progress", (_event, entry) => callback(entry));
+  },
+  removeAllDeleteAppProgressListeners: () => {
+    ipcRenderer.removeAllListeners("delete-app-progress");
+  },
   listVmc: (oplRoot: string) => ipcRenderer.invoke("list-vmc", oplRoot),
   checkPopsVmc: (oplRoot: string, gameTitle: string) =>
     ipcRenderer.invoke("check-pops-vmc", oplRoot, gameTitle),

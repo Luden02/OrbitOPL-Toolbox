@@ -43,7 +43,7 @@ import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { checkPopsVmc, createVmc, deleteVmc, listVmc } from "./vmc.service";
-import { deleteApp, getApps, getPs1Launchers, importApp, updatePs1TitleCfg } from "./apps.service";
+import { deleteApp, deleteAppWithProgress, getApps, getPs1Launchers, importApp, updatePs1TitleCfg } from "./apps.service";
 import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
@@ -459,6 +459,15 @@ ipcMain.handle(
 ipcMain.handle("delete-app", async (_event, oplRoot: string, folder: string) => {
   return deleteApp(oplRoot, folder);
 });
+
+ipcMain.handle(
+  "delete-app-with-progress",
+  async (event, oplRoot: string, folder: string, bootName: string) => {
+    return deleteAppWithProgress(oplRoot, folder, bootName, (entry) => {
+      event.sender.send("delete-app-progress", entry);
+    });
+  }
+);
 
 ipcMain.handle("list-vmc", async (_event, oplRoot: string) => {
   return listVmc(oplRoot);

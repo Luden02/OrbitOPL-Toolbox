@@ -253,3 +253,126 @@ export async function deleteApp(
     return { success: false, message: err?.message || String(err) };
   }
 }
+
+export interface DeleteAppEntry {
+  label: string;
+  path?: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Delete an app folder with per-file progress reporting and optional ART cleanup.
+ * Reports each deleted file via `onProgress` and returns the full entry list.
+ */
+export async function deleteAppWithProgress(
+  oplRoot: string,
+  folder: string,
+  bootName: string,
+  onProgress?: (entry: DeleteAppEntry) => void
+): Promise<{ success: boolean; entries: DeleteAppEntry[] }> {
+  const entries: DeleteAppEntry[] = [];
+  const addEntry = (label: string, success: boolean, path?: string, error?: string) => {
+    const entry: DeleteAppEntry = { label, path, success, error };
+    entries.push(entry);
+    if (onProgress) onProgress(entry);
+  };
+
+  const rel = (p: string) => path.relative(oplRoot, p);
+
+  try {
+    // Guard against path traversal
+    if (!folder || folder.includes("/") || folder.includes("\\") || folder.includes("..")) {
+      addEntry("App folder", false, folder, "Invalid app folder.");
+      log.warn(`Rejected app delete for suspicious folder name: "${folder}"`);
+      return { success: false, entries };
+    }
+    const target = path.resolve(appsDir(oplRoot), folder);
+    if (!target.startsWith(appsDir(oplRoot) + path.sep)) {
+      addEntry("App folder", false, folder, "Path traversal blocked");
+      log.warn(`Path traversal blocked for app folder: "${folder}"`);
+      return { success: false, entries };
+    }
+
+    // Recursively collect all files and folders
+    const allFiles: string[] = [];
+    const allDirs: string[] = [];
+    const collect = async (dir: string) => {
+      const items = await fs.readdir(dir, { withFileTypes: true });
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.isDirectory()) {
+          allDirs.push(fullPath);
+          await collect(fullPath);
+        } else {
+          allFiles.push(fullPath);
+        }
+      }
+    };
+    await collect(target);
+
+    // Delete files (deepest first)
+    for (const filePath of allFiles) {
+      const label = path.basename(filePath).toLowerCase() === "title.cfg"
+        ? "CONFIG FILE"
+        : "App file";
+      try {
+        await fs.unlink(filePath);
+        addEntry(label, true, rel(filePath));
+      } catch (err: any) {
+        addEntry(label, false, rel(filePath), err?.message || String(err));
+      }
+    }
+
+    // Delete subdirectories (reverse order = deepest first)
+    allDirs.reverse();
+    for (const dirPath of allDirs) {
+      try {
+        await fs.rmdir(dirPath);
+        addEntry("App folder", true, rel(dirPath));
+      } catch (err: any) {
+        addEntry("App folder", false, rel(dirPath), err?.message || String(err));
+      }
+    }
+
+    // Delete the top-level app folder
+    try {
+      await fs.rmdir(target);
+      addEntry("App folder", true, rel(target));
+    } catch (err: any) {
+      addEntry("App folder", false, rel(target), err?.message || String(err));
+    }
+
+    // Delete ART files matching the boot ELF name
+    const artDir = path.join(oplRoot, "ART");
+    try {
+      const artFiles = await fs.readdir(artDir);
+      const matchingArt = artFiles.filter((f) =>
+        f.startsWith(bootName + "_")
+      );
+      if (matchingArt.length === 0) {
+        addEntry("Artwork", true, "None found");
+      } else {
+        for (const artFile of matchingArt) {
+          const artPath = path.join(artDir, artFile);
+          try {
+            await fs.unlink(artPath);
+            addEntry("Artwork", true, rel(artPath));
+          } catch (err: any) {
+            addEntry("Artwork", false, rel(artPath), err?.message || String(err));
+          }
+        }
+      }
+    } catch {
+      addEntry("Artwork", true, "No artwork directory");
+    }
+
+    log.info(`Deleted app APPS/${folder} (${allFiles.length} file(s))`);
+    const allSuccess = entries.every((e) => e.success);
+    return { success: allSuccess, entries };
+  } catch (err: any) {
+    log.error(`Failed to delete app APPS/${folder}:`, err?.message || err);
+    addEntry("App folder", false, folder, err?.message || String(err));
+    return { success: false, entries };
+  }
+}

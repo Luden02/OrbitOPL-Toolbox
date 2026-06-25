@@ -3,7 +3,7 @@
   <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
     <i-lucide name="trash-2" size="18" class="text-error"></i-lucide>
     <h2 class="font-display text-sm font-semibold tracking-wide">
-      @if (deleting) { Deleting PS1 App Game… }
+      @if (deleting) { Deleting App… }
       @else { Delete complete }
     </h2>
     <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()" [disabled]="deleting">
@@ -13,8 +13,8 @@
 
   <div class="delete-body flex flex-col gap-4 px-5 py-4">
     <div class="rounded-md border border-base-content/10 bg-base-100/30 p-3 text-sm">
-      <span class="font-semibold">{{ game().title || game().gameId }}</span>
-      <span class="ml-2 text-xs text-base-content/50">{{ game().gameId }}</span>
+      <span class="font-semibold">{{ game().title || game().appFolder }}</span>
+      <span class="ml-2 text-xs text-base-content/50">APP</span>
     </div>
 
     <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
@@ -63,7 +63,7 @@
       </div>
       @if (!overallSuccess) {
       <p class="mt-1 text-xs text-base-content/60">
-        The game may still be partially removed. Check the Logs page for details.
+        Some files could not be removed. Check the Logs page for details.
       </p>
       }
     </div>
