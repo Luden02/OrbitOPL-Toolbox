@@ -28,6 +28,7 @@ interface DeleteEntry {
 })
 export class AppDeleteDialogComponent {
   readonly game = input.required<Game>();
+  readonly deleteArtwork = input(false);
   readonly closed = output<void>();
   readonly logAreaRef = viewChild<ElementRef<HTMLElement>>('logArea');
 
@@ -69,7 +70,7 @@ export class AppDeleteDialogComponent {
       const result = await window.libraryAPI.deleteAppWithProgress(
         currentDir,
         g.appFolder,
-        g.filename,
+        this.deleteArtwork() ? g.filename : '',
       );
       if (result) {
         this.overallSuccess = !!result.success;

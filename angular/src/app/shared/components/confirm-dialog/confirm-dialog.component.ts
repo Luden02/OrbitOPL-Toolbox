@@ -1,15 +1,18 @@
-import { Component, ElementRef, afterNextRender, input, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, input, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import type { ConfirmDialogOptions } from '../../services/confirm-dialog.service';
 
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, FormsModule],
   templateUrl: './confirm-dialog.component.html',
   styleUrl: './confirm-dialog.component.scss',
 })
 export class ConfirmDialogComponent {
   readonly options = input.required<ConfirmDialogOptions>();
+
+  readonly checkboxChecked = signal(false);
 
   private readonly cancelBtn = viewChild.required<ElementRef<HTMLButtonElement>>('cancelBtn');
 

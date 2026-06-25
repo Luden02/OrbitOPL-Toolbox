@@ -28,6 +28,7 @@ interface DeleteEntry {
 })
 export class Ps1DeleteDialogComponent {
   readonly game = input.required<Game>();
+  readonly deleteArtwork = input(false);
   readonly closed = output<void>();
   readonly logAreaRef = viewChild<ElementRef<HTMLElement>>('logArea');
 
@@ -72,6 +73,7 @@ export class Ps1DeleteDialogComponent {
         artDir,
         g.gameId,
         g.appFolder,
+        this.deleteArtwork() ? g.ps1LauncherBoot : undefined,
       );
       if (result) {
         this.overallSuccess = !!result.success;

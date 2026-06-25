@@ -20,6 +20,13 @@
     @if (options().detail) {
     <p class="text-xs text-base-content/55 whitespace-pre-wrap">{{ options().detail }}</p>
     }
+    @if (options().checkboxLabel) {
+    <label class="flex items-center gap-3 cursor-pointer select-none mt-2 pt-2 border-t border-base-content/10">
+      <input type="checkbox" class="toggle toggle-primary" [ngModel]="checkboxChecked()"
+        (ngModelChange)="checkboxChecked.set($event)" />
+      <span class="text-xs text-base-content/70">{{ options().checkboxLabel }}</span>
+    </label>
+    }
   </div>
 
   <!-- Footer -->

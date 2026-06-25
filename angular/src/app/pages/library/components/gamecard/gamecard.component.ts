@@ -96,6 +96,7 @@ export class GamecardComponent {
   public showRename = false;
   public showDeleteDialog = false;
   public showAppDeleteDialog = false;
+  public deleteArtwork = false;
 
   private readonly _cdr = inject(ChangeDetectorRef);
 
@@ -162,27 +163,31 @@ export class GamecardComponent {
     const g = this.game();
     if (!g) return;
     if (g.isPs1Launcher) {
-      const confirmed = await this._confirm.confirm({
+      const result = await this._confirm.confirmWithCheckbox({
         title: 'Delete PS1 Game',
         message: `Delete PS1 game "${g.title}"?`,
         detail:
           'This removes the VCD file, launcher app and POPS subfolder elements (VMCs, CHEATS.TXT, etc.)',
         confirmLabel: 'Delete',
+        checkboxLabel: 'Also delete game artwork',
       });
-      if (confirmed) {
+      if (result.confirmed) {
+        this.deleteArtwork = result.checked;
         this.showDeleteDialog = true;
         this._cdr.markForCheck();
       }
       return;
     }
     if (this.isApp()) {
-      const confirmed = await this._confirm.confirm({
+      const result = await this._confirm.confirmWithCheckbox({
         title: 'Delete App',
         message: `Delete the app "${g.title}"?`,
-        detail: 'This removes its APPS folder, files and associated artwork.',
+        detail: 'This removes its APPS folder and all files inside.',
         confirmLabel: 'Delete',
+        checkboxLabel: 'Also delete game artwork',
       });
-      if (confirmed) {
+      if (result.confirmed) {
+        this.deleteArtwork = result.checked;
         this.showAppDeleteDialog = true;
         this._cdr.markForCheck();
       }

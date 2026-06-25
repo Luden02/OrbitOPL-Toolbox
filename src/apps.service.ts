@@ -343,28 +343,30 @@ export async function deleteAppWithProgress(
       addEntry("App folder", false, rel(target), err?.message || String(err));
     }
 
-    // Delete ART files matching the boot ELF name
-    const artDir = path.join(oplRoot, "ART");
-    try {
-      const artFiles = await fs.readdir(artDir);
-      const matchingArt = artFiles.filter((f) =>
-        f.startsWith(bootName + "_")
-      );
-      if (matchingArt.length === 0) {
-        addEntry("Artwork", true, "None found");
-      } else {
-        for (const artFile of matchingArt) {
-          const artPath = path.join(artDir, artFile);
-          try {
-            await fs.unlink(artPath);
-            addEntry("Artwork", true, rel(artPath));
-          } catch (err: any) {
-            addEntry("Artwork", false, rel(artPath), err?.message || String(err));
+    // Delete ART files matching the boot ELF name (only when user opted in)
+    if (bootName) {
+      const artDir = path.join(oplRoot, "ART");
+      try {
+        const artFiles = await fs.readdir(artDir);
+        const matchingArt = artFiles.filter((f) =>
+          f.startsWith(bootName + "_")
+        );
+        if (matchingArt.length === 0) {
+          addEntry("Artwork", true, "None found");
+        } else {
+          for (const artFile of matchingArt) {
+            const artPath = path.join(artDir, artFile);
+            try {
+              await fs.unlink(artPath);
+              addEntry("Artwork", true, rel(artPath));
+            } catch (err: any) {
+              addEntry("Artwork", false, rel(artPath), err?.message || String(err));
+            }
           }
         }
+      } catch {
+        addEntry("Artwork", true, "No artwork directory");
       }
-    } catch {
-      addEntry("Artwork", true, "No artwork directory");
     }
 
     log.info(`Deleted app APPS/${folder} (${allFiles.length} file(s))`);

@@ -197,6 +197,7 @@ declare interface Window {
       artDir: string,
       gameId: string,
       launcherFolder?: string,
+      bootName?: string,
     ) => Promise<any>;
     moveFile: (sourcePath: string, destPath: string) => Promise<any>;
     onMoveFileProgress: (

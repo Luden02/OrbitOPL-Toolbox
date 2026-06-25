@@ -16,6 +16,8 @@ export interface ConfirmDialogOptions {
   cancelLabel?: string;
   /** Allow closing by clicking the backdrop. Defaults to true. */
   backdropClose?: boolean;
+  /** If set, renders a checkbox with this label text. */
+  checkboxLabel?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,6 +53,38 @@ export class ConfirmDialogService {
           componentRef.destroy();
         });
         resolve(result);
+      });
+    });
+  }
+
+  confirmWithCheckbox(options: ConfirmDialogOptions): Promise<{ confirmed: boolean; checked: boolean }> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return Promise.resolve({ confirmed: false, checked: false });
+    }
+
+    const componentRef = createComponent(ConfirmDialogComponent, {
+      environmentInjector: this.appRef.injector,
+    });
+
+    componentRef.setInput('options', options);
+    document.body.appendChild(componentRef.location.nativeElement);
+
+    this.appRef.attachView(componentRef.hostView);
+    componentRef.changeDetectorRef.detectChanges();
+
+    return new Promise<{ confirmed: boolean; checked: boolean }>((resolve) => {
+      let resolved = false;
+
+      componentRef.instance.setCloseCallback((result: boolean) => {
+        if (resolved) return;
+        resolved = true;
+
+        const checked = componentRef.instance.checkboxChecked();
+        queueMicrotask(() => {
+          this.appRef.detachView(componentRef.hostView);
+          componentRef.destroy();
+        });
+        resolve({ confirmed: result, checked });
       });
     });
   }

@@ -1482,7 +1482,8 @@ export async function deleteGameAndRelatedFiles(
   artDir: string,
   gameId: string,
   launcherFolder?: string,
-  onProgress?: (entry: DeleteEntry) => void
+  onProgress?: (entry: DeleteEntry) => void,
+  bootName?: string,
 ): Promise<DeleteGameResult> {
   log.info(`Deleting ${gameId} and related files: ${gamePath}`);
   const entries: DeleteEntry[] = [];
@@ -1510,30 +1511,7 @@ export async function deleteGameAndRelatedFiles(
     addEntry("VCD", false, rel(gamePath), err?.message || String(err));
   }
 
-  // 2. For non-PS1 games only, delete related artwork files
-  if (!launcherFolder) {
-    try {
-      const artFiles = await fs.readdir(artDir);
-      const relatedArt = artFiles.filter((f) => f.startsWith(gameId + "_"));
-      let deleted = 0;
-      for (const artFile of relatedArt) {
-        try {
-          await fs.unlink(path.join(artDir, artFile));
-          deleted++;
-        } catch {
-          // Ignore individual art file deletion failures
-        }
-      }
-      if (relatedArt.length > 0) {
-        log.verbose(`Removed ${relatedArt.length} artwork file(s) for ${gameId}`);
-      }
-      addEntry("Artwork", true, deleted > 0 ? `${deleted} file(s)` : "None found");
-    } catch {
-      addEntry("Artwork", true, "No artwork directory");
-    }
-  }
-
-  // 3. Delete POPStarter launcher folder (APPS/POPS_<name>/)
+  // 2. Delete POPStarter launcher folder (APPS/POPS_<name>/)
   if (launcherFolder) {
     const appsBase = path.join(oplRoot, "APPS");
     const resolved = path.resolve(appsBase, launcherFolder);
@@ -1585,6 +1563,39 @@ export async function deleteGameAndRelatedFiles(
     } catch {
       // Folder doesn't exist — not an error
       addEntry("POPS subfolder", true, "Not present");
+    }
+  }
+
+  // 4. Delete related artwork files
+  //    Disc games match by gameId prefix (XXXX_###.##_TYPE.png),
+  //    PS1 launcher apps match by bootName prefix (boot.ELF_TYPE.png).
+  //    For PS1 launchers, skip artwork unless bootName is explicitly provided.
+  if (launcherFolder && !bootName) {
+    // Artwork intentionally omitted — user unchecked the option.
+  } else {
+    const artPrefix = bootName || gameId;
+    try {
+      const artFiles = await fs.readdir(artDir);
+      const relatedArt = artFiles.filter((f) => {
+        const base = path.parse(f).name;
+        return f.startsWith(artPrefix + "_") && !f.startsWith(".");
+      });
+      if (relatedArt.length > 0) {
+        log.verbose(`Removing ${relatedArt.length} artwork file(s) for ${artPrefix}`);
+        for (const artFile of relatedArt) {
+          const artPath = path.join(artDir, artFile);
+          try {
+            await fs.unlink(artPath);
+            addEntry("Artwork", true, rel(artPath));
+          } catch (err: any) {
+            addEntry("Artwork", false, rel(artPath), err?.message || String(err));
+          }
+        }
+      } else {
+        addEntry("Artwork", true, "None found");
+      }
+    } catch {
+      addEntry("Artwork", true, "No artwork directory");
     }
   }
 

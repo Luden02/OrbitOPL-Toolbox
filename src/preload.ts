@@ -177,14 +177,16 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     gamePath: string,
     artDir: string,
     gameId: string,
-    launcherFolder?: string
+    launcherFolder?: string,
+    bootName?: string
   ) =>
     ipcRenderer.invoke(
       "delete-game-and-related-files",
       gamePath,
       artDir,
       gameId,
-      launcherFolder
+      launcherFolder,
+      bootName
     ),
   moveFile: (sourcePath: string, destPath: string) =>
     ipcRenderer.invoke("move-file", sourcePath, destPath),

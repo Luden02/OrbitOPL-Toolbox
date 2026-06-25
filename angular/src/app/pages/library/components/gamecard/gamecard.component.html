@@ -127,11 +127,11 @@
 }
 
 @if(showDeleteDialog && game()) {
-<app-ps1-delete-dialog [game]="game()!"
+<app-ps1-delete-dialog [game]="game()!" [deleteArtwork]="deleteArtwork"
   (closed)="showDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-ps1-delete-dialog>
 }
 
 @if(showAppDeleteDialog && game()) {
-<app-app-delete-dialog [game]="game()!"
+<app-app-delete-dialog [game]="game()!" [deleteArtwork]="deleteArtwork"
   (closed)="showAppDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-app-delete-dialog>
 }
