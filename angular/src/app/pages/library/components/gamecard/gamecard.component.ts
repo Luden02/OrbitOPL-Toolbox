@@ -107,7 +107,10 @@ export class GamecardComponent {
   }
 
   openRename() {
-    if (this.game()) this.showRename = true;
+    if (this.game()) {
+      this.showRename = true;
+      this._cdr.markForCheck();
+    }
   }
 
   fetchArtwork() {

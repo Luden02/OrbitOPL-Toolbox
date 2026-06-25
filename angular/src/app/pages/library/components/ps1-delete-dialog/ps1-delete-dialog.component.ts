@@ -2,9 +2,11 @@ import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
+  ElementRef,
   inject,
   input,
   output,
+  viewChild,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '@shared/types/game.type';
@@ -27,6 +29,7 @@ interface DeleteEntry {
 export class Ps1DeleteDialogComponent {
   readonly game = input.required<Game>();
   readonly closed = output<void>();
+  readonly logAreaRef = viewChild<ElementRef<HTMLElement>>('logArea');
 
   entries: DeleteEntry[] = [];
   deleting = true;
@@ -35,15 +38,11 @@ export class Ps1DeleteDialogComponent {
   private destroyed = false;
   private readonly _cdr = inject(ChangeDetectorRef);
   private readonly _destroyRef = inject(DestroyRef);
-  private progressCb: ((entry: DeleteEntry) => void) | null = null;
 
   constructor(private readonly _libraryService: LibraryService) {
     this._destroyRef.onDestroy(() => {
       this.destroyed = true;
-      if (this.progressCb) {
-        window.libraryAPI.removeAllDeletePs1ProgressListeners();
-        this.progressCb = null;
-      }
+      window.libraryAPI.removeAllDeletePs1ProgressListeners();
     });
   }
 
@@ -56,14 +55,18 @@ export class Ps1DeleteDialogComponent {
       this.entries = [...this.entries, { ...entry, id: ++this.entryIdCounter }];
       if (!entry.success) this.overallSuccess = false;
       this._cdr.detectChanges();
+      setTimeout(() => {
+        const el = this.logAreaRef()?.nativeElement;
+        if (el) {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'instant' });
+        }
+      });
     };
-    this.progressCb = (entry) => handleProgress(entry);
-    window.libraryAPI.onDeletePs1Progress(this.progressCb);
+    window.libraryAPI.onDeletePs1Progress(handleProgress);
 
     try {
-      const currentDir = this._libraryService.currentDirectoryValue ?? '';
-      const sep = currentDir.includes('\\') ? '\\' : '/';
-      const artDir = `${currentDir.replace(/[\\/]$/, '')}${sep}ART`;
+      const currentDir = (this._libraryService.currentDirectoryValue ?? '').replace(/[\\/]/g, '/');
+      const artDir = `${currentDir.replace(/\/$/, '')}/ART`;
       const result = await window.libraryAPI.deleteGameAndRelatedFiles(
         g.path,
         artDir,
@@ -72,6 +75,14 @@ export class Ps1DeleteDialogComponent {
       );
       if (result) {
         this.overallSuccess = !!result.success;
+        for (const entry of (result.entries || [])) {
+          const exists = this.entries.some(
+            e => e.label === entry.label && e.path === entry.path
+          );
+          if (!exists) {
+            this.entries = [...this.entries, { ...entry, id: ++this.entryIdCounter }];
+          }
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -86,7 +97,6 @@ export class Ps1DeleteDialogComponent {
 
   close() {
     if (this.deleting) return;
-    this._libraryService.refreshGamesFiles();
     this.closed.emit();
   }
 }

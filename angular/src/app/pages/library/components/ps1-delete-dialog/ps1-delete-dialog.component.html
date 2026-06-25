@@ -6,6 +6,9 @@
       @if (deleting) { Deleting PS1 App Game… }
       @else { Delete complete }
     </h2>
+    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()" [disabled]="deleting">
+      <i-lucide name="x" size="16"></i-lucide>
+    </button>
   </div>
 
   <div class="delete-body flex flex-col gap-4 px-5 py-4">
@@ -14,7 +17,7 @@
       <span class="ml-2 text-xs text-base-content/50">{{ game().gameId }}</span>
     </div>
 
-    <div class="log-area rounded-md border border-base-content/10 bg-base-100/30">
+    <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
       @if (deleting && entries.length === 0) {
       <div class="flex items-center gap-2 p-4 text-sm text-base-content/60">
         <span class="loading loading-spinner loading-sm"></span>

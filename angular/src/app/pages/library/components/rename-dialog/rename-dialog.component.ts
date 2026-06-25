@@ -29,10 +29,12 @@ interface Ps1RenamePreview {
 }
 
 interface Ps1RenameProgress {
+  percent: number;
   stage: string;
 }
 
 interface LogEntry {
+  id: number;
   time: string;
   text: string;
   type: 'info' | 'success' | 'error' | 'step' | 'change';
@@ -68,10 +70,10 @@ export class LibraryRenameDialogComponent implements OnInit {
 
   private plan: RenamePlanItem[] = [];
   private candidates: Game[] = [];
+  private logEntryIdCounter = 0;
   private destroyed = false;
   private readonly _cdr = inject(ChangeDetectorRef);
   private readonly _destroyRef = inject(DestroyRef);
-  private progressCb: ((progress: Ps1RenameProgress) => void) | null = null;
 
   constructor(
     private readonly _libraryService: LibraryService,
@@ -111,7 +113,7 @@ export class LibraryRenameDialogComponent implements OnInit {
   }
 
   get ps1CloseAllowed(): boolean {
-    return !this.isPs1Launcher || this.ps1DialogState === 'input';
+    return !this.isPs1Launcher || this.ps1DialogState !== 'running';
   }
 
   get ps1VcdFilename(): string {
@@ -143,10 +145,7 @@ export class LibraryRenameDialogComponent implements OnInit {
 
     this._destroyRef.onDestroy(() => {
       this.destroyed = true;
-      if (this.progressCb) {
-        window.libraryAPI.removeAllRenamePs1ProgressListeners();
-        this.progressCb = null;
-      }
+      window.libraryAPI.removeAllRenamePs1ProgressListeners();
     });
   }
 
@@ -224,10 +223,11 @@ export class LibraryRenameDialogComponent implements OnInit {
   ) {
     const now = new Date();
     const time = now.toLocaleTimeString('en-US', { hour12: false });
+    const id = ++this.logEntryIdCounter;
     if (oldText !== undefined && newText !== undefined) {
-      this.ps1Log = [...this.ps1Log, { time, text, type, oldText, newText }];
+      this.ps1Log = [...this.ps1Log, { id, time, text, type, oldText, newText }];
     } else {
-      this.ps1Log = [...this.ps1Log, { time, text, type }];
+      this.ps1Log = [...this.ps1Log, { id, time, text, type }];
     }
     this._cdr.detectChanges();
     this.logAreaRef()?.nativeElement.scrollTo({ top: this.logAreaRef()?.nativeElement.scrollHeight ?? 0, behavior: 'instant' });
@@ -277,8 +277,7 @@ export class LibraryRenameDialogComponent implements OnInit {
         this.addLog(progress.stage, 'info');
       }
     };
-    this.progressCb = (progress) => handleProgress(progress);
-    window.libraryAPI.onRenamePs1Progress(this.progressCb);
+    window.libraryAPI.onRenamePs1Progress(handleProgress);
 
     try {
       this.addLog('Step 1 — Renaming folders', 'step');

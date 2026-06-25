@@ -124,5 +124,5 @@
 
 @if(showDeleteDialog && game()) {
 <app-ps1-delete-dialog [game]="game()!"
-  (closed)="showDeleteDialog = false"></app-ps1-delete-dialog>
+  (closed)="showDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-ps1-delete-dialog>
 }
