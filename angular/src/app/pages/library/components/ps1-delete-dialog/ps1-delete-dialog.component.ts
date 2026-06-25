@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { Game } from '../../../../shared/types/game.type';
-import { LibraryService } from '../../../../shared/services/library.service';
+import { Game } from '@shared/types/game.type';
+import { LibraryService } from '@shared/services/library.service';
 
 interface DeleteEntry {
   label: string;

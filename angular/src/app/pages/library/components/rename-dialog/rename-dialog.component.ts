@@ -9,9 +9,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { LibraryService } from '../../../../shared/services/library.service';
-import { JobsService } from '../../../../shared/services/jobs.service';
-import { Game } from '../../../../shared/types/game.type';
+import { LibraryService } from '@shared/services/library.service';
+import { JobsService } from '@shared/services/jobs.service';
+import { Game } from '@shared/types/game.type';
 
 type Convention = 'old' | 'new';
 

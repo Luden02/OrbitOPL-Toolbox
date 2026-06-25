@@ -1,9 +1,9 @@
 import { Component, computed, input } from '@angular/core';
-import { Game, gameArt } from '../../../../shared/types/game.type';
+import { Game, gameArt } from '@shared/types/game.type';
 
-import { LibraryService } from '../../../../shared/services/library.service';
-import { JobsService } from '../../../../shared/services/jobs.service';
-import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { LibraryService } from '@shared/services/library.service';
+import { JobsService } from '@shared/services/jobs.service';
+import { ConfirmDialogService } from '@shared/services/confirm-dialog.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { GameCfgDialogComponent } from '../game-cfg-dialog/game-cfg-dialog.component';
 import { LibraryRenameDialogComponent } from '../rename-dialog/rename-dialog.component';

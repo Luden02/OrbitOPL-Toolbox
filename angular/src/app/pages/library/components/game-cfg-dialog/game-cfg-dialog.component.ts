@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { Game } from '../../../../shared/types/game.type';
+import { Game } from '@shared/types/game.type';
 import {
   CfgService,
   COMPAT_MODES,
@@ -9,8 +9,8 @@ import {
   CFG_KEY_VMC0,
   CFG_KEY_VMC1,
   GameCfg,
-} from '../../../../shared/services/cfg.service';
-import { VmcInfo, VmcService } from '../../../../shared/services/vmc.service';
+} from '@shared/services/cfg.service';
+import { VmcInfo, VmcService } from '@shared/services/vmc.service';
 
 @Component({
   selector: 'app-game-cfg-dialog',
@@ -102,9 +102,8 @@ export class GameCfgDialogComponent {
   }
 
   get otherKeyCount(): number {
-    return Object.keys(this.entries).filter(
-      (k) => !this.knownKeys.includes(k),
-    ).length;
+    return Object.keys(this.entries).filter((k) => !this.knownKeys.includes(k))
+      .length;
   }
 
   get hasChanges(): boolean {
@@ -129,7 +128,11 @@ export class GameCfgDialogComponent {
       delete next[CFG_KEY_VMC1];
       await this._cfg.saveGameCfg(g.gameId, next);
       if (g.ps1LauncherPath) {
-        await window.libraryAPI.updatePs1TitleCfg(g.ps1LauncherPath, trimmed || g.gameId, g.gameId);
+        await window.libraryAPI.updatePs1TitleCfg(
+          g.ps1LauncherPath,
+          trimmed || g.gameId,
+          g.gameId,
+        );
       }
       this.saving = false;
       this.closed.emit();
