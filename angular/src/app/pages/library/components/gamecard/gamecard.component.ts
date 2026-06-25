@@ -1,7 +1,9 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
+  inject,
   input,
 } from '@angular/core';
 import { Game } from '@shared/types/game.type';
@@ -92,6 +94,8 @@ export class GamecardComponent {
   public showRename = false;
   public showDeleteDialog = false;
 
+  private readonly _cdr = inject(ChangeDetectorRef);
+
   constructor(
     public readonly _libraryService: LibraryService,
     private readonly _jobs: JobsService,
@@ -159,7 +163,10 @@ export class GamecardComponent {
           'This removes the VCD file, launcher app and POPS subfolder elements (VMCs, CHEATS.TXT, etc.)',
         confirmLabel: 'Delete',
       });
-      if (confirmed) this.showDeleteDialog = true;
+      if (confirmed) {
+        this.showDeleteDialog = true;
+        this._cdr.markForCheck();
+      }
       return;
     }
     if (this.isApp()) {

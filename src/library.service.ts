@@ -1481,13 +1481,16 @@ export async function deleteGameAndRelatedFiles(
   gamePath: string,
   artDir: string,
   gameId: string,
-  launcherFolder?: string
+  launcherFolder?: string,
+  onProgress?: (entry: DeleteEntry) => void
 ): Promise<DeleteGameResult> {
   log.info(`Deleting ${gameId} and related files: ${gamePath}`);
   const entries: DeleteEntry[] = [];
 
   const addEntry = (label: string, success: boolean, path?: string, error?: string) => {
-    entries.push({ label, path, success, error });
+    const entry: DeleteEntry = { label, path, success, error };
+    entries.push(entry);
+    if (onProgress) onProgress(entry);
   };
 
   const oplRoot = path.dirname(artDir);

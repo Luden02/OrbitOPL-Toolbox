@@ -45,6 +45,15 @@ declare interface Window {
       callback: (progress: { percent: number; stage: string }) => void,
     ) => void;
     removeAllRenamePs1ProgressListeners: () => void;
+    onDeletePs1Progress: (
+      callback: (entry: {
+        label: string;
+        path?: string;
+        success: boolean;
+        error?: string;
+      }) => void,
+    ) => void;
+    removeAllDeletePs1ProgressListeners: () => void;
     downloadArtByGameId: (
       dirPath: string,
       gameId: string,

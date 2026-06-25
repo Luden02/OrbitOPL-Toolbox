@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Game } from '@shared/types/game.type';
 import {
@@ -36,7 +36,7 @@ export class GameCfgDialogComponent {
   cards: VmcInfo[] = [];
   slot0Cards: VmcInfo[] = [];
   slot1Cards: VmcInfo[] = [];
-  loading = true;
+  loading = signal(true);
   saving = false;
 
   private readonly knownKeys = [
@@ -52,38 +52,40 @@ export class GameCfgDialogComponent {
   }
 
   async ngOnInit() {
-    const g = this.game();
-    this.entries = await this._cfg.getGameCfg(g.gameId);
-    this.title = this.entries[CFG_KEY_NAME] ?? '';
-    this.initialTitle = this.title;
+    try {
+      const g = this.game();
+      this.entries = await this._cfg.getGameCfg(g.gameId);
+      this.title = this.entries[CFG_KEY_NAME] ?? '';
+      this.initialTitle = this.title;
 
-    if (g.isPs1Launcher) {
-      const vmcSub = g.ps1VmcSub ?? '';
-      if (vmcSub) {
-        const vmcs = await this._vmc.checkPops(vmcSub);
-        if (vmcs.slot0) {
-          this.slot0Cards = [{ name: vmcs.slot0, sizeBytes: 0, sizeMb: 0 }];
-          this.vmc0 = vmcs.slot0;
+      if (g.isPs1Launcher) {
+        const vmcSub = g.ps1VmcSub ?? '';
+        if (vmcSub) {
+          const vmcs = await this._vmc.checkPops(vmcSub);
+          if (vmcs.slot0) {
+            this.slot0Cards = [{ name: vmcs.slot0, sizeBytes: 0, sizeMb: 0 }];
+            this.vmc0 = vmcs.slot0;
+          }
+          if (vmcs.slot1) {
+            this.slot1Cards = [{ name: vmcs.slot1, sizeBytes: 0, sizeMb: 0 }];
+            this.vmc1 = vmcs.slot1;
+          }
         }
-        if (vmcs.slot1) {
-          this.slot1Cards = [{ name: vmcs.slot1, sizeBytes: 0, sizeMb: 0 }];
-          this.vmc1 = vmcs.slot1;
-        }
+      } else {
+        this.cards = await this._vmc.refresh();
+        this.vmc0 = this.entries[CFG_KEY_VMC0] ?? '';
+        this.vmc1 = this.entries[CFG_KEY_VMC1] ?? '';
       }
-    } else {
-      this.cards = await this._vmc.refresh();
-      this.vmc0 = this.entries[CFG_KEY_VMC0] ?? '';
-      this.vmc1 = this.entries[CFG_KEY_VMC1] ?? '';
-    }
 
-    if (!g.isPs1Launcher) {
-      const compatVal = parseInt(this.entries[CFG_KEY_COMPAT] ?? '0', 10) || 0;
-      this.compat = this.compatModes.map(
-        (m) => (compatVal & (1 << m.bit)) !== 0,
-      );
+      if (!g.isPs1Launcher) {
+        const compatVal = parseInt(this.entries[CFG_KEY_COMPAT] ?? '0', 10) || 0;
+        this.compat = this.compatModes.map(
+          (m) => (compatVal & (1 << m.bit)) !== 0,
+        );
+      }
+    } finally {
+      this.loading.set(false);
     }
-
-    this.loading = false;
   }
 
   get cardNames(): string[] {

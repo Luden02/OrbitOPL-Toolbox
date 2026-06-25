@@ -481,8 +481,10 @@ ipcMain.handle("delete-vmc", async (_event, oplRoot: string, name: string) => {
 
 ipcMain.handle(
   "delete-game-and-related-files",
-  async (_event, gamePath: string, artDir: string, gameId: string, launcherFolder?: string) => {
-    return deleteGameAndRelatedFiles(gamePath, artDir, gameId, launcherFolder);
+  async (event, gamePath: string, artDir: string, gameId: string, launcherFolder?: string) => {
+    return deleteGameAndRelatedFiles(gamePath, artDir, gameId, launcherFolder, (entry) => {
+      event.sender.send("delete-ps1-progress", entry);
+    });
   }
 );
 

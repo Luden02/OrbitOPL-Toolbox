@@ -1,9 +1,11 @@
 import {
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
   inject,
   input,
+  OnInit,
   output,
   viewChild,
 } from '@angular/core';
@@ -44,7 +46,7 @@ interface LogEntry {
   templateUrl: './rename-dialog.component.html',
   styleUrl: './rename-dialog.component.scss',
 })
-export class LibraryRenameDialogComponent {
+export class LibraryRenameDialogComponent implements OnInit {
   readonly game = input<Game>();
   readonly closed = output<void>();
   readonly logAreaRef = viewChild<ElementRef<HTMLElement>>('logArea');
@@ -67,6 +69,7 @@ export class LibraryRenameDialogComponent {
   private plan: RenamePlanItem[] = [];
   private candidates: Game[] = [];
   private destroyed = false;
+  private readonly _cdr = inject(ChangeDetectorRef);
   private readonly _destroyRef = inject(DestroyRef);
   private progressCb: ((progress: Ps1RenameProgress) => void) | null = null;
 
@@ -226,12 +229,8 @@ export class LibraryRenameDialogComponent {
     } else {
       this.ps1Log = [...this.ps1Log, { time, text, type }];
     }
-    requestAnimationFrame(() => {
-      this.logAreaRef()?.nativeElement.scrollTo({
-        top: this.logAreaRef()?.nativeElement.scrollHeight ?? 0,
-        behavior: 'instant',
-      });
-    });
+    this._cdr.detectChanges();
+    this.logAreaRef()?.nativeElement.scrollTo({ top: this.logAreaRef()?.nativeElement.scrollHeight ?? 0, behavior: 'instant' });
   }
 
   private parseChangeMsg(full: string) {
@@ -257,10 +256,9 @@ export class LibraryRenameDialogComponent {
     this.running = true;
     this.ps1DialogState = 'running';
     this.ps1Log = [];
-
     this.addLog(`Renaming "${g.title}" → "${newTitle}"`, 'step');
 
-    this.progressCb = (progress) => {
+    const handleProgress = (progress: Ps1RenameProgress) => {
       if (this.destroyed) return;
       const isChange =
         progress.stage.startsWith('Renaming VCD:') ||
@@ -279,6 +277,7 @@ export class LibraryRenameDialogComponent {
         this.addLog(progress.stage, 'info');
       }
     };
+    this.progressCb = (progress) => handleProgress(progress);
     window.libraryAPI.onRenamePs1Progress(this.progressCb);
 
     try {
@@ -296,14 +295,6 @@ export class LibraryRenameDialogComponent {
         return;
       }
       this.addLog('Folders renamed', 'success');
-
-      if (
-        step1.oldElfFile &&
-        step1.newElfFile &&
-        step1.oldElfFile !== step1.newElfFile
-      ) {
-        this.addLog('ELF: ', 'change', step1.oldElfFile, step1.newElfFile);
-      }
 
       if (!step1.newAppsFolder) {
         this.addLog('Internal error: newAppsFolder missing', 'error');
@@ -337,6 +328,7 @@ export class LibraryRenameDialogComponent {
       this.running = false;
     } finally {
       window.libraryAPI.removeAllRenamePs1ProgressListeners();
+      if (!this.destroyed) this._cdr.detectChanges();
     }
   }
 

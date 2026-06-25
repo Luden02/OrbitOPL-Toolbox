@@ -44,6 +44,14 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   removeAllRenamePs1ProgressListeners: () => {
     ipcRenderer.removeAllListeners("rename-ps1-progress");
   },
+  onDeletePs1Progress: (
+    callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void
+  ) => {
+    ipcRenderer.on("delete-ps1-progress", (_event, entry) => callback(entry));
+  },
+  removeAllDeletePs1ProgressListeners: () => {
+    ipcRenderer.removeAllListeners("delete-ps1-progress");
+  },
   downloadArtByGameId: (
     dirPath: string,
     gameId: string,

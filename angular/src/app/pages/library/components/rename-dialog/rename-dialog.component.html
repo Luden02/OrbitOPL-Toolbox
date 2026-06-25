@@ -11,10 +11,6 @@
       {{ isSingle ? "Rename game to convention" : "Rename all games to convention" }}
       }
     </h2>
-    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()"
-      [disabled]="running || (isPs1Launcher && ps1DialogState !== 'input')">
-      <i-lucide name="x" size="16"></i-lucide>
-    </button>
   </div>
 
   <div class="rename-body flex flex-col gap-4 px-5 py-4">
@@ -53,7 +49,7 @@
 
     @if (ps1DialogState === 'running' || ps1DialogState === 'done') {
     <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
-      @for (entry of ps1Log; track $index) {
+      @for (entry of ps1Log; track entry) {
       <div class="log-line" [class.text-info]="entry.type === 'step'" [class.text-warning]="entry.type === 'change'"
         [class.text-success]="entry.type === 'success'" [class.text-error]="entry.type === 'error'"
         [class.font-semibold]="entry.type === 'step'">
@@ -72,13 +68,6 @@
       }
     </div>
 
-    @if (ps1DialogState === 'running') {
-    <div class="log-line log-cursor">
-      <span class="loading loading-dots loading-xs"></span>
-    </div>
-    }
-
-    @if (ps1DialogState === 'done') {
     <div class="rounded-md border p-3 text-sm" [class.border-success/30]="lastLogType === 'success'"
       [class.bg-success/5]="lastLogType === 'success'" [class.border-error/30]="lastLogType === 'error'"
       [class.bg-error/5]="lastLogType === 'error'">
@@ -90,7 +79,6 @@
         </span>
       </div>
     </div>
-    }
     }
 
     <!-- ════════════════════════════════════════════════════════════════
@@ -180,10 +168,9 @@
       <i-lucide name="text-cursor-input" size="15"></i-lucide>
       Rename game
     </button>
-    } @else if (ps1DialogState === 'running') {
-    <span class="text-xs text-base-content/40">Renaming — do not close...</span>
-    } @else {
-    <button class="btn btn-primary btn-sm" (click)="close()">Close</button>
+    }
+    @else {
+    <button class="btn btn-primary btn-sm" (click)="close()" [disabled]="running">Close</button>
     }
     } @else {
     @if (!done) {
