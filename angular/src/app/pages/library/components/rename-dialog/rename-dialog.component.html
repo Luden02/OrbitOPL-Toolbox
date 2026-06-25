@@ -27,8 +27,14 @@
     @if (ps1DialogState === 'input') {
     <fieldset class="fieldset">
       <legend class="fieldset-legend">New name for the PS1 App Game</legend>
-      <input #ps1TitleInput type="text" class="input w-full" [value]="ps1NewTitle"
+      <input #ps1TitleInput type="text" class="input w-full"
+        [class.input-error]="ps1NewTitle.trim() === ''"
+        placeholder="New game title"
+        [value]="ps1NewTitle"
         (input)="onTitleChange(ps1TitleInput.value)" [disabled]="running" />
+      @if (ps1NewTitle.trim() === '') {
+      <p class="mt-1 text-xs text-error">The game name cannot be empty.</p>
+      }
       <p class="flex items-center gap-1.5 text-xs text-base-content/60">
         Renaming
         <span class="font-mono text-base-content/80">POPS/{{ ps1VcdFilename }}</span>

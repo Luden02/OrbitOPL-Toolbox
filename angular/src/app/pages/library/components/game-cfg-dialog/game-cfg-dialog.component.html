@@ -28,10 +28,14 @@
         #titleInput
         type="text"
         class="input w-full"
-        [placeholder]="game().title || game().gameId"
+        [class.input-error]="game().isPs1Launcher && title.trim() === ''"
+        placeholder="Display title"
         [value]="title"
         (input)="title = titleInput.value"
       />
+      @if (game().isPs1Launcher && title.trim() === '') {
+      <p class="mt-1 text-xs text-error">The display title cannot be empty.</p>
+      }
       <p class="label-info text-xs">
         @if (game().isPs1Launcher) {
         This only modifies the title shown in OPL and OrbitOPL list. It

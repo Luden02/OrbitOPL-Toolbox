@@ -55,7 +55,7 @@ export class GameCfgDialogComponent {
     try {
       const g = this.game();
       this.entries = await this._cfg.getGameCfg(g.gameId);
-      this.title = this.entries[CFG_KEY_NAME] ?? '';
+      this.title = this.entries[CFG_KEY_NAME] ?? g.title ?? '';
       this.initialTitle = this.title;
 
       if (g.isPs1Launcher) {
@@ -110,7 +110,8 @@ export class GameCfgDialogComponent {
 
   get hasChanges(): boolean {
     if (this.game().isPs1Launcher) {
-      return this.title.trim() !== this.initialTitle;
+      const trimmed = this.title.trim();
+      return trimmed !== '' && trimmed !== this.initialTitle;
     }
     return true;
   }
