@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { LogsService } from './logs.service';
 import { SettingsService } from './settings.service';
 import { BehaviorSubject, map, Observable } from 'rxjs';
-import { Game, GameFormat, RawGameFile } from '../types/game.type';
+import { Game, GameFormat, Ps1LauncherInfo, RawGameFile, gameArt } from '../types/game.type';
 
 @Injectable({
   providedIn: 'root',
@@ -259,7 +259,8 @@ export class LibraryService {
         window.libraryAPI.getGamesFiles(currentDirectory),
         window.libraryAPI.getULGames(currentDirectory),
         window.libraryAPI.getApps(currentDirectory),
-      ]).then(async ([files, ulResult, appsResult]) => {
+        window.libraryAPI.getPs1Launchers(currentDirectory),
+      ]).then(async ([files, ulResult, appsResult, ps1LaunchersResult]) => {
         if (files.success) {
           this._logger.log(
             'libraryService',
@@ -289,7 +290,21 @@ export class LibraryService {
             this._logger.log('libraryService', `Found ${apps.length} app(s)`);
           }
 
-          await this.parseGameFilesToLibrary(files.data, ulGames, apps);
+          // Build PS1 launcher map: POPS_<sanitizedName> → launcher info
+          const ps1Launchers =
+            ps1LaunchersResult?.success && ps1LaunchersResult.launchers
+              ? ps1LaunchersResult.launchers
+              : [];
+          const ps1LauncherMap = new Map<string, Ps1LauncherInfo>();
+          for (const launcher of ps1Launchers) {
+            const name = launcher.folder.replace(/^POPS_/i, '');
+            ps1LauncherMap.set(name.toLowerCase(), launcher);
+          }
+          if (ps1Launchers.length > 0) {
+            this._logger.log('libraryService', `Found ${ps1Launchers.length} PS1 launcher(s) in APPS/POPS_*`);
+          }
+
+          await this.parseGameFilesToLibrary(files.data, ulGames, apps, ps1LauncherMap);
         } else {
           this._logger.error('libraryService', files.message);
           this.setCurrentAction('');
@@ -463,101 +478,148 @@ export class LibraryService {
     }));
   }
 
+  /**
+   * Resolve a single disc-image file to a Game with optional PS1 launcher link.
+   * Returns null if the file is invalid or its game ID can't be resolved.
+   */
+  private async parseSingleFile(
+    file: RawGameFile,
+    ps1LauncherMap?: Map<string, Ps1LauncherInfo>
+  ): Promise<Game | null> {
+    const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/i);
+    const ext = file.extension?.toLowerCase();
+    const looksLikeImage =
+      (ext === '.iso' || ext === '.zso' || ext === '.vcd') &&
+      typeof file.name === 'string' &&
+      typeof file.path === 'string' &&
+      !!file.stats &&
+      typeof file.stats.size === 'number';
+
+    if (!looksLikeImage) return null;
+
+    this.setCurrentAction(file.name);
+
+    let gameId: string;
+    let title: string;
+    let ps1Launcher: Ps1LauncherInfo | undefined;
+
+    if (gameIdMatch) {
+      gameId = gameIdMatch[1];
+      title = gameIdMatch[2];
+      if (ps1LauncherMap && ext === '.vcd') {
+        ps1Launcher = ps1LauncherMap.get(title.toLowerCase());
+      }
+    } else if (ext === '.iso' || ext === '.zso') {
+      this.setCurrentAction(`Resolving ${file.name}…`);
+      const resolved = await window.libraryAPI.resolveIsoGameId(file.path);
+      if (!resolved?.success || !resolved.gameId) return null;
+      gameId = resolved.gameId;
+      title = resolved.gameName || file.name;
+    } else {
+      if (ps1LauncherMap) {
+        ps1Launcher = ps1LauncherMap.get(file.name.toLowerCase());
+      }
+      if (ps1Launcher?.gameId) {
+        gameId = ps1Launcher.gameId;
+        title = file.name;
+      } else {
+        this.setCurrentAction(`Resolving VCD ${file.name}…`);
+        const resolved = await window.libraryAPI.tryDeterminePs1GameIdFromVcd(file.path);
+        if (!resolved?.success || !resolved.gameId) return null;
+        gameId = resolved.gameId;
+        title = resolved.gameName || file.name;
+      }
+    }
+
+    const dirName = file.parentPath?.split(/[\\/]/).pop() || '';
+    const isPops = dirName === 'POPS';
+    const isVcd = dirName === 'VCD';
+    const hasLauncher = !!ps1Launcher && isPops;
+
+    const gameEntry: Game = {
+      filename: file.name + file.extension,
+      title,
+      cdType: hasLauncher ? 'APPS' : isPops ? 'POPS' : dirName,
+      gameId,
+      region: this.mapGameIdToRegion(gameId),
+      path: file.path,
+      extension: file.extension,
+      parentPath: file.parentPath,
+      format: isPops ? 'POPS' : this.extensionToFormat(file.extension),
+      system: hasLauncher ? 'APPS' : isPops || isVcd ? 'PS1' : 'PS2',
+      size: this.formatFileSize(file.stats!.size) || '??',
+    };
+
+    if (hasLauncher) {
+      const l = ps1Launcher!;
+      gameEntry.title = l.title;
+      gameEntry.ps1LauncherPath = l.path.replace(/[\\/][^\\/]+\.elf$/i, '');
+      gameEntry.ps1LauncherBoot = l.boot;
+      gameEntry.isPs1Launcher = true;
+      gameEntry.appFolder = l.folder;
+      gameEntry.ps1VmcSub = l.folder.replace(/^POPS_/i, '');
+    }
+
+    return gameEntry;
+  }
+
+  /**
+   * Match artwork from the /ART directory against every game in the list.
+   * PS1 launcher apps are matched by boot ELF name; all others by gameId.
+   */
+  private matchArtForGames(games: Game[], artFiles: gameArt[]): void {
+    for (const game of games) {
+      if (game.isPs1Launcher && game.ps1LauncherBoot) {
+        const bootName = game.ps1LauncherBoot;
+        game.art = artFiles.filter(
+          (art: gameArt) => art.name === bootName + '_' + (art.type || ''),
+        );
+      } else if (game.system === 'APPS' && game.filename) {
+        // Regular ELF apps: art files follow <boot>.ELF_<TYPE>.png convention
+        game.art = artFiles.filter(
+          (art: gameArt) => art.gameId === game.filename,
+        );
+      } else {
+        game.art = artFiles.filter(
+          (art: gameArt) => art.gameId === game.gameId,
+        );
+      }
+    }
+  }
+
   private async parseGameFilesToLibrary(
     gamefiles: RawGameFile[],
     ulGames: Game[] = [],
-    apps: Game[] = []
+    apps: Game[] = [],
+    ps1LauncherMap?: Map<string, Ps1LauncherInfo>
   ) {
     this.setLoading(true);
     this.setCurrentAction('Mapping gamefiles to Game Objects...');
     this._logger.verbose(
       'libraryService.parseGameFilesToLibrary',
-      'Started mapping gamefiles to GameObjects: ' +
-        gamefiles.length +
-        ' Files...'
+      `Started mapping gamefiles to GameObjects: ${gamefiles.length} Files...`
     );
     const validGames: Game[] = [];
-    const invalidFiles: any[] = [];
+    const invalidFiles: RawGameFile[] = [];
 
     for (const file of gamefiles) {
-      const gameIdMatch = file.name.match(/^([A-Z]{4}_\d{3}\.\d{2})\.(.+)$/i);
-      const ext = file.extension?.toLowerCase();
-      const looksLikeImage =
-        (ext === '.iso' || ext === '.zso' || ext === '.vcd') &&
-        typeof file.name === 'string' &&
-        typeof file.path === 'string' &&
-        !!file.stats &&
-        typeof file.stats.size === 'number';
-
-      if (!looksLikeImage) {
-        invalidFiles.push(file);
-        continue;
-      }
-
-      this.setLoading(true);
-      this.setCurrentAction(file.name);
       this._logger.verbose(
         'libraryService.parseGameFilesToLibrary',
         `Mapping: ${file.name}`
       );
-
-      let gameId: string;
-      let title: string;
-
-      if (gameIdMatch) {
-        // Legacy naming convention: GAMEID prefix in the filename.
-        gameId = gameIdMatch[1];
-        title = gameIdMatch[2];
-      } else if (ext === '.iso' || ext === '.zso') {
-        // "New" OPL naming convention: no GAMEID prefix — read the game ID from
-        // the disc image (ZSO is decompressed on the fly). Cached after the
-        // first scan.
-        this.setCurrentAction(`Resolving ${file.name}…`);
-        const resolved = await window.libraryAPI.resolveIsoGameId(file.path);
-        if (!resolved?.success || !resolved.gameId) {
-          invalidFiles.push(file);
-          continue;
-        }
-        gameId = resolved.gameId;
-        title = resolved.gameName || file.name;
+      const game = await this.parseSingleFile(file, ps1LauncherMap);
+      if (game) {
+        validGames.push(game);
       } else {
-        // .vcd without a GAMEID prefix isn't resolvable yet (would need VCD
-        // block decompression). Treat as invalid for now.
         invalidFiles.push(file);
-        continue;
       }
-
-      const dirName = file.parentPath?.split(/[\\/]/).pop() || '';
-      const isPops = dirName === 'POPS';
-      const isVcd = dirName === 'VCD';
-      const isPs1 = isPops || isVcd;
-
-      validGames.push({
-        filename: file.name + file.extension,
-        title: title,
-        cdType: isPops ? 'POPS' : dirName,
-        gameId: gameId,
-        region: this.mapGameIdToRegion(gameId),
-        path: file.path,
-        extension: file.extension,
-        parentPath: file.parentPath,
-        format: isPops ? 'POPS' : this.extensionToFormat(file.extension),
-        system: isPs1 ? 'PS1' : 'PS2',
-        size: this.formatFileSize(file.stats!.size) || '??',
-      });
     }
 
-    // Merge UL games and homebrew apps
-    validGames.push(...ulGames);
-    validGames.push(...apps);
+    validGames.push(...ulGames, ...apps);
 
     if (this.currentDirectory) {
       const artFiles = await this.parseArtFiles(this.currentDirectory);
-      for (const game of validGames) {
-        game.art = artFiles
-          .filter((art: any) => art.gameId === game.gameId)
-          .map((art: any) => art);
-      }
+      this.matchArtForGames(validGames, artFiles);
     }
 
     this.setLoading(true);
@@ -601,6 +663,15 @@ export class LibraryService {
     const currentLibrary = this.librarySubject.getValue();
     const updatedLibrary = currentLibrary.map((game) => {
       if (game.gameId === gameId) {
+        if (game.isPs1Launcher && game.ps1LauncherBoot) {
+          const bootName = game.ps1LauncherBoot;
+          return {
+            ...game,
+            art: artFiles
+              .filter((art: gameArt) => (bootName + '_' + (art.type || '')) === art.name)
+              .map((art: gameArt) => art),
+          };
+        }
         return {
           ...game,
           art: artFiles
@@ -611,6 +682,19 @@ export class LibraryService {
       return game;
     });
     this.librarySubject.next(updatedLibrary);
+
+    const updated = updatedLibrary.find((g) => g.gameId === gameId);
+    if (updated?.isPs1Launcher) {
+      this._logger.log(
+        'libraryService',
+        `updateArtForGame: PS1 launcher "${updated.title}" matched ${updated.art?.length ?? 0} art file(s) via boot name "${updated.ps1LauncherBoot}"`
+      );
+      if (updated.art?.length) {
+        for (const a of updated.art) {
+          this._logger.log('libraryService', `  art: ${a.name} (${a.path})`);
+        }
+      }
+    }
   }
 
   public tryDetermineGameIdFromHex(filepath: string) {
@@ -750,27 +834,34 @@ export class LibraryService {
     }
   }
 
-  public async deleteGame(game: Game) {
+  public async deleteGame(game: Game, skipRefresh = false) {
     this._logger.log('deleteGame', `Deleting game: ${game.gameId} (${game.title})`);
     this.setLoading(true);
     this.setCurrentAction(`Deleting ${game.title || game.gameId}...`);
 
     try {
-      const artDir = `${this.currentDirectory}/ART`;
+      const currentDir = this.currentDirectory ?? '';
+      const sep = currentDir.includes('\\') ? '\\' : '/';
+      const artDir = `${currentDir.replace(/[\\/]$/, '')}${sep}ART`;
       const result = await window.libraryAPI.deleteGameAndRelatedFiles(
         game.path,
         artDir,
-        game.gameId
+        game.gameId,
+        game.appFolder
       );
 
       if (result.success) {
         this._logger.log('deleteGame', `Successfully deleted ${game.gameId}`);
-        this.refreshGamesFiles();
+        if (!skipRefresh) {
+          this.refreshGamesFiles();
+        }
       } else {
         this._logger.error('deleteGame', `Failed to delete: ${result.message}`);
       }
+      return result;
     } catch (error: any) {
       this._logger.error('deleteGame', `Error: ${error?.message || error}`);
+      return { success: false, entries: [], message: error?.message ?? String(error) };
     } finally {
       this.setCurrentAction('');
       this.setLoading(false);

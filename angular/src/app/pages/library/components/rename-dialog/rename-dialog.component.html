@@ -1,33 +1,107 @@
-<div class="rename-backdrop" (click)="close()"></div>
+<div class="rename-backdrop" (click)="ps1CloseAllowed ? close() : null"></div>
 <div class="rename-modal glass-strong" role="dialog">
   <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
     <i-lucide name="text-cursor-input" size="18" class="text-accent"></i-lucide>
     <h2 class="font-display text-sm font-semibold tracking-wide">
+      @if (isPs1Launcher) {
+      @if (ps1DialogState === 'input') { Rename PS1 App Game }
+      @else if (ps1DialogState === 'running') { Renaming PS1 App Game... }
+      @else { Rename complete }
+      } @else {
       {{ isSingle ? "Rename game to convention" : "Rename all games to convention" }}
+      }
     </h2>
-    <button
-      class="btn btn-ghost btn-xs btn-square ml-auto"
-      (click)="close()"
-      [disabled]="running"
-    >
+    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()" [disabled]="running">
       <i-lucide name="x" size="16"></i-lucide>
     </button>
   </div>
 
   <div class="rename-body flex flex-col gap-4 px-5 py-4">
     @if (!done) {
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PS1 LAUNCHER FLOW
+         ════════════════════════════════════════════════════════════════ -->
+    @if (isPs1Launcher) {
+
+    @if (ps1DialogState === 'input') {
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">New name for the PS1 App Game</legend>
+      <input #ps1TitleInput type="text" class="input w-full"
+        [class.input-error]="ps1NewTitle.trim() === ''"
+        placeholder="New game title"
+        [value]="ps1NewTitle"
+        (input)="onTitleChange(ps1TitleInput.value)" [disabled]="running" />
+      @if (ps1NewTitle.trim() === '') {
+      <p class="mt-1 text-xs text-error">The game name cannot be empty.</p>
+      }
+      <p class="flex items-center gap-1.5 text-xs text-base-content/60">
+        Renaming
+        <span class="font-mono text-base-content/80">POPS/{{ ps1VcdFilename }}</span>
+      </p>
+    </fieldset>
+
+    @if (ps1Preview && hasChanges) {
+    <div class="rounded-md border border-warning/30 bg-warning/5 p-3 text-xs leading-relaxed">
+      <span class="mb-1 flex items-center gap-1.5 text-sm font-semibold text-warning">
+        <i-lucide name="triangle-alert" size="15"></i-lucide>
+        The following changes will be applied
+      </span>
+      <ul class="ml-1 list-inside list-disc space-y-1 text-base-content/75">
+        <li><span class="font-mono">{{ ps1Preview.vcd }}</span></li>
+        <li><span class="font-mono">{{ ps1Preview.popsFolder }}</span></li>
+        <li><span class="font-mono">{{ ps1Preview.appsFolder }}</span></li>
+      </ul>
+    </div>
+    }
+    }
+
+    @if (ps1DialogState === 'running' || ps1DialogState === 'done') {
+    <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
+      @for (entry of ps1Log; track entry.id) {
+      <div class="log-line" [class.text-info]="entry.type === 'step'" [class.text-warning]="entry.type === 'change'"
+        [class.text-success]="entry.type === 'success'" [class.text-error]="entry.type === 'error'"
+        [class.font-semibold]="entry.type === 'step'">
+        <span class="log-time">{{ entry.time }}</span>
+        @if (entry.oldText && entry.newText) {
+        <span class="log-text">
+          <span class="opacity-80">{{ entry.text }}</span>
+          <span class="text-error/80">{{ entry.oldText }}</span>
+          <span class="opacity-40"> → </span>
+          <span class="text-success">{{ entry.newText }}</span>
+        </span>
+        } @else {
+        <span class="log-text">{{ entry.text }}</span>
+        }
+      </div>
+      }
+    </div>
+
+    @if (ps1DialogState === 'done') {
+    <div class="rounded-md border p-3 text-sm" [class.border-success/30]="lastLogType === 'success'"
+      [class.bg-success/5]="lastLogType === 'success'" [class.border-error/30]="lastLogType === 'error'"
+      [class.bg-error/5]="lastLogType === 'error'">
+      <div class="flex items-center gap-2">
+        <i-lucide [name]="lastLogType === 'error' ? 'triangle-alert' : 'circle-check'" size="18"
+          [class.text-success]="lastLogType !== 'error'" [class.text-error]="lastLogType === 'error'"></i-lucide>
+        <span class="font-semibold">
+          {{ lastLogType === 'error' ? 'Failed' : 'Done' }}
+        </span>
+      </div>
+    </div>
+    }
+    }
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PS2 DISK IMAGE FLOW (unchanged)
+         ════════════════════════════════════════════════════════════════ -->
+    } @else {
     <div>
       <span class="text-sm font-semibold">Target convention</span>
       <div class="mt-2 flex flex-col gap-2">
         <label class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40">
-          <input
-            type="radio"
-            name="convention"
-            class="radio radio-primary radio-sm mt-0.5"
-            [checked]="convention === 'new'"
-            [disabled]="running"
-            (change)="setConvention('new')"
-          />
+          <input type="radio" name="convention" class="radio radio-primary radio-sm mt-0.5"
+            [checked]="convention === 'new'" [disabled]="running" (change)="setConvention('new')" />
           <span class="leading-tight">
             <span class="text-sm">New — &lt;Title&gt;.iso</span>
             <span class="block text-[0.68rem] text-base-content/55">
@@ -37,14 +111,8 @@
           </span>
         </label>
         <label class="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-base-100/40">
-          <input
-            type="radio"
-            name="convention"
-            class="radio radio-primary radio-sm mt-0.5"
-            [checked]="convention === 'old'"
-            [disabled]="running"
-            (change)="setConvention('old')"
-          />
+          <input type="radio" name="convention" class="radio radio-primary radio-sm mt-0.5"
+            [checked]="convention === 'old'" [disabled]="running" (change)="setConvention('old')" />
           <span class="leading-tight">
             <span class="text-sm">Old — &lt;GAMEID&gt;.&lt;Title&gt;.iso</span>
             <span class="block text-[0.68rem] text-base-content/55">
@@ -77,25 +145,18 @@
 
     @if (running) {
     <div>
-      <progress
-        class="progress progress-primary h-2 w-full"
-        [value]="progress"
-        max="100"
-      ></progress>
+      <progress class="progress progress-primary h-2 w-full" [value]="progress" max="100"></progress>
       <p class="mt-1 truncate text-[0.68rem] text-base-content/55">
         {{ currentLabel }}
       </p>
     </div>
     }
+    }
     } @else {
     <div class="rounded-md border border-base-content/10 bg-base-100/30 p-4 text-sm">
       <div class="flex items-center gap-2">
-        <i-lucide
-          [name]="failed === 0 ? 'circle-check' : 'triangle-alert'"
-          size="18"
-          [class.text-success]="failed === 0"
-          [class.text-warning]="failed > 0"
-        ></i-lucide>
+        <i-lucide [name]="failed === 0 ? 'circle-check' : 'triangle-alert'" size="18"
+          [class.text-success]="failed === 0" [class.text-warning]="failed > 0"></i-lucide>
         <span class="font-semibold">Done.</span>
       </div>
       <p class="mt-1 text-sm text-base-content/70">
@@ -109,15 +170,25 @@
   </div>
 
   <div class="flex justify-end gap-2 border-t border-base-content/10 px-5 py-3">
+    @if (isPs1Launcher) {
+    @if (ps1DialogState === 'input') {
+    <button class="btn btn-ghost btn-sm" (click)="close()" [disabled]="running">
+      Cancel
+    </button>
+    <button class="btn btn-primary btn-sm" (click)="run()" [disabled]="!hasChanges">
+      <i-lucide name="text-cursor-input" size="15"></i-lucide>
+      Rename game
+    </button>
+    }
+    @else {
+    <button class="btn btn-primary btn-sm" (click)="close()" [disabled]="running">Close</button>
+    }
+    } @else {
     @if (!done) {
     <button class="btn btn-ghost btn-sm" (click)="close()" [disabled]="running">
       Cancel
     </button>
-    <button
-      class="btn btn-primary btn-sm"
-      (click)="run()"
-      [disabled]="running || planCount === 0"
-    >
+    <button class="btn btn-primary btn-sm" (click)="run()" [disabled]="running || planCount === 0">
       @if (running) {
       <span class="loading loading-spinner loading-xs"></span>
       } @else {
@@ -127,6 +198,7 @@
     </button>
     } @else {
     <button class="btn btn-primary btn-sm" (click)="close()">Close</button>
+    }
     }
   </div>
 </div>

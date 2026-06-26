@@ -1,11 +1,7 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
-import { Subscription } from 'rxjs';
-import {
-  ImportJob,
-  JobsService,
-} from '../../services/jobs.service';
+import { ImportJob, JobsService } from '../../services/jobs.service';
 
 @Component({
   selector: 'app-jobs-panel',
@@ -13,21 +9,17 @@ import {
   templateUrl: './jobs-panel.component.html',
   styleUrl: './jobs-panel.component.scss',
 })
-export class JobsPanelComponent implements OnDestroy {
+export class JobsPanelComponent {
   public collapsed = true;
-  private sub: Subscription;
 
   constructor(public _jobs: JobsService) {
-    // Auto-expand the panel whenever work is in flight.
-    this.sub = this._jobs.activeCount$.subscribe((count) => {
+    const destroyRef = inject(DestroyRef);
+    const sub = this._jobs.activeCount$.subscribe((count) => {
       if (count > 0) {
         this.collapsed = false;
       }
     });
-  }
-
-  ngOnDestroy(): void {
-    this.sub.unsubscribe();
+    destroyRef.onDestroy(() => sub.unsubscribe());
   }
 
   toggle() {
@@ -65,6 +57,8 @@ export class JobsPanelComponent implements OnDestroy {
         return 'circle-x';
       case 'running':
         return 'loader';
+      case 'cancelled':
+        return 'ban';
       default:
         return 'clock';
     }

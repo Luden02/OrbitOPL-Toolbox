@@ -19,6 +19,12 @@
      beyond the tile bounds. Image clipping lives on the inner wrapper. */
 }
 
+/* PS1 launcher apps (shown in APPS section for OPL 1.2+) use square tiles
+   so they visually differentiate from standard disc-game posters. */
+.poster-art.is-square {
+  aspect-ratio: 1 / 1;
+}
+
 .poster-art-clip {
   position: absolute;
   inset: 0;
@@ -75,6 +81,11 @@
 .poster-system.is-ps1 {
   background: oklch(60% 0.17 287 / 0.85);
   box-shadow: 0 2px 8px -2px oklch(60% 0.17 287 / 0.8);
+}
+
+.poster-system.is-ps1-app {
+  background: oklch(66.696% 0.11697 186.07);
+  box-shadow: 0 2px 8px -2px oklch(66.696% 0.11697 186.07 / 0.8);
 }
 
 /* Kebab menu — fades in on hover */

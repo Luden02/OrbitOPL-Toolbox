@@ -25,11 +25,41 @@ contextBridge.exposeInMainWorld("libraryAPI", {
       gameName,
       !!nameOnly
     ),
+  renamePs1LauncherStep1: (vcdPath: string, gameId: string, newTitle: string) =>
+    ipcRenderer.invoke("rename-ps1-launcher-step1", vcdPath, gameId, newTitle),
+  renamePs1LauncherStep2: (params: {
+    newAppsFolder: string;
+    oldElfFile?: string;
+    newElfFile?: string;
+    newCfgContent?: string;
+    newTitle: string;
+  }) => ipcRenderer.invoke("rename-ps1-launcher-step2", params),
+  onRenamePs1Progress: (
+    callback: (progress: { percent: number; stage: string }) => void
+  ) => {
+    ipcRenderer.on("rename-ps1-progress", (_event, progress) =>
+      callback(progress)
+    );
+  },
+  removeAllRenamePs1ProgressListeners: () => {
+    ipcRenderer.removeAllListeners("rename-ps1-progress");
+  },
+  onDeletePs1Progress: (
+    callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void
+  ) => {
+    ipcRenderer.on("delete-ps1-progress", (_event, entry) => callback(entry));
+  },
+  removeAllDeletePs1ProgressListeners: () => {
+    ipcRenderer.removeAllListeners("delete-ps1-progress");
+  },
   downloadArtByGameId: (
     dirPath: string,
     gameId: string,
-    system?: "PS1" | "PS2"
-  ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system),
+    system?: "PS1" | "PS2",
+    saveAsName?: string
+  ) => ipcRenderer.invoke("download-art-by-gameid", dirPath, gameId, system, saveAsName),
+  checkArtFilesExist: (artDir: string, filenames: string[]) =>
+    ipcRenderer.invoke("check-art-files-exist", artDir, filenames),
   tryDetermineGameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-gameid-from-hex", filepath),
   resolveIsoGameId: (filepath: string) =>
@@ -38,6 +68,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("open-ask-game-files", isGameCd, isGameDvd),
   tryDeterminePs1GameIdFromHex: (filepath: string) =>
     ipcRenderer.invoke("try-determine-ps1-gameid-from-hex", filepath),
+  tryDeterminePs1GameIdFromVcd: (filepath: string) =>
+    ipcRenderer.invoke("try-determine-ps1-gameid-from-vcd", filepath),
   importPs1Game: (
     cueFilePath: string,
     oplRoot: string,
@@ -108,12 +140,28 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.removeAllListeners("zso-compress-progress");
   },
   getApps: (oplRoot: string) => ipcRenderer.invoke("get-apps", oplRoot),
+  getPs1Launchers: (oplRoot: string) =>
+    ipcRenderer.invoke("get-ps1-launchers", oplRoot),
+  updatePs1TitleCfg: (launcherPath: string, newTitle: string, gameId?: string) =>
+    ipcRenderer.invoke("update-ps1-title-cfg", launcherPath, newTitle, gameId),
   openAskElfFiles: () => ipcRenderer.invoke("open-ask-elf-files"),
   importApp: (oplRoot: string, elfPath: string, title: string) =>
     ipcRenderer.invoke("import-app", oplRoot, elfPath, title),
   deleteApp: (oplRoot: string, folder: string) =>
     ipcRenderer.invoke("delete-app", oplRoot, folder),
+  deleteAppWithProgress: (oplRoot: string, folder: string, bootName: string) =>
+    ipcRenderer.invoke("delete-app-with-progress", oplRoot, folder, bootName),
+  onDeleteAppProgress: (
+    callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void
+  ) => {
+    ipcRenderer.on("delete-app-progress", (_event, entry) => callback(entry));
+  },
+  removeAllDeleteAppProgressListeners: () => {
+    ipcRenderer.removeAllListeners("delete-app-progress");
+  },
   listVmc: (oplRoot: string) => ipcRenderer.invoke("list-vmc", oplRoot),
+  checkPopsVmc: (oplRoot: string, gameTitle: string) =>
+    ipcRenderer.invoke("check-pops-vmc", oplRoot, gameTitle),
   createVmc: (oplRoot: string, name: string, sizeMb: number) =>
     ipcRenderer.invoke("create-vmc", oplRoot, name, sizeMb),
   deleteVmc: (oplRoot: string, name: string) =>
@@ -128,13 +176,17 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   deleteGameAndRelatedFiles: (
     gamePath: string,
     artDir: string,
-    gameId: string
+    gameId: string,
+    launcherFolder?: string,
+    bootName?: string
   ) =>
     ipcRenderer.invoke(
       "delete-game-and-related-files",
       gamePath,
       artDir,
-      gameId
+      gameId,
+      launcherFolder,
+      bootName
     ),
   moveFile: (sourcePath: string, destPath: string) =>
     ipcRenderer.invoke("move-file", sourcePath, destPath),

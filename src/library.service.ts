@@ -261,16 +261,16 @@ export async function getGamesFiles(dirPath: string) {
     // Only include files, skip directories
     const items = [
       ...items_cd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/CD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "CD") })
       ),
       ...items_dvd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/DVD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "DVD") })
       ),
       ...items_vcd.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/VCD" })
+        Object.assign(item, { parentDir: path.join(dirPath, "VCD") })
       ),
       ...items_pops.map((item) =>
-        Object.assign(item, { parentDir: dirPath + "/POPS" })
+        Object.assign(item, { parentDir: path.join(dirPath, "POPS") })
       ),
     ].filter((item) => {
       if (!item.isFile() || item.name.startsWith(".")) return false;
@@ -285,13 +285,14 @@ export async function getGamesFiles(dirPath: string) {
     const files = [];
 
     for (const item of items) {
-      const stats = await fs.stat(item.parentDir + "/" + item.name);
+      const fullPath = path.join(item.parentDir, item.name);
+      const stats = await fs.stat(fullPath);
 
       const itemInfo = {
         extension: path.extname(item.name),
         name: path.parse(item.name).name,
         parentPath: item.parentDir,
-        path: item.parentDir + "/" + item.name,
+        path: fullPath,
         stats,
       };
 
@@ -545,6 +546,11 @@ export async function downloadArtByGameId(
 
   const saved = results.filter((r) => r.savedPath).length;
   log.info(`Artwork for ${gameId}: ${saved}/${types.length} file(s) downloaded`);
+  if (saved === 0) {
+    const msg = `No artwork found for ${gameId} in ${system} database.`;
+    log.warn(msg);
+    return { success: false, data: results, message: msg };
+  }
   return { success: true, data: results };
 }
 
@@ -612,6 +618,345 @@ export async function renameGamefile(
     log.error(`Failed to rename ${path.basename(dirpath)} → ${newFileName}:`, err);
     return { success: false, message: err };
   }
+}
+
+// ── PS1 rename progress percentages ──────────────────────────────
+const PROGRESS_APPS_WAIT = 10;
+const PROGRESS_VCD_RENAME = 15;
+const PROGRESS_POPS_SUBFOLDER = 25;
+const PROGRESS_READ_APPS = 35;
+const PROGRESS_ELF_RENAME = 40;
+const PROGRESS_APPS_RENAME = 50;
+const PROGRESS_CFG_WRITE = 70;
+const PROGRESS_DONE = 100;
+
+// ── PS1 rename retry timing (ms) ─────────────────────────────────
+const RENAME_STEP2_RETRY_MAX = 10;
+const RENAME_STEP2_RETRY_DELAY_MS = 500;
+const RENAME_ELF_RETRY_MAX = 5;
+const RENAME_ELF_RETRY_DELAY_MS = 300;
+const TITLE_CFG_POST_WRITE_DELAY_MS = 800;
+
+function deriveOldTitle(vcdPath: string, gameId: string): string | null {
+  const vcdBasename = path.basename(vcdPath);
+  const vcdExt = path.extname(vcdBasename);
+  const vcdStem = vcdBasename.slice(0, -vcdExt.length);
+  const prefix = `${gameId}.`;
+  const oldTitle = vcdStem.startsWith(prefix) ? vcdStem.slice(prefix.length) : vcdStem;
+  return oldTitle || null;
+}
+
+async function renameVcdFile(
+  vcdPath: string,
+  newVcdPath: string,
+  vcdBasename: string,
+  newVcdBasename: string,
+  onProgress?: (percent: number, stage: string) => void,
+): Promise<string | null> {
+  onProgress?.(PROGRESS_VCD_RENAME, `Renaming VCD: ${vcdBasename} → ${newVcdBasename}`);
+  log.info(`Renaming VCD: ${vcdBasename} → ${newVcdBasename}`);
+  try {
+    await fs.rename(vcdPath, newVcdPath);
+    log.info(`VCD renamed: ${vcdBasename} → ${newVcdBasename}`);
+    return null;
+  } catch (err: unknown) {
+    const msg = `Failed to rename VCD: ${err instanceof Error ? err.message : String(err)}`;
+    log.error(msg);
+    return msg;
+  }
+}
+
+async function renamePopsSubfolder(
+  popsDir: string,
+  oldTitle: string,
+  safeNewTitle: string,
+  onProgress?: (percent: number, stage: string) => void,
+): Promise<void> {
+  onProgress?.(PROGRESS_POPS_SUBFOLDER, `Renaming VMC folder: ${oldTitle}/ → ${safeNewTitle}/`);
+  log.info(`Renaming VMC folder: ${oldTitle}/ → ${safeNewTitle}/`);
+  try {
+    await fs.access(path.join(popsDir, oldTitle));
+    await fs.rename(path.join(popsDir, oldTitle), path.join(popsDir, safeNewTitle));
+    log.verbose(`POPS VMC subfolder renamed`);
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      log.verbose(`POPS VMC subfolder does not exist — skipping`);
+    } else {
+      log.warn(`Failed to rename POPS VMC subfolder: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
+interface AppsFolderContents {
+  oldElfFile?: string;
+  oldTitleCfgContent: string;
+}
+
+async function readAppsFolderContents(oldAppsFolder: string): Promise<AppsFolderContents | null> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const files = await fs.readdir(oldAppsFolder);
+      const oldElfFile = files.find((f) => /\.ELF$/i.test(f));
+      let oldTitleCfgContent = "";
+      try {
+        oldTitleCfgContent = await fs.readFile(path.join(oldAppsFolder, "title.cfg"), "utf-8");
+      } catch { /* no title.cfg — fine */ }
+      return { oldElfFile, oldTitleCfgContent };
+    } catch {
+      if (attempt < 4) await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+  return null;
+}
+
+function computeNewElfName(
+  oldElfFile: string | undefined,
+  gameId: string,
+  oldTitle: string,
+  safeNewTitle: string,
+): string | undefined {
+  if (!oldElfFile || !/\.ELF$/i.test(oldElfFile)) return undefined;
+
+  const elfExt = path.extname(oldElfFile);
+  const elfStem = oldElfFile.slice(0, -elfExt.length);
+  const gIdx = elfStem.indexOf(gameId);
+  if (gIdx !== -1) {
+    return `${elfStem.slice(0, gIdx)}${gameId}.${safeNewTitle}${elfExt}`;
+  }
+
+  const tIdx = elfStem.lastIndexOf(oldTitle);
+  if (tIdx !== -1) {
+    const newName = `${elfStem.slice(0, tIdx)}${safeNewTitle}${elfExt}`;
+    log.verbose(`ELF name derived via oldTitle fallback: ${oldElfFile} → ${newName}`);
+    return newName;
+  }
+
+  log.warn(`ELF name lacks gameId "${gameId}" and oldTitle "${oldTitle}" — keeping existing`);
+  return oldElfFile;
+}
+
+interface CfgBuildResult {
+  content: string;
+  bootVal?: string;
+}
+
+function buildNewCfgContent(
+  oldTitleCfgContent: string,
+  newTitle: string,
+  newElfFile: string | undefined,
+  gameId: string,
+): CfgBuildResult {
+  const bootVal = newElfFile ? `boot=${newElfFile}` : undefined;
+  const seenKeys = new Map<string, string>();
+
+  const cfgLines = oldTitleCfgContent.split("\n").map((line) => {
+    const t = line.trimEnd();
+    const eq = t.indexOf("=");
+    if (eq === -1) return line;
+    const k = t.slice(0, eq).trim();
+    const lower = k.toLowerCase();
+    if (!seenKeys.has(lower)) seenKeys.set(lower, k);
+    if (lower === "title") {
+      return k === "Title" ? `Title=${newTitle}` : `title=${newTitle}`;
+    }
+    if (lower === "boot" && bootVal) return bootVal;
+    return line;
+  });
+
+  const add: string[] = [];
+  // OPL's title.cfg parser may look for either casing — add both for compatibility
+  if (!seenKeys.has("title")) { add.push(`title=${newTitle}`); add.push(`Title=${newTitle}`); }
+  if (!seenKeys.has("boot") && bootVal) add.push(bootVal);
+  if (!seenKeys.has("gameid")) add.push(`GameID=${gameId}`);
+
+  const content =
+    add.length > 0
+      ? cfgLines.join("\n") + (cfgLines.length && cfgLines[cfgLines.length - 1] !== "" ? "\n" : "") + add.join("\n") + "\n"
+      : cfgLines.join("\n");
+
+  return { content, bootVal };
+}
+
+export async function renamePs1LauncherStep1(
+  vcdPath: string,
+  gameId: string,
+  newTitle: string,
+  onProgress?: (percent: number, stage: string) => void
+): Promise<{
+  success: boolean;
+  newVcdPath?: string;
+  oldElfFile?: string;
+  newElfFile?: string;
+  newCfgContent?: string;
+  newAppsFolder?: string;
+  safeNewTitle?: string;
+  message?: string;
+}> {
+  const safeNewTitle = sanitizeGameFilename(newTitle);
+  if (!safeNewTitle) {
+    return { success: false, message: "The new name is empty or invalid after sanitization." };
+  }
+
+  const popsDir = path.dirname(vcdPath);
+  const oplRoot = path.resolve(popsDir, "..");
+
+  const oldTitle = deriveOldTitle(vcdPath, gameId);
+  if (!oldTitle) {
+    return { success: false, message: "Could not derive the current game title from the VCD filename." };
+  }
+  if (oldTitle === safeNewTitle) {
+    return { success: false, message: "The new name is identical to the current name." };
+  }
+
+  log.info(`PS1 rename step 1: "${oldTitle}" → "${safeNewTitle}" (gameId=${gameId})`);
+
+  const vcdBasename = path.basename(vcdPath);
+  const vcdExt = path.extname(vcdBasename);
+  const newVcdBasename = `${safeNewTitle}${vcdExt}`;
+  const newVcdPath = path.join(popsDir, newVcdBasename);
+  const appsDir = path.join(oplRoot, "APPS");
+  const oldAppsFolder = path.join(appsDir, `POPS_${oldTitle}`);
+  const newAppsFolder = path.join(appsDir, `POPS_${safeNewTitle}`);
+
+  // ── Rename the VCD file ─────────────────────────────────────────────
+  const vcdError = await renameVcdFile(vcdPath, newVcdPath, vcdBasename, newVcdBasename, onProgress);
+  if (vcdError) return { success: false, message: vcdError };
+
+  // ── Rename POPS VMC subfolder (if exists) ───────────────────────────
+  await renamePopsSubfolder(popsDir, oldTitle, safeNewTitle, onProgress);
+
+  // ── Read OLD APPS folder contents before renaming ──────────────────
+  onProgress?.(PROGRESS_READ_APPS, "Reading APPS launcher folder contents…");
+  const appsContents = await readAppsFolderContents(oldAppsFolder);
+  if (!appsContents) {
+    return { success: false, message: `Cannot read APPS folder "${oldAppsFolder}".` };
+  }
+
+  // ── Pre-compute new values ──────────────────────────────────────────
+  const newElfFile = computeNewElfName(appsContents.oldElfFile, gameId, oldTitle, safeNewTitle);
+
+  const { content: newCfgContent } = buildNewCfgContent(
+    appsContents.oldTitleCfgContent,
+    newTitle,
+    newElfFile,
+    gameId,
+  );
+
+  // ── Rename the APPS launcher folder ─────────────────────────────────
+  onProgress?.(PROGRESS_APPS_RENAME, `Renaming APPS folder: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  log.info(`Renaming APPS folder: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  try {
+    await fs.rename(oldAppsFolder, newAppsFolder);
+    log.info(`APPS folder renamed: POPS_${oldTitle}/ → POPS_${safeNewTitle}/`);
+  } catch (err: unknown) {
+    const msg = `Failed to rename APPS launcher folder: ${err instanceof Error ? err.message : String(err)}`;
+    log.error(msg);
+    return { success: false, message: msg };
+  }
+
+  log.info(`PS1 rename step 1 complete for "${oldTitle}" → "${safeNewTitle}"`);
+  return {
+    success: true,
+    newVcdPath,
+    oldElfFile: appsContents.oldElfFile,
+    newElfFile,
+    newCfgContent,
+    newAppsFolder,
+    safeNewTitle,
+  };
+}
+
+export async function renamePs1LauncherStep2(
+  params: {
+    newAppsFolder: string;
+    oldElfFile?: string;
+    newElfFile?: string;
+    newCfgContent?: string;
+    newTitle: string;
+  },
+  onProgress?: (percent: number, stage: string) => void
+): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const { newAppsFolder, oldElfFile, newElfFile, newCfgContent, newTitle } = params;
+
+  log.info(`PS1 rename step 2: applying internal changes to ${newAppsFolder}`);
+
+  // ── Wait for the folder to be fully accessible ──────────────────────
+  onProgress?.(PROGRESS_APPS_WAIT, "Waiting for APPS folder to be ready…");
+  await new Promise((r) => setTimeout(r, TITLE_CFG_POST_WRITE_DELAY_MS));
+
+  let appsReady = false;
+  for (let attempt = 0; attempt < RENAME_STEP2_RETRY_MAX; attempt++) {
+    try {
+      await fs.access(newAppsFolder, fs.constants.F_OK);
+      const files = await fs.readdir(newAppsFolder);
+      if (oldElfFile && !files.some((f) => /\.ELF$/i.test(f))) {
+        throw new Error("ELF not yet visible");
+      }
+      appsReady = true;
+      break;
+    } catch {
+      if (attempt < RENAME_STEP2_RETRY_MAX - 1) await new Promise((r) => setTimeout(r, RENAME_STEP2_RETRY_DELAY_MS));
+    }
+  }
+  if (!appsReady) {
+    return { success: false, message: `APPS folder "${newAppsFolder}" is not ready.` };
+  }
+
+  // ── Rename the ELF file ────────────────────────────────────────────
+  if (oldElfFile && newElfFile && oldElfFile !== newElfFile) {
+    onProgress?.(PROGRESS_ELF_RENAME, `Renaming ELF: ${oldElfFile} → ${newElfFile}`);
+    log.info(`Renaming ELF: ${oldElfFile} → ${newElfFile}`);
+    const oldPath = path.join(newAppsFolder, oldElfFile);
+    const newPath = path.join(newAppsFolder, newElfFile);
+    let done = false;
+    for (let attempt = 0; attempt < RENAME_ELF_RETRY_MAX; attempt++) {
+      try {
+        await fs.rename(oldPath, newPath);
+        await fs.access(newPath, fs.constants.F_OK);
+        done = true;
+        break;
+      } catch {
+        if (attempt < RENAME_ELF_RETRY_MAX - 1) await new Promise((r) => setTimeout(r, RENAME_ELF_RETRY_DELAY_MS));
+      }
+    }
+    if (!done) {
+      log.error(`ELF rename failed after retries: ${oldElfFile} → ${newElfFile}`);
+      return { success: false, message: `Failed to rename ELF after multiple attempts.` };
+    }
+    log.info(`ELF renamed: ${oldElfFile} → ${newElfFile}`);
+  }
+
+  // ── Write title.cfg ─────────────────────────────────────────────────
+  if (newCfgContent !== undefined) {
+    onProgress?.(PROGRESS_CFG_WRITE, "Updating title.cfg (title, Title, boot)");
+    log.info("Updating title.cfg (title, Title, boot)");
+    const cfgPath = path.join(newAppsFolder, "title.cfg");
+    let done = false;
+    for (let attempt = 0; attempt < RENAME_ELF_RETRY_MAX; attempt++) {
+      try {
+        await fs.writeFile(cfgPath, newCfgContent, "utf-8");
+        const verify = await fs.readFile(cfgPath, "utf-8");
+        if (verify === newCfgContent) {
+          done = true;
+          break;
+        }
+      } catch {
+        if (attempt < RENAME_ELF_RETRY_MAX - 1) await new Promise((r) => setTimeout(r, RENAME_ELF_RETRY_DELAY_MS));
+      }
+    }
+    if (!done) {
+      log.error(`title.cfg write failed after retries`);
+      return { success: false, message: `Failed to update title.cfg after multiple attempts.` };
+    }
+    log.info(`title.cfg updated`);
+  }
+
+  onProgress?.(PROGRESS_DONE, "Rename complete");
+  log.info(`PS1 rename step 2 complete`);
+  return { success: true };
 }
 
 /**
@@ -880,6 +1225,111 @@ export async function tryDetermineGameIdFromZso(filepath: string) {
   };
 }
 
+const VCD_HEADER_SIZE = 1048576; // 1 MB — VCD header before disc data
+
+/**
+ * Resolves a PS1 game ID from a VCD file by scanning the disc image data
+ * embedded after the 1 MB VCD header.
+ *
+ * VCD = POPStarter's container format: 1 MB TOC header followed by raw
+ * 2352-byte sectors from the original BIN. The PS1 game ID string lives in
+ * the ISO9660 volume descriptors / directory records of those sectors, so
+ * we scan from offset VCD_HEADER_SIZE using the same regex used for BIN files.
+ */
+export async function tryDeterminePs1GameIdFromVcd(
+  filepath: string
+): Promise<{
+  success: boolean;
+  gameId?: string;
+  formattedGameId?: string;
+  gameName?: string;
+  message?: string;
+}> {
+  let fileHandle: fs.FileHandle | undefined;
+
+  try {
+    fileHandle = await fs.open(filepath, "r");
+  } catch (err: any) {
+    log.error(`PS1 VCD scan: cannot open ${filepath}:`, err?.code || err?.message || err);
+    return {
+      success: false,
+      message: describeFileAccessError(err, filepath),
+    };
+  }
+
+  try {
+    log.verbose(`PS1 VCD scan: reading ${path.basename(filepath)} from offset 1 MB (VCD header skip)`);
+    const buffer = Buffer.alloc(FILE_SCAN_CHUNK_BYTES);
+    let position = VCD_HEADER_SIZE;
+    let carry = "";
+    const fileSize = (await fs.stat(filepath)).size;
+
+    while (position < fileSize) {
+      const { bytesRead } = await fileHandle.read(
+        buffer,
+        0,
+        FILE_SCAN_CHUNK_BYTES,
+        position
+      );
+
+      if (bytesRead === 0) {
+        break;
+      }
+
+      position += bytesRead;
+
+      const chunk = carry + buffer.subarray(0, bytesRead).toString("latin1");
+      PS1_GAME_ID_REGEX.lastIndex = 0;
+      const matches = chunk.match(PS1_GAME_ID_REGEX);
+
+      if (matches && matches.length > 0) {
+        const rawId = matches[0];
+        const gameId = rawId.replace("-", "_");
+        const lookupId = normaliseGameIdForLookup(gameId);
+        const gameName = await findPs1GameName(lookupId);
+
+        log.verbose(
+          `PS1 VCD scan: matched ${gameId} at offset ${position - bytesRead}` +
+            (gameName ? ` (${gameName})` : " (no title in games list)")
+        );
+        return {
+          success: true,
+          gameId,
+          formattedGameId: lookupId,
+          ...(gameName ? { gameName } : {}),
+        };
+      }
+
+      carry =
+        chunk.length > FILE_SCAN_OVERLAP_BYTES
+          ? chunk.slice(-FILE_SCAN_OVERLAP_BYTES)
+          : chunk;
+
+      // Safety bound — don't scan more than 64 MB of disc data for an ID
+      if (position - VCD_HEADER_SIZE > 64 * 1024 * 1024) {
+        log.verbose(`PS1 VCD scan: hit 64 MB safety bound for ${path.basename(filepath)}`);
+        break;
+      }
+    }
+
+    log.verbose(`PS1 VCD scan: no game ID found in ${path.basename(filepath)}`);
+    return {
+      success: false,
+      message: "Could not locate a PS1 game ID inside the VCD disc data.",
+    };
+  } catch (err: any) {
+    log.error(`PS1 VCD scan: read error on ${path.basename(filepath)}:`, err?.message || err);
+    return {
+      success: false,
+      message: err?.message || "Failed while reading VCD file contents.",
+    };
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close();
+    }
+  }
+}
+
 export async function tryDeterminePs1GameIdFromHex(filepath: string) {
   let scanPath = filepath;
 
@@ -1014,64 +1464,152 @@ export async function openAskGameFiles(
   return result;
 }
 
+export interface DeleteEntry {
+  label: string;
+  path?: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteGameResult {
+  success: boolean;
+  message?: string;
+  entries: DeleteEntry[];
+}
+
 export async function deleteGameAndRelatedFiles(
   gamePath: string,
   artDir: string,
-  gameId: string
-) {
+  gameId: string,
+  launcherFolder?: string,
+  onProgress?: (entry: DeleteEntry) => void,
+  bootName?: string,
+): Promise<DeleteGameResult> {
   log.info(`Deleting ${gameId} and related files: ${gamePath}`);
-  try {
-    // Delete the game file
-    await fs.unlink(gamePath);
-    log.verbose(`Removed disc image ${path.basename(gamePath)}`);
+  const entries: DeleteEntry[] = [];
 
-    // Delete related artwork files (e.g., SLUS_123.45_COV.png)
+  const addEntry = (label: string, success: boolean, path?: string, error?: string) => {
+    const entry: DeleteEntry = { label, path, success, error };
+    entries.push(entry);
+    if (onProgress) onProgress(entry);
+  };
+
+  const oplRoot = path.dirname(artDir);
+
+  // Helper: show path relative to OPL root
+  const rel = (p: string) => path.relative(oplRoot, p);
+
+  // 1. Delete the game file (VCD in POPS/)
+  let hasCriticalError = false;
+  try {
+    await fs.unlink(gamePath);
+    log.verbose(`Removed game file ${path.basename(gamePath)}`);
+    addEntry("VCD", true, rel(gamePath));
+  } catch (err: any) {
+    hasCriticalError = true;
+    log.error(`Failed to remove game file ${path.basename(gamePath)}:`, err?.message || err);
+    addEntry("VCD", false, rel(gamePath), err?.message || String(err));
+  }
+
+  // 2. Delete POPStarter launcher folder (APPS/POPS_<name>/)
+  if (launcherFolder) {
+    const appsBase = path.join(oplRoot, "APPS");
+    const resolved = path.resolve(appsBase, launcherFolder);
+    if (!resolved.startsWith(appsBase + path.sep)) {
+      log.warn(`Path traversal attempt blocked: "${launcherFolder}" — refusing to delete`);
+      addEntry("Launcher folder", false, launcherFolder, "Path traversal blocked");
+    } else {
+      try {
+        await fs.rm(resolved, { recursive: true, force: true });
+        log.verbose(`Removed launcher folder ${rel(resolved)}`);
+        addEntry("Launcher folder", true, rel(resolved));
+      } catch (err: any) {
+        log.error(`Failed to remove launcher ${rel(resolved)}:`, err?.message || err);
+        addEntry("Launcher folder", false, rel(resolved), err?.message || String(err));
+      }
+    }
+  }
+
+  // 4. Delete per-game POPS subfolder (POPS/<title>/) containing VMC files etc.
+  if (launcherFolder) {
+    const vcdName = path.basename(gamePath);
+    const ext = path.extname(vcdName);
+    const gameTitle = vcdName.slice(0, -ext.length);
+    const popsDir = path.dirname(gamePath);
+    const popsSubdir = path.join(popsDir, gameTitle);
+
     try {
-      const artFiles = await fs.readdir(artDir);
-      const relatedArt = artFiles.filter((f) => f.startsWith(gameId + "_"));
-      for (const artFile of relatedArt) {
+      await fs.access(popsSubdir);
+      // Folder exists — enumerate and delete each file inside
+      const files = await fs.readdir(popsSubdir);
+      for (const f of files) {
+        const filePath = path.join(popsSubdir, f);
         try {
-          await fs.unlink(path.join(artDir, artFile));
-        } catch {
-          // Ignore individual art file deletion failures
+          await fs.unlink(filePath);
+          log.verbose(`Removed file ${rel(filePath)}`);
+          addEntry("POPS subfolder file", true, rel(filePath));
+        } catch (err: any) {
+          addEntry("POPS subfolder file", false, rel(filePath), err?.message || String(err));
         }
       }
-      if (relatedArt.length > 0) {
-        log.verbose(`Removed ${relatedArt.length} artwork file(s) for ${gameId}`);
+      // Remove the now-empty folder
+      try {
+        await fs.rmdir(popsSubdir);
+        log.verbose(`Removed POPS subfolder ${rel(popsSubdir)}`);
+        addEntry("POPS subfolder", true, rel(popsSubdir));
+      } catch (err: any) {
+        addEntry("POPS subfolder", false, rel(popsSubdir), err?.message || String(err));
       }
     } catch {
-      // ART directory may not exist — that's fine
+      // Folder doesn't exist — not an error
+      addEntry("POPS subfolder", true, "Not present");
     }
-
-    // PS1 VCDs are paired with an APPS/POPS_<sanitizedName>/ launcher created
-    // during import. Remove that folder too so PS1 deletes don't leave the
-    // launcher orphaned on disk.
-    if (path.extname(gamePath).toLowerCase() === ".vcd") {
-      const oplRoot = path.dirname(artDir); // artDir = <root>/ART
-      const base = path.basename(gamePath, path.extname(gamePath));
-      // Strip the "GAMEID." prefix if present; otherwise use the whole stem.
-      const prefix = `${gameId}.`;
-      const sanitizedName = base.startsWith(prefix)
-        ? base.slice(prefix.length)
-        : base;
-      if (sanitizedName) {
-        const appsLauncher = path.join(oplRoot, "APPS", `POPS_${sanitizedName}`);
-        try {
-          await fs.rm(appsLauncher, { recursive: true, force: true });
-          log.verbose(`Removed paired POPStarter launcher APPS/POPS_${sanitizedName}`);
-        } catch {
-          // Best-effort — the launcher may not exist (e.g. PS1 game imported
-          // outside this app), and that's fine.
-        }
-      }
-    }
-
-    log.info(`Deleted ${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    log.error(`Failed to delete ${gameId} (${gamePath}):`, err?.message || err);
-    return { success: false, message: err?.message || String(err) };
   }
+
+  // 4. Delete related artwork files
+  //    Disc games match by gameId prefix (XXXX_###.##_TYPE.png),
+  //    PS1 launcher apps match by bootName prefix (boot.ELF_TYPE.png).
+  //    For PS1 launchers, skip artwork unless bootName is explicitly provided.
+  if (launcherFolder && !bootName) {
+    // Artwork intentionally omitted — user unchecked the option.
+  } else {
+    const artPrefix = bootName || gameId;
+    try {
+      const artFiles = await fs.readdir(artDir);
+    const relatedArt = artFiles.filter((f) =>
+      f.startsWith(artPrefix + "_") && !f.startsWith(".")
+    );
+      if (relatedArt.length > 0) {
+        log.verbose(`Removing ${relatedArt.length} artwork file(s) for ${artPrefix}`);
+        for (const artFile of relatedArt) {
+          const artPath = path.join(artDir, artFile);
+          try {
+            await fs.unlink(artPath);
+            addEntry("Artwork", true, rel(artPath));
+          } catch (err: any) {
+            addEntry("Artwork", false, rel(artPath), err?.message || String(err));
+          }
+        }
+      } else {
+        addEntry("Artwork", true, "None found");
+      }
+    } catch {
+      addEntry("Artwork", true, "No artwork directory");
+    }
+  }
+
+  if (hasCriticalError) {
+    log.error(`Failed to delete game file for ${gameId}`);
+    return { success: false, message: entries.find((e) => e.label === "VCD")?.error ?? "VCD deletion failed", entries };
+  }
+
+  const allSuccess = entries.every((e) => e.success);
+  if (!allSuccess) {
+    log.info(`Deleted ${gameId} with some non-critical errors`);
+  } else {
+    log.info(`Deleted ${gameId} successfully`);
+  }
+  return { success: true, entries };
 }
 
 export async function moveFile(
