@@ -70,11 +70,11 @@
 }
 
 .log-entry.is-success .entry-icon {
-  color: #4ade80;
+  color: oklch(80.036% 0.18204 151.736);
 }
 
 .log-entry.is-error .entry-icon {
-  color: #f87171;
+  color: oklch(71.061% 0.16614 22.191);
 }
 
 .entry-label {
@@ -85,11 +85,11 @@
 }
 
 .log-entry.is-success .entry-label {
-  color: #4ade80;
+  color: oklch(80.036% 0.18204 151.736);
 }
 
 .log-entry.is-error .entry-label {
-  color: #f87171;
+  color: oklch(71.061% 0.16614 22.191);
 }
 
 .log-secondary {

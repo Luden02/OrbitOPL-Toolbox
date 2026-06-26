@@ -19,6 +19,13 @@ import { AppDeleteDialogComponent } from '../app-delete-dialog/app-delete-dialog
 
 export type GamecardViewMode = 'grid' | 'list';
 
+/**
+ * Displays a single game in either grid or list view.
+ *
+ * Handles artwork rendering, system badges, format labels, and all
+ * game-specific actions: configuration editing, renaming, artwork
+ * fetching, ZSO compression, and deletion (PS2 / PS1 / App variants).
+ */
 @Component({
   selector: 'app-gamecard',
   imports: [
@@ -33,9 +40,15 @@ export type GamecardViewMode = 'grid' | 'list';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GamecardComponent {
+  /** The game data to render — undefined while the library is loading. */
   readonly game = input<Game | undefined>(undefined);
+
+  /** Whether the library is currently in grid or list view. */
   readonly viewMode = input<GamecardViewMode>('grid');
 
+  // ── Artwork ──────────────────────────────────────────────────────────
+
+  /** The best art asset for the current view mode (ICO in list, COV in grid). */
   readonly displayArt = computed(() => {
     const g = this.game();
     const vm = this.viewMode();
@@ -46,11 +59,15 @@ export class GamecardComponent {
     return undefined;
   });
 
+  /** Base64 data-URL of the selected artwork, or null if none found. */
   readonly artSrc = computed(() => {
     const a = this.displayArt();
     return a ? `data:image/png;base64,${a.base64}` : null;
   });
 
+  // ── Labels & badges ──────────────────────────────────────────────────
+
+  /** Human-readable system label for the badge chip. */
   readonly displaySystemLabel = computed(() => {
     const g = this.game();
     if (g?.isPs1Launcher) return 'PS1 App';
@@ -59,22 +76,28 @@ export class GamecardComponent {
     return 'PS2';
   });
 
+  /** Whether this game is a regular (non-PS1-launcher) ELF app. */
   readonly isApp = computed(() => {
     const g = this.game();
     return g?.system === 'APPS' && !g?.isPs1Launcher;
   });
 
+  /** Whether this game is a PS1 launcher app. */
   readonly isPs1LauncherApp = computed(() => {
     const g = this.game();
     return g?.system === 'APPS' && !!g?.isPs1Launcher;
   });
 
+  /** Format label shown in the chip — "ELF" for regular apps, otherwise format/extension. */
   readonly formatLabel = computed(() => {
     const g = this.game();
     if (g?.system === 'APPS' && !g?.isPs1Launcher) return 'ELF';
     return g?.format || g?.extension || '';
   });
 
+  // ── Action availability ──────────────────────────────────────────────
+
+  /** Whether a PS2 ISO can be compressed to ZSO. */
   readonly canCompressZso = computed(() => {
     const g = this.game();
     if (!g) return false;
@@ -83,6 +106,7 @@ export class GamecardComponent {
     return system === 'PS2' && isIso;
   });
 
+  /** Whether the file can be renamed to the OPL naming convention. */
   readonly canRenameConvention = computed(() => {
     const g = this.game();
     if (!g) return false;
@@ -98,10 +122,21 @@ export class GamecardComponent {
     );
   });
 
+  // ── Dialog visibility state ──────────────────────────────────────────
+
+  /** Whether the game-config dialog is open. */
   public showCfg = false;
+
+  /** Whether the rename dialog is open. */
   public showRename = false;
+
+  /** Whether the PS1 delete-progress dialog is open. */
   public showDeleteDialog = false;
+
+  /** Whether the App delete-progress dialog is open. */
   public showAppDeleteDialog = false;
+
+  /** Whether the user opted to delete artwork alongside the game. */
   public deleteArtwork = false;
 
   private readonly _cdr = inject(ChangeDetectorRef);
@@ -112,10 +147,14 @@ export class GamecardComponent {
     private readonly _confirm: ConfirmDialogService,
   ) {}
 
+  // ── Actions ──────────────────────────────────────────────────────────
+
+  /** Open the game configuration editor dialog. */
   openCfg() {
     if (this.game()) this.showCfg = true;
   }
 
+  /** Open the rename dialog to rename the game file. */
   openRename() {
     if (this.game()) {
       this.showRename = true;
@@ -123,6 +162,10 @@ export class GamecardComponent {
     }
   }
 
+  /**
+   * Enqueue an artwork-fetch job for this game.
+   * Regular ELF apps are skipped — they have no artwork source.
+   */
   fetchArtwork() {
     const g = this.game();
     if (!g) return;
@@ -141,6 +184,7 @@ export class GamecardComponent {
     ]);
   }
 
+  /** Enqueue a ZSO compression job for a PS2 ISO. */
   async convertToZso() {
     const g = this.game();
     if (!g || !this.canCompressZso()) return;
@@ -165,6 +209,12 @@ export class GamecardComponent {
     ]);
   }
 
+  /**
+   * Show the appropriate delete confirmation dialog based on game type:
+   *   - PS1 launcher → confirm-with-checkbox then PS1 delete dialog
+   *   - Regular app   → confirm-with-checkbox then App delete dialog
+   *   - PS2 game       → simple confirm then immediate delete
+   */
   async confirmDelete() {
     const g = this.game();
     if (!g) return;
