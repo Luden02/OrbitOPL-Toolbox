@@ -268,7 +268,7 @@ export interface DeleteAppEntry {
 export async function deleteAppWithProgress(
   oplRoot: string,
   folder: string,
-  bootName: string,
+  bootName?: string,
   onProgress?: (entry: DeleteAppEntry) => void
 ): Promise<{ success: boolean; entries: DeleteAppEntry[] }> {
   const entries: DeleteAppEntry[] = [];

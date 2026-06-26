@@ -151,7 +151,7 @@ declare interface Window {
     deleteAppWithProgress: (
       oplRoot: string,
       folder: string,
-      bootName: string,
+      bootName?: string,
     ) => Promise<{ success: boolean; entries: Array<{ label: string; path?: string; success: boolean; error?: string }> }>;
     onDeleteAppProgress: (
       callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void,
@@ -198,7 +198,11 @@ declare interface Window {
       gameId: string,
       launcherFolder?: string,
       bootName?: string,
-    ) => Promise<any>;
+    ) => Promise<{
+      success: boolean;
+      entries: Array<{ label: string; path?: string; success: boolean; error?: string }>;
+      message?: string;
+    }>;
     moveFile: (sourcePath: string, destPath: string) => Promise<any>;
     onMoveFileProgress: (
       callback: (progress: {

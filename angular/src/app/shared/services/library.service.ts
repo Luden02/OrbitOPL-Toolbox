@@ -861,6 +861,7 @@ export class LibraryService {
       return result;
     } catch (error: any) {
       this._logger.error('deleteGame', `Error: ${error?.message || error}`);
+      return { success: false, entries: [], message: error?.message ?? String(error) };
     } finally {
       this.setCurrentAction('');
       this.setLoading(false);

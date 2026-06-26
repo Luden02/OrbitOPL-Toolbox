@@ -1576,10 +1576,9 @@ export async function deleteGameAndRelatedFiles(
     const artPrefix = bootName || gameId;
     try {
       const artFiles = await fs.readdir(artDir);
-      const relatedArt = artFiles.filter((f) => {
-        const base = path.parse(f).name;
-        return f.startsWith(artPrefix + "_") && !f.startsWith(".");
-      });
+    const relatedArt = artFiles.filter((f) =>
+      f.startsWith(artPrefix + "_") && !f.startsWith(".")
+    );
       if (relatedArt.length > 0) {
         log.verbose(`Removing ${relatedArt.length} artwork file(s) for ${artPrefix}`);
         for (const artFile of relatedArt) {

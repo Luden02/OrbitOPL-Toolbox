@@ -69,6 +69,12 @@ export class GamecardComponent {
     return g?.system === 'APPS' && !!g?.isPs1Launcher;
   });
 
+  readonly formatLabel = computed(() => {
+    const g = this.game();
+    if (g?.system === 'APPS' && !g?.isPs1Launcher) return 'ELF';
+    return g?.format || g?.extension || '';
+  });
+
   readonly canCompressZso = computed(() => {
     const g = this.game();
     if (!g) return false;
@@ -169,7 +175,7 @@ export class GamecardComponent {
         detail:
           'This removes the VCD file, launcher app and POPS subfolder elements (VMCs, CHEATS.TXT, etc.)',
         confirmLabel: 'Delete',
-        checkboxLabel: 'Also delete game artwork',
+        toggleLabel: 'Also delete game artwork',
       });
       if (result.confirmed) {
         this.deleteArtwork = result.checked;
@@ -184,7 +190,7 @@ export class GamecardComponent {
         message: `Delete the app "${g.title}"?`,
         detail: 'This removes its APPS folder and all files inside.',
         confirmLabel: 'Delete',
-        checkboxLabel: 'Also delete game artwork',
+        toggleLabel: 'Also delete game artwork',
       });
       if (result.confirmed) {
         this.deleteArtwork = result.checked;

@@ -16,8 +16,8 @@ export interface ConfirmDialogOptions {
   cancelLabel?: string;
   /** Allow closing by clicking the backdrop. Defaults to true. */
   backdropClose?: boolean;
-  /** If set, renders a checkbox with this label text. */
-  checkboxLabel?: string;
+  /** If set, renders a toggle switch with this label text. */
+  toggleLabel?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,7 +57,9 @@ export class ConfirmDialogService {
     });
   }
 
-  confirmWithCheckbox(options: ConfirmDialogOptions): Promise<{ confirmed: boolean; checked: boolean }> {
+  confirmWithCheckbox(
+    options: ConfirmDialogOptions,
+  ): Promise<{ confirmed: boolean; checked: boolean }> {
     if (!isPlatformBrowser(this.platformId)) {
       return Promise.resolve({ confirmed: false, checked: false });
     }
