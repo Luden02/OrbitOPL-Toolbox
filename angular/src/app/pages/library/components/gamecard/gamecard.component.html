@@ -14,9 +14,7 @@
     {{ game()?.title || game()?.gameId }}
   </div>
   <span class="row-meta font-mono">{{ game()?.gameId }}</span>
-  @if(!isApp()) {
-  <span class="chip chip-region font-mono">{{ game()?.region }}</span>
-  }
+  <span class="chip chip-region font-mono" [style.visibility]="isApp() ? 'hidden' : 'visible'">{{ game()?.region }}</span>
   <span class="row-meta font-mono">{{ game()?.size }}</span>
   <span class="chip font-mono">{{ formatLabel() }}</span>
   <div class="dropdown dropdown-end row-actions">
