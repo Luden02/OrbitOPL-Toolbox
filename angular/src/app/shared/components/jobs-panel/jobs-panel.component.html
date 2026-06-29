@@ -41,6 +41,7 @@
         class="rounded-md border border-base-content/10 bg-base-100/40 p-2.5"
         [class.border-error]="job.status === 'error'"
         [class.border-success]="job.status === 'success'"
+        [class.border-warning]="job.status === 'cancelled'"
       >
         <div class="flex items-center gap-2">
           <i-lucide
@@ -49,12 +50,13 @@
             [class.text-success]="job.status === 'success'"
             [class.text-error]="job.status === 'error'"
             [class.text-accent]="job.status === 'running'"
+            [class.text-warning]="job.status === 'cancelled'"
             [class.text-base-content]="job.status === 'queued'"
             [class.spin]="job.status === 'running'"
           ></i-lucide>
           <span class="truncate text-xs font-medium" [title]="job.label">{{ job.label }}</span>
           <span class="badge badge-ghost badge-xs ml-auto shrink-0">{{ typeLabel(job) }}</span>
-          @if (job.status === 'success' || job.status === 'error' || job.status === 'queued') {
+          @if (job.status === 'success' || job.status === 'error' || job.status === 'queued' || job.status === 'cancelled') {
           <button
             class="btn btn-ghost btn-xs btn-square shrink-0"
             (click)="_jobs.removeJob(job.id)"
@@ -74,6 +76,12 @@
         <p class="mt-1 truncate text-[0.68rem] text-base-content/55">{{ job.stage }}</p>
         } @else if (job.status === 'queued') {
         <p class="mt-1 text-[0.68rem] text-base-content/45">Queued</p>
+        } @else if (job.status === 'success') {
+        @if (job.message) {
+        <p class="mt-1 text-[0.68rem] text-success/70">{{ job.message }}</p>
+        }
+        } @else if (job.status === 'cancelled') {
+        <p class="mt-1 text-[0.68rem] text-warning/70">{{ job.message || 'Cancelled' }}</p>
         } @else if (job.status === 'error') {
         <p class="mt-1 text-[0.68rem] text-error" [title]="job.message">{{ job.message }}</p>
         }

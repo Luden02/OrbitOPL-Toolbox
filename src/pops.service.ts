@@ -149,7 +149,7 @@ export async function importPs1Game(
     await fs.copyFile(popstarterElf, path.join(appsGameDir, elfFilename));
     await fs.writeFile(
       path.join(appsGameDir, "title.cfg"),
-      `title=${gameName}\nboot=${elfFilename}\n`,
+      `title=${gameName}\nboot=${elfFilename}\nGameID=${gameId}\n`,
       "utf-8"
     );
     log.verbose(`Created POPStarter launcher APPS/${appsFolderName}/${elfFilename}`);

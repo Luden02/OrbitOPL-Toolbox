@@ -8,6 +8,7 @@ import {
   shell,
 } from "electron";
 import path from "path";
+import * as fs from "fs/promises";
 import electronReloader from "electron-reloader";
 import PackageInfo from "../package.json";
 import {
@@ -24,8 +25,11 @@ import {
   openAskGameFiles,
   resolveIsoGameId,
   renameGamefile,
+  renamePs1LauncherStep1,
+  renamePs1LauncherStep2,
   tryDetermineGameIdFromHex,
   tryDeterminePs1GameIdFromHex,
+  tryDeterminePs1GameIdFromVcd,
 } from "./library.service";
 import { importPs1Game } from "./pops.service";
 import { importPs2CdGame } from "./cd.service";
@@ -38,8 +42,8 @@ import {
 import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
-import { createVmc, deleteVmc, listVmc } from "./vmc.service";
-import { deleteApp, getApps, importApp } from "./apps.service";
+import { checkPopsVmc, createVmc, deleteVmc, listVmc } from "./vmc.service";
+import { deleteApp, deleteAppWithProgress, getApps, getPs1Launchers, importApp, updatePs1TitleCfg } from "./apps.service";
 import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
@@ -273,11 +277,56 @@ ipcMain.handle(
 );
 
 ipcMain.handle(
-  "download-art-by-gameid",
-  async (event, dirPath: string, gameId: string, system?: "PS1" | "PS2") => {
-    return downloadArtByGameId(dirPath, gameId, system || "PS2");
+  "rename-ps1-launcher-step1",
+  async (
+    event,
+    vcdPath: string,
+    gameId: string,
+    newTitle: string
+  ) => {
+    return renamePs1LauncherStep1(vcdPath, gameId, newTitle, (percent, stage) => {
+      event.sender.send("rename-ps1-progress", { percent, stage });
+    });
   }
 );
+
+ipcMain.handle(
+  "rename-ps1-launcher-step2",
+  async (
+    event,
+    params: {
+      newAppsFolder: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newTitle: string;
+    }
+  ) => {
+    return renamePs1LauncherStep2(params, (percent, stage) => {
+      event.sender.send("rename-ps1-progress", { percent, stage });
+    });
+  }
+);
+
+ipcMain.handle(
+  "download-art-by-gameid",
+  async (event, dirPath: string, gameId: string, system?: "PS1" | "PS2", saveAsName?: string) => {
+    return downloadArtByGameId(dirPath, gameId, system || "PS2", saveAsName);
+  }
+);
+
+ipcMain.handle("check-art-files-exist", async (_event, artDir: string, filenames: string[]) => {
+  const existing: string[] = [];
+  for (const name of filenames) {
+    try {
+      await fs.access(path.join(artDir, name));
+      existing.push(name);
+    } catch {
+      // File does not exist — skip.
+    }
+  }
+  return existing;
+});
 
 ipcMain.handle("resolve-iso-gameid", async (_event, filepath: string) => {
   return resolveIsoGameId(filepath);
@@ -381,6 +430,21 @@ ipcMain.handle("get-apps", async (_event, oplRoot: string) => {
   return getApps(oplRoot);
 });
 
+ipcMain.handle("get-ps1-launchers", async (_event, oplRoot: string) => {
+  return getPs1Launchers(oplRoot);
+});
+
+ipcMain.handle(
+  "update-ps1-title-cfg",
+  async (_event, launcherPath: string, newTitle: string, gameId?: string) => {
+    return updatePs1TitleCfg(launcherPath, newTitle, gameId);
+  }
+);
+
+ipcMain.handle("try-determine-ps1-gameid-from-vcd", async (_event, filepath: string) => {
+  return tryDeterminePs1GameIdFromVcd(filepath);
+});
+
 ipcMain.handle("open-ask-elf-files", async () => {
   return openAskElfFiles();
 });
@@ -396,8 +460,21 @@ ipcMain.handle("delete-app", async (_event, oplRoot: string, folder: string) => 
   return deleteApp(oplRoot, folder);
 });
 
+ipcMain.handle(
+  "delete-app-with-progress",
+  async (event, oplRoot: string, folder: string, bootName: string) => {
+    return deleteAppWithProgress(oplRoot, folder, bootName, (entry) => {
+      event.sender.send("delete-app-progress", entry);
+    });
+  }
+);
+
 ipcMain.handle("list-vmc", async (_event, oplRoot: string) => {
   return listVmc(oplRoot);
+});
+
+ipcMain.handle("check-pops-vmc", async (_event, oplRoot: string, gameTitle: string) => {
+  return checkPopsVmc(oplRoot, gameTitle);
 });
 
 ipcMain.handle(
@@ -413,8 +490,10 @@ ipcMain.handle("delete-vmc", async (_event, oplRoot: string, name: string) => {
 
 ipcMain.handle(
   "delete-game-and-related-files",
-  async (_event, gamePath: string, artDir: string, gameId: string) => {
-    return deleteGameAndRelatedFiles(gamePath, artDir, gameId);
+  async (event, gamePath: string, artDir: string, gameId: string, launcherFolder?: string, bootName?: string) => {
+    return deleteGameAndRelatedFiles(gamePath, artDir, gameId, launcherFolder, (entry) => {
+      event.sender.send("delete-ps1-progress", entry);
+    }, bootName);
   }
 );
 

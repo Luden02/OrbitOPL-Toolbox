@@ -1,0 +1,82 @@
+<div class="delete-backdrop" (click)="deleting ? null : close()"></div>
+<div class="delete-modal glass-strong" role="dialog">
+  <div class="flex items-center gap-2 border-b border-base-content/10 px-5 py-3">
+    <i-lucide name="trash-2" size="18" class="text-error"></i-lucide>
+    <h2 class="font-display text-sm font-semibold tracking-wide">
+      @if (deleting) { Deleting PS1 App Game… }
+      @else { Delete complete }
+    </h2>
+    <button class="btn btn-ghost btn-xs btn-square ml-auto" (click)="close()" [disabled]="deleting">
+      <i-lucide name="x" size="16"></i-lucide>
+    </button>
+  </div>
+
+  <div class="delete-body flex flex-col gap-4 px-5 py-4">
+    <div class="rounded-md border border-base-content/10 bg-base-100/30 p-3 text-sm">
+      <span class="font-semibold">{{ game().title || game().gameId }}</span>
+      <span class="ml-2 text-xs text-base-content/50">{{ game().gameId }}</span>
+    </div>
+
+    <div #logArea class="log-area rounded-md border border-base-content/10 bg-base-100/30">
+      @if (deleting && entries.length === 0) {
+      <div class="flex items-center gap-2 p-4 text-sm text-base-content/60">
+        <span class="loading loading-spinner loading-sm"></span>
+        Deleting…
+      </div>
+      }
+      @for (entry of entries; track entry.id) {
+      <div class="log-entry" [class.is-success]="entry.success" [class.is-error]="!entry.success">
+        <div class="log-primary">
+          <span class="entry-icon">
+            @if (entry.success) {
+            <i-lucide name="circle-check" size="14"></i-lucide>
+            } @else {
+            <i-lucide name="circle-x" size="14"></i-lucide>
+            }
+          </span>
+          <span class="entry-label">{{ entry.label }}</span>
+        </div>
+        <div class="log-secondary">
+          @if (entry.path && entry.path !== 'Not present') {
+          <span class="entry-path font-mono">{{ entry.path }}</span>
+          } @else if (entry.path === 'Not present') {
+          <span class="entry-path-missing font-mono italic">Not present</span>
+          }
+        </div>
+        @if (!entry.success && entry.error) {
+        <div class="log-error-detail font-mono text-xs">{{ entry.error }}</div>
+        }
+      </div>
+      }
+    </div>
+
+    @if (!deleting) {
+    <div class="rounded-md border p-3 text-sm" [class.border-success/30]="overallSuccess"
+      [class.bg-success/5]="overallSuccess" [class.border-error/30]="!overallSuccess"
+      [class.bg-error/5]="!overallSuccess">
+      <div class="flex items-center gap-2">
+        <i-lucide [name]="overallSuccess ? 'circle-check' : 'triangle-alert'" size="18"
+          [class.text-success]="overallSuccess" [class.text-error]="!overallSuccess"></i-lucide>
+        <span class="font-semibold">
+          {{ overallSuccess ? 'Deleted successfully' : 'Some items failed' }}
+        </span>
+      </div>
+      @if (!overallSuccess) {
+      <p class="mt-1 text-xs text-base-content/60">
+        The game may still be partially removed. Check the Logs page for details.
+      </p>
+      }
+    </div>
+    }
+  </div>
+
+  <div class="flex justify-end gap-2 border-t border-base-content/10 px-5 py-3">
+    @if (deleting) {
+    <span class="text-xs text-base-content/40">Deleting — do not close…</span>
+    } @else {
+    <button class="btn btn-primary btn-sm" (click)="close()">
+      Close
+    </button>
+    }
+  </div>
+</div>

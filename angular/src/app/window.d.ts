@@ -10,7 +10,7 @@ declare interface Window {
     }>;
     createOplFolders: (
       dirPath: string,
-      folders: string[]
+      folders: string[],
     ) => Promise<{ success: boolean; created?: string[]; message?: string }>;
     getULGames: (dirPath: string) => Promise<any>;
     getArtFolder: (dirPath: string) => Promise<any>;
@@ -18,13 +18,52 @@ declare interface Window {
       dirPath: string,
       gameId: string,
       gameName: string,
-      nameOnly?: boolean
+      nameOnly?: boolean,
     ) => Promise<any>;
+    renamePs1LauncherStep1: (
+      vcdPath: string,
+      gameId: string,
+      newTitle: string,
+    ) => Promise<{
+      success: boolean;
+      newVcdPath?: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newAppsFolder?: string;
+      safeNewTitle?: string;
+      message?: string;
+    }>;
+    renamePs1LauncherStep2: (params: {
+      newAppsFolder: string;
+      oldElfFile?: string;
+      newElfFile?: string;
+      newCfgContent?: string;
+      newTitle: string;
+    }) => Promise<{ success: boolean; message?: string }>;
+    onRenamePs1Progress: (
+      callback: (progress: { percent: number; stage: string }) => void,
+    ) => void;
+    removeAllRenamePs1ProgressListeners: () => void;
+    onDeletePs1Progress: (
+      callback: (entry: {
+        label: string;
+        path?: string;
+        success: boolean;
+        error?: string;
+      }) => void,
+    ) => void;
+    removeAllDeletePs1ProgressListeners: () => void;
     downloadArtByGameId: (
       dirPath: string,
       gameId: string,
-      system?: 'PS1' | 'PS2'
+      system?: 'PS1' | 'PS2',
+      saveAsName?: string,
     ) => Promise<any>;
+    checkArtFilesExist: (
+      artDir: string,
+      filenames: string[],
+    ) => Promise<string[]>;
     tryDetermineGameIdFromHex: (filepath: string) => Promise<any>;
     resolveIsoGameId: (filepath: string) => Promise<{
       success: boolean;
@@ -34,14 +73,21 @@ declare interface Window {
     }>;
     openAskGameFiles: (isGameCd: boolean, isGameDvd: boolean) => Promise<any>;
     tryDeterminePs1GameIdFromHex: (filepath: string) => Promise<any>;
+    tryDeterminePs1GameIdFromVcd: (filepath: string) => Promise<{
+      success: boolean;
+      gameId?: string;
+      formattedGameId?: string;
+      gameName?: string;
+      message?: string;
+    }>;
     importPs1Game: (
       cueFilePath: string,
       oplRoot: string,
       elfPrefix: string,
-      downloadArtwork: boolean
+      downloadArtwork: boolean,
     ) => Promise<any>;
     onPs1ImportProgress: (
-      callback: (progress: { percent: number; stage: string }) => void
+      callback: (progress: { percent: number; stage: string }) => void,
     ) => void;
     removeAllPs1ImportProgressListeners: () => void;
     importPs2CdGame: (
@@ -49,19 +95,19 @@ declare interface Window {
       oplRoot: string,
       gameId: string | undefined,
       gameName: string | undefined,
-      downloadArtwork: boolean
+      downloadArtwork: boolean,
     ) => Promise<any>;
     onPs2CdImportProgress: (
-      callback: (progress: { percent: number; stage: string }) => void
+      callback: (progress: { percent: number; stage: string }) => void,
     ) => void;
     removeAllPs2CdImportProgressListeners: () => void;
     compressIsoToZso: (
       isoPath: string,
       zsoPath: string,
-      deleteOriginal: boolean
+      deleteOriginal: boolean,
     ) => Promise<any>;
     onZsoCompressProgress: (
-      callback: (progress: { percent: number; stage: string }) => void
+      callback: (progress: { percent: number; stage: string }) => void,
     ) => void;
     removeAllZsoCompressProgressListeners: () => void;
     getApps: (oplRoot: string) => Promise<{
@@ -75,33 +121,67 @@ declare interface Window {
       }[];
       message?: string;
     }>;
+    getPs1Launchers: (oplRoot: string) => Promise<{
+      success: boolean;
+      launchers: {
+        folder: string;
+        title: string;
+        boot: string;
+        path: string;
+        sizeBytes: number;
+        gameId?: string;
+      }[];
+      message?: string;
+    }>;
+    updatePs1TitleCfg: (
+      launcherPath: string,
+      newTitle: string,
+      gameId?: string,
+    ) => Promise<{ success: boolean; message?: string }>;
     openAskElfFiles: () => Promise<any>;
     importApp: (
       oplRoot: string,
       elfPath: string,
-      title: string
+      title: string,
     ) => Promise<{ success: boolean; folder?: string; message?: string }>;
     deleteApp: (
       oplRoot: string,
-      folder: string
+      folder: string,
     ) => Promise<{ success: boolean; message?: string }>;
+    deleteAppWithProgress: (
+      oplRoot: string,
+      folder: string,
+      bootName?: string,
+    ) => Promise<{ success: boolean; entries: Array<{ label: string; path?: string; success: boolean; error?: string }> }>;
+    onDeleteAppProgress: (
+      callback: (entry: { label: string; path?: string; success: boolean; error?: string }) => void,
+    ) => void;
+    removeAllDeleteAppProgressListeners: () => void;
     listVmc: (oplRoot: string) => Promise<{
       success: boolean;
       cards: { name: string; sizeBytes: number; sizeMb: number }[];
       message?: string;
     }>;
+    checkPopsVmc: (
+      oplRoot: string,
+      gameTitle: string,
+    ) => Promise<{
+      success: boolean;
+      slot0: string | null;
+      slot1: string | null;
+    }>;
     createVmc: (
       oplRoot: string,
       name: string,
-      sizeMb: number
+      sizeMb: number,
     ) => Promise<{ success: boolean; name?: string; message?: string }>;
     deleteVmc: (
       oplRoot: string,
-      name: string
+      name: string,
     ) => Promise<{ success: boolean; message?: string }>;
     readGameCfg: (
       oplRoot: string,
-      gameId: string
+      gameId: string,
     ) => Promise<{
       success: boolean;
       entries: Record<string, string>;
@@ -110,13 +190,19 @@ declare interface Window {
     writeGameCfg: (
       oplRoot: string,
       gameId: string,
-      entries: Record<string, string>
+      entries: Record<string, string>,
     ) => Promise<{ success: boolean; message?: string }>;
     deleteGameAndRelatedFiles: (
       gamePath: string,
       artDir: string,
-      gameId: string
-    ) => Promise<any>;
+      gameId: string,
+      launcherFolder?: string,
+      bootName?: string,
+    ) => Promise<{
+      success: boolean;
+      entries: Array<{ label: string; path?: string; success: boolean; error?: string }>;
+      message?: string;
+    }>;
     moveFile: (sourcePath: string, destPath: string) => Promise<any>;
     onMoveFileProgress: (
       callback: (progress: {
@@ -124,7 +210,7 @@ declare interface Window {
         copiedMB: number;
         totalMB: number;
         elapsed: number;
-      }) => void
+      }) => void,
     ) => void;
     removeAllMoveFileProgressListeners: () => void;
     onMainLog: (
@@ -133,14 +219,14 @@ declare interface Window {
         location?: string;
         message: string;
         timestamp: string;
-      }) => void
+      }) => void,
     ) => void;
     removeAllMainLogListeners: () => void;
     setLoadingState: (isLoading: boolean) => void;
     getSettings: () => Promise<AppSettings>;
     setSetting: <K extends keyof AppSettings>(
       key: K,
-      value: AppSettings[K]
+      value: AppSettings[K],
     ) => Promise<AppSettings>;
     directoryExists: (dirPath: string) => Promise<boolean>;
     checkForUpdates: () => Promise<UpdateCheckResult>;

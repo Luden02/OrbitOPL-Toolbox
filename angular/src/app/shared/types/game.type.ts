@@ -1,5 +1,13 @@
 export type GameFormat = 'ISO' | 'ZSO' | 'VCD' | 'UL' | 'POPS' | 'APP';
 
+export type Ps1LauncherInfo = {
+  folder: string;
+  title: string;
+  boot: string;
+  path: string;
+  gameId?: string;
+};
+
 export type Game = {
   filename: string;
   size?: string;
@@ -15,6 +23,14 @@ export type Game = {
   art?: gameArt[];
   /** APPS only: the subfolder name under APPS/ (used for deletion). */
   appFolder?: string;
+  /** PS1 only: path to the APPS/POPS_* launcher folder for this game. */
+  ps1LauncherPath?: string;
+  /** PS1 only: ELF boot filename inside the launcher folder. */
+  ps1LauncherBoot?: string;
+  /** PS1 only: POPS subfolder for VMC detection (derived from POPS_ prefix). */
+  ps1VmcSub?: string;
+  /** Marks this APPS entry as a PS1 POPStarter launcher (OPL 1.2+). */
+  isPs1Launcher?: boolean;
 };
 
 export type RawGameFile = {

@@ -22,7 +22,7 @@ export class VmcService {
 
   constructor(
     private readonly _library: LibraryService,
-    private readonly _logger: LogsService
+    private readonly _logger: LogsService,
   ) {}
 
   public get cards(): VmcInfo[] {
@@ -44,7 +44,31 @@ export class VmcService {
     return res.cards;
   }
 
-  async create(name: string, sizeMb: number): Promise<{ ok: boolean; name?: string; message?: string }> {
+  /**
+   * Check per-game POPS VMC files for a PS1 launcher app.
+   * Returns whether SLOT0.VMC and SLOT1.VMC exist in VMC/POPS/<gameTitle>/.
+   * Does NOT update cardsSubject (these are per-game, not global cards).
+   */
+  async checkPops(
+    gameTitle: string,
+  ): Promise<{ slot0: string | null; slot1: string | null }> {
+    const root = this._library.currentDirectoryValue;
+    if (!root) return { slot0: null, slot1: null };
+    const res = await window.libraryAPI.checkPopsVmc(root, gameTitle);
+    if (!res.success) {
+      this._logger.error(
+        'vmcService',
+        `Failed to check POPS VMC for "${gameTitle}"`,
+      );
+      return { slot0: null, slot1: null };
+    }
+    return { slot0: res.slot0, slot1: res.slot1 };
+  }
+
+  async create(
+    name: string,
+    sizeMb: number,
+  ): Promise<{ ok: boolean; name?: string; message?: string }> {
     const root = this._library.currentDirectoryValue;
     if (!root) return { ok: false, message: 'No directory mounted.' };
     const res = await window.libraryAPI.createVmc(root, name, sizeMb);
