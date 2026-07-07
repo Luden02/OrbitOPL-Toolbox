@@ -5,6 +5,7 @@ import {
   computed,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { Game } from '@shared/types/game.type';
 
@@ -45,6 +46,9 @@ export class GamecardComponent {
 
   /** Whether the library is currently in grid or list view. */
   readonly viewMode = input<GamecardViewMode>('grid');
+
+  /** Emitted when the user clicks the card body to view details. */
+  readonly viewDetails = output<Game>();
 
   // ── Artwork ──────────────────────────────────────────────────────────
 
@@ -145,7 +149,7 @@ export class GamecardComponent {
     public readonly _libraryService: LibraryService,
     private readonly _jobs: JobsService,
     private readonly _confirm: ConfirmDialogService,
-  ) {}
+  ) { }
 
   // ── Actions ──────────────────────────────────────────────────────────
 

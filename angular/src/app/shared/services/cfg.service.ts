@@ -30,16 +30,21 @@ export class CfgService {
   constructor(
     private readonly _library: LibraryService,
     private readonly _logger: LogsService
-  ) {}
+  ) { }
 
   async getGameCfg(gameId: string): Promise<GameCfg> {
     const root = this._library.currentDirectoryValue;
-    if (!root) return {};
-    const res = await window.libraryAPI.readGameCfg(root, gameId);
-    if (!res.success) {
-      this._logger.error('cfgService', `Failed to read CFG: ${res.message}`);
+    if (!root) {
+      this._logger.log('cfgService', `getGameCfg(${gameId}): no root directory`);
       return {};
     }
+    const res = await window.libraryAPI.readGameCfg(root, gameId);
+    if (!res.success) {
+      this._logger.error('cfgService', `Failed to read CFG for ${gameId}: ${res.message}`);
+      return {};
+    }
+    const keys = Object.keys(res.entries);
+    this._logger.log('cfgService', `CFG for ${gameId}: ${keys.length} key(s) [${keys.join(', ')}]`);
     return res.entries;
   }
 

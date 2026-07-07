@@ -1,6 +1,8 @@
 <div class="page flex h-full flex-col fade-in">
   <!-- ── Header ──────────────────────────────────────────────── -->
-  <header class="page-header glass flex items-center justify-between gap-4 px-6">
+  <header
+    class="page-header glass flex items-center justify-between gap-4 px-6"
+  >
     <div class="flex items-center gap-3">
       <i-lucide name="library" size="26" class="text-accent"></i-lucide>
       <div>
@@ -14,17 +16,21 @@
     <div class="flex items-center gap-2">
       <!-- Search -->
       <label class="input input-sm w-64 bg-base-100/60">
-        <i-lucide name="search" size="16" class="text-base-content/40"></i-lucide>
+        <i-lucide
+          name="search"
+          size="16"
+          class="text-base-content/40"
+        ></i-lucide>
         <input
           type="text"
           placeholder="Search games…"
           [value]="searchTerm"
           (input)="setSearch($any($event.target).value)"
         />
-        @if(searchTerm) {
-        <button class="opacity-60 hover:opacity-100" (click)="clearSearch()">
-          <i-lucide name="x" size="15"></i-lucide>
-        </button>
+        @if (searchTerm) {
+          <button class="opacity-60 hover:opacity-100" (click)="clearSearch()">
+            <i-lucide name="x" size="15"></i-lucide>
+          </button>
         }
       </label>
 
@@ -68,32 +74,35 @@
         <i-lucide name="refresh-cw" size="16"></i-lucide>
       </button>
 
-      @if(this._libraryService.hasCurrentDirectory$ | async) {
-      <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-sm btn-square">
-          <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
+      @if (this._libraryService.hasCurrentDirectory$ | async) {
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-sm btn-square">
+            <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
+          </div>
+          <ul
+            tabindex="-1"
+            class="dropdown-content menu glass-strong rounded-box z-10 mt-1 w-60 p-2 shadow-xl"
+          >
+            <li>
+              <a (click)="downloadAllArt()">
+                <i-lucide name="image-down" size="16"></i-lucide>Download
+                artwork for all games
+              </a>
+            </li>
+            <li>
+              <a (click)="convertAllToZso()">
+                <i-lucide name="file-archive" size="16"></i-lucide>Convert all
+                PS2 ISOs to ZSO
+              </a>
+            </li>
+            <li>
+              <a (click)="openRenameDialog()">
+                <i-lucide name="text-cursor-input" size="16"></i-lucide>Rename
+                all games to convention…
+              </a>
+            </li>
+          </ul>
         </div>
-        <ul
-          tabindex="-1"
-          class="dropdown-content menu glass-strong rounded-box z-10 mt-1 w-60 p-2 shadow-xl"
-        >
-          <li>
-            <a (click)="downloadAllArt()">
-              <i-lucide name="image-down" size="16"></i-lucide>Download artwork for all games
-            </a>
-          </li>
-          <li>
-            <a (click)="convertAllToZso()">
-              <i-lucide name="file-archive" size="16"></i-lucide>Convert all PS2 ISOs to ZSO
-            </a>
-          </li>
-          <li>
-            <a (click)="openRenameDialog()">
-              <i-lucide name="text-cursor-input" size="16"></i-lucide>Rename all games to convention…
-            </a>
-          </li>
-        </ul>
-      </div>
       }
     </div>
   </header>
@@ -128,61 +137,67 @@
 
   <!-- ── Body ────────────────────────────────────────────────── -->
   <div class="library-body flex-1 overflow-y-auto px-6 py-5">
-    @if(!(this._libraryService.hasCurrentDirectory$ | async)) {
-    <!-- Nothing mounted -->
-    <div class="empty-state">
-      <div class="empty-orb">
-        <i-lucide name="folder-open" size="44"></i-lucide>
+    @if (!(this._libraryService.hasCurrentDirectory$ | async)) {
+      <!-- Nothing mounted -->
+      <div class="empty-state">
+        <div class="empty-orb">
+          <i-lucide name="folder-open" size="44"></i-lucide>
+        </div>
+        <h2 class="font-display mt-5 text-xl tracking-wide">
+          No directory mounted
+        </h2>
+        <p class="mt-1 max-w-sm text-sm text-base-content/50">
+          Mount your OPL drive or folder to browse and manage your PlayStation
+          game collection.
+        </p>
+        <button
+          class="btn btn-primary mt-5"
+          [disabled]="this._libraryService.loading$ | async"
+          (click)="this._libraryService.openAskDirectory()"
+        >
+          <i-lucide name="folder-open" size="18"></i-lucide>Mount Directory
+        </button>
       </div>
-      <h2 class="font-display mt-5 text-xl tracking-wide">No directory mounted</h2>
-      <p class="mt-1 max-w-sm text-sm text-base-content/50">
-        Mount your OPL drive or folder to browse and manage your PlayStation
-        game collection.
-      </p>
-      <button
-        class="btn btn-primary mt-5"
-        [disabled]="this._libraryService.loading$ | async"
-        (click)="this._libraryService.openAskDirectory()"
-      >
-        <i-lucide name="folder-open" size="18"></i-lucide>Mount Directory
-      </button>
-    </div>
-    } @else if((visibleGames$ | async)?.length === 0) {
-    <!-- Mounted but empty / no matches -->
-    <div class="empty-state">
-      <div class="empty-orb">
-        <i-lucide [name]="searchTerm ? 'search-x' : 'gamepad-2'" size="44"></i-lucide>
+    } @else if ((visibleGames$ | async)?.length === 0) {
+      <!-- Mounted but empty / no matches -->
+      <div class="empty-state">
+        <div class="empty-orb">
+          <i-lucide
+            [name]="searchTerm ? 'search-x' : 'gamepad-2'"
+            size="44"
+          ></i-lucide>
+        </div>
+        <h2 class="font-display mt-5 text-xl tracking-wide">
+          {{ searchTerm ? "No matching games" : "No games here yet" }}
+        </h2>
+        <p class="mt-1 max-w-sm text-sm text-base-content/50">
+          {{
+            searchTerm
+              ? "Try a different search term or switch systems."
+              : "Import a game to get started, or switch to the other system."
+          }}
+        </p>
       </div>
-      <h2 class="font-display mt-5 text-xl tracking-wide">
-        {{ searchTerm ? "No matching games" : "No games here yet" }}
-      </h2>
-      <p class="mt-1 max-w-sm text-sm text-base-content/50">
-        {{
-          searchTerm
-            ? "Try a different search term or switch systems."
-            : "Import a game to get started, or switch to the other system."
-        }}
-      </p>
-    </div>
     } @else {
-    <div
-      [class.library-grid]="viewMode === 'grid'"
-      [class.library-list]="viewMode === 'list'"
-    >
-      @for (item of visibleGames$ | async; track item.path || item.gameId) {
-      <app-gamecard
-        [game]="item"
-        [viewMode]="viewMode"
-        [class.list-card]="viewMode === 'list'"
-      ></app-gamecard>
-      }
-    </div>
+      <div
+        [class.library-grid]="viewMode === 'grid'"
+        [class.library-list]="viewMode === 'list'"
+      >
+        @for (item of visibleGames$ | async; track item.path || item.gameId) {
+          <app-gamecard
+            [game]="item"
+            [viewMode]="viewMode"
+            (viewDetails)="viewGameDetails($event)"
+            [class.list-card]="viewMode === 'list'"
+          ></app-gamecard>
+        }
+      </div>
     }
   </div>
 </div>
 
 @if (showRenameDialog) {
-<app-library-rename-dialog
-  (closed)="showRenameDialog = false"
-></app-library-rename-dialog>
+  <app-library-rename-dialog
+    (closed)="showRenameDialog = false"
+  ></app-library-rename-dialog>
 }

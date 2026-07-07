@@ -30,6 +30,21 @@ export class LibraryService {
     return this.invalidFilesSubject.asObservable();
   }
 
+  private selectedGameSubject = new BehaviorSubject<Game | null>(null);
+  public get selectedGame$(): Observable<Game | null> {
+    return this.selectedGameSubject.asObservable();
+  }
+  /** Synchronous snapshot of the selected game for details view. */
+  public get selectedGameValue(): Game | null {
+    return this.selectedGameSubject.getValue();
+  }
+  public selectGame(game: Game | null) {
+    this.selectedGameSubject.next(game);
+  }
+
+  /** Tab to restore when returning from the details view. */
+  public returnTab: 'PS2' | 'PS1' | 'APPS' = 'PS2';
+
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public get loading$(): Observable<boolean> {
     return this.loadingSubject.asObservable();
@@ -101,7 +116,7 @@ export class LibraryService {
   constructor(
     private readonly _logger: LogsService,
     private readonly _settings: SettingsService
-  ) {}
+  ) { }
 
   /**
    * On launch, re-mount the last used directory if auto-reconnect is enabled
@@ -212,9 +227,9 @@ export class LibraryService {
     const missing = result.missing;
     const confirmed = window.confirm(
       `The selected folder is missing standard OPL folder(s):\n\n` +
-        `${missing.join(', ')}\n\n` +
-        `Make sure this is your OPL directory. Click OK to create the ` +
-        `missing folder(s) and continue, or Cancel to unmount.`
+      `${missing.join(', ')}\n\n` +
+      `Make sure this is your OPL directory. Click OK to create the ` +
+      `missing folder(s) and continue, or Cancel to unmount.`
     );
 
     if (!confirmed) {

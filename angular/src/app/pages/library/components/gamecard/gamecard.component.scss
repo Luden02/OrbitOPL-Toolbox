@@ -6,6 +6,14 @@
   max-width: none;
 }
 
+.tile {
+  cursor: pointer;
+}
+
+.game-row {
+  cursor: pointer;
+}
+
 /* ── Grid poster ────────────────────────────────────────────── */
 .poster {
   height: 100%;
@@ -52,11 +60,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: linear-gradient(
-    160deg,
-    oklch(28% 0.05 258),
-    oklch(18% 0.04 262)
-  );
+  background: linear-gradient(160deg, oklch(28% 0.05 258), oklch(18% 0.04 262));
   color: oklch(70% 0.06 240 / 0.45);
 }
 

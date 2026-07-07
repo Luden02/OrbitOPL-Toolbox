@@ -179,6 +179,22 @@ declare interface Window {
       oplRoot: string,
       name: string,
     ) => Promise<{ success: boolean; message?: string }>;
+    readAppTitleCfg: (
+      oplRoot: string,
+      folder: string,
+    ) => Promise<{
+      success: boolean;
+      title?: string;
+      boot?: string;
+      gameId?: string;
+      developer?: string;
+      genre?: string;
+      release?: string;
+      ratingText?: string;
+      rating?: string;
+      description?: string;
+      message?: string;
+    }>;
     readGameCfg: (
       oplRoot: string,
       gameId: string,

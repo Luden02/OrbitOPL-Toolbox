@@ -43,7 +43,7 @@ import { checkForUpdates } from "./update.service";
 import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { checkPopsVmc, createVmc, deleteVmc, listVmc } from "./vmc.service";
-import { deleteApp, deleteAppWithProgress, getApps, getPs1Launchers, importApp, updatePs1TitleCfg } from "./apps.service";
+import { deleteApp, deleteAppWithProgress, getApps, getPs1Launchers, importApp, readAppTitleCfg, updatePs1TitleCfg } from "./apps.service";
 import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
@@ -409,6 +409,13 @@ ipcMain.handle(
     return compressIsoToZso(isoPath, zsoPath, deleteOriginal, (percent, stage) => {
       event.sender.send("zso-compress-progress", { percent, stage });
     });
+  }
+);
+
+ipcMain.handle(
+  "read-app-title-cfg",
+  async (_event, oplRoot: string, folder: string) => {
+    return readAppTitleCfg(oplRoot, folder);
   }
 );
 

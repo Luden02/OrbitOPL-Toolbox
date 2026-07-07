@@ -16,6 +16,15 @@ const log = createLogger("cfg");
 
 export type GameCfg = Record<string, string>;
 
+/** Reject paths targeting `.cfg.bak` backup files — never read them. */
+const CFG_BAK_RE = /\.cfg\.bak$/i;
+
+function assertNotBak(gameId: string): void {
+  if (CFG_BAK_RE.test(gameId)) {
+    throw new Error(`Refusing to operate on .cfg.bak path: ${gameId}`);
+  }
+}
+
 function cfgPath(oplRoot: string, gameId: string): string {
   return path.join(oplRoot, "CFG", `${gameId}.cfg`);
 }
@@ -25,16 +34,20 @@ export async function readGameCfg(
   gameId: string
 ): Promise<{ success: boolean; entries: GameCfg; message?: string }> {
   try {
+    assertNotBak(gameId);
     const raw = await fs.readFile(cfgPath(oplRoot, gameId), "utf-8");
     const entries: GameCfg = {};
     for (const line of raw.split(/\r?\n/)) {
       if (!line) continue;
       const eq = line.indexOf("=");
       if (eq <= 0) continue;
-      const key = line.slice(0, eq);
-      entries[key] = line.slice(eq + 1);
+      const key = line.slice(0, eq).trim();
+      const value = line.slice(eq + 1).trim();
+      if (!key) continue;
+      entries[key] = value;
     }
-    log.verbose(`Read CFG for ${gameId}: ${Object.keys(entries).length} key(s)`);
+    const foundKeys = Object.keys(entries);
+    log.verbose(`Read CFG for ${gameId}: ${foundKeys.length} key(s) [${foundKeys.join(", ")}]`);
     return { success: true, entries };
   } catch (err: any) {
     // A missing file simply means "no config yet" — not an error.
@@ -53,6 +66,7 @@ export async function writeGameCfg(
   entries: GameCfg
 ): Promise<{ success: boolean; message?: string }> {
   try {
+    assertNotBak(gameId);
     const target = cfgPath(oplRoot, gameId);
     const keys = Object.keys(entries);
 
