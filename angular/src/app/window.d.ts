@@ -285,7 +285,6 @@ declare interface Window {
       message?: string;
     }>;
     /** Read a game CFG file (`CFG/<gameId>.cfg`). */
-
     readGameCfg: (
       oplRoot: string,
       gameId: string,
@@ -390,3 +389,4 @@ declare interface AppSettings {
   /** Whether to auto-reconnect to the last directory on startup. */
   autoReconnect: boolean;
 }
+

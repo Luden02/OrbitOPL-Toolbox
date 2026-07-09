@@ -126,13 +126,7 @@
                     [class.meta-placeholder]="
                       !parentalType && !parentalDisplayValue
                     "
-                    >{{
-                      parentalType
-                        ? (parentalType | uppercase) +
-                          " - " +
-                          parentalDisplayValue
-                        : parentalDisplayValue || "—"
-                    }}</span
+                    >{{ parentalLabel || "—" }}</span
                   >
                 </div>
                 <div class="meta-item meta-item-icons">

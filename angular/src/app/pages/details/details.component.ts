@@ -1,5 +1,4 @@
 import { ApplicationRef, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { LibraryService } from '@shared/services/library.service';
@@ -19,7 +18,7 @@ const PEGI_RATINGS: Record<string, number> = {
 
 @Component({
   selector: 'app-details',
-  imports: [CommonModule, LucideAngularModule],
+  imports: [LucideAngularModule],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
 })
@@ -178,6 +177,12 @@ export class DetailsComponent {
 
   // ── Template helpers ──────────────────────────────────────────────
 
+  get parentalLabel(): string {
+    if (!this.parentalType && !this.parentalDisplayValue) return '';
+    if (!this.parentalType) return this.parentalDisplayValue;
+    return `${this.parentalType.toUpperCase()} - ${this.parentalDisplayValue}`;
+  }
+
   get isSquareCover(): boolean {
     if (!this.game) return false;
     return this.game.system === 'PS1' || this.game.system === 'APPS';
@@ -236,9 +241,5 @@ export class DetailsComponent {
     }
     this._library.selectGame(null);
     this._router.navigate(['/library']);
-  }
-
-  toggleLayout() {
-    this.layoutVariant = this.layoutVariant === 'default' ? 'alt' : 'default';
   }
 }
