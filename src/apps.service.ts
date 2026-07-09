@@ -49,6 +49,9 @@ export interface TitleCfgData {
   ratingText?: string;
   rating?: string;
   description?: string;
+  parentalText?: string;
+  parental?: string;
+  playersText?: string;
 }
 
 function parseTitleCfg(raw: string): TitleCfgData {
@@ -67,6 +70,9 @@ function parseTitleCfg(raw: string): TitleCfgData {
     else if (key === "ratingtext") out.ratingText = val;
     else if (key === "rating") out.rating = val;
     else if (key === "description") out.description = val;
+    else if (key === "parentaltext") out.parentalText = val;
+    else if (key === "parental") out.parental = val;
+    else if (key === "playerstext") out.playersText = val;
   }
   return out;
 }

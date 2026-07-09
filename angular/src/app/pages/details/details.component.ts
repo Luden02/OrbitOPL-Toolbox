@@ -1,10 +1,11 @@
 import { ApplicationRef, Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { LibraryService } from '../../shared/services/library.service';
-import { CfgService, CFG_KEY_NAME } from '../../shared/services/cfg.service';
-import { TitleCfgService } from '../../shared/services/title-cfg.service';
-import { Game, gameArt } from '../../shared/types/game.type';
+import { LibraryService } from '@shared/services/library.service';
+import { CfgService, CFG_KEY_NAME } from '@shared/services/cfg.service';
+import { TitleCfgService } from '@shared/services/title-cfg.service';
+import { Game, gameArt } from '@shared/types/game.type';
 
 const ESRB_RATINGS: Record<string, number> = {
   'EC': 2, 'E': 3, 'E10+': 3.5, 'E10': 3.5,
@@ -18,7 +19,7 @@ const PEGI_RATINGS: Record<string, number> = {
 
 @Component({
   selector: 'app-details',
-  imports: [LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
 })
@@ -41,6 +42,10 @@ export class DetailsComponent {
   release = '';
   description = '';
   ratingValue = 0;
+  parentalType = '';
+  parentalDisplayValue = '';
+  players = '';
+  layoutVariant: 'default' | 'alt' = 'default';
 
   ngOnInit() {
     this.game = this._library.selectedGameValue;
@@ -101,6 +106,8 @@ export class DetailsComponent {
         this.release = cfg['Release'] || '';
         this.description = cfg['Description'] || '';
         this.ratingValue = this.parseRating(cfg['RatingText'] || cfg['Rating'] || '');
+        this._formatParentalLabel(cfg['Parental'] || '', cfg['ParentalText'] || '');
+        this.players = cfg['PlayersText'] || cfg['Players'] || '';
         this._applyFallbackTitle();
         this.loading = false;
         this._appRef.tick();
@@ -141,6 +148,10 @@ export class DetailsComponent {
       if (data.ratingText || data.rating) {
         this.ratingValue = this.parseRating(data.ratingText || data.rating || '');
       }
+      if (data.parental || data.parentalText) {
+        this._formatParentalLabel(data.parental || '', data.parentalText || '');
+      }
+      if (data.playersText) this.players = data.playersText;
       this._applyFallbackTitle();
       this.loading = false;
       this._appRef.tick();
@@ -151,6 +162,17 @@ export class DetailsComponent {
   private _applyFallbackTitle(): void {
     if (!this.displayTitle && this.game) {
       this.displayTitle = this.game.title || this.game.gameId || this.game.filename;
+    }
+  }
+
+  /** Parse parental type and display value from "type/value" + optional text. */
+  private _formatParentalLabel(parental: string, text: string): void {
+    if (parental.includes('/')) {
+      this.parentalType = parental.split('/')[0].trim();
+      this.parentalDisplayValue = text || parental.split('/')[1].trim();
+    } else {
+      this.parentalType = '';
+      this.parentalDisplayValue = text || parental;
     }
   }
 
@@ -168,6 +190,13 @@ export class DetailsComponent {
   get ratingStars(): boolean[] {
     const r = Math.round(this.ratingValue);
     return [1, 2, 3, 4, 5].map((i) => i <= r);
+  }
+
+  get playersCount(): number {
+    if (!this.players) return 0;
+    const m = this.players.match(/(\d+)/);
+    const n = m ? parseInt(m[1], 10) : 0;
+    return Math.min(Math.max(n, 1), 4);
   }
 
   private parseRating(raw: string): number {
@@ -207,5 +236,9 @@ export class DetailsComponent {
     }
     this._library.selectGame(null);
     this._router.navigate(['/library']);
+  }
+
+  toggleLayout() {
+    this.layoutVariant = this.layoutVariant === 'default' ? 'alt' : 'default';
   }
 }

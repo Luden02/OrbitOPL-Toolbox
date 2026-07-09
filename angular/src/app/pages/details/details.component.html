@@ -32,19 +32,37 @@
         >
           <i-lucide name="arrow-left" size="20"></i-lucide>
         </button>
-        <span class="text-sm font-mono text-base-content/60">{{
-          game.gameId || "—"
-        }}</span>
+        <div class="join ml-auto">
+          <button
+            class="btn btn-sm btn-square join-item"
+            [class.btn-primary]="layoutVariant === 'default'"
+            [class.btn-ghost]="layoutVariant !== 'default'"
+            (click)="layoutVariant = 'default'"
+            title="Stacked layout"
+          >
+            <i-lucide name="stretch-horizontal" size="16"></i-lucide>
+          </button>
+          <button
+            class="btn btn-sm btn-square join-item"
+            [class.btn-primary]="layoutVariant === 'alt'"
+            [class.btn-ghost]="layoutVariant !== 'alt'"
+            (click)="layoutVariant = 'alt'"
+            title="Compact layout"
+          >
+            <i-lucide name="rows-2" size="16"></i-lucide>
+          </button>
+        </div>
       </header>
 
-      <div class="details-body">
+      <div class="details-body" [class.alt-layout]="layoutVariant === 'alt'">
         <div class="details-art-col">
           @if (covArt) {
-            <div
+            <img
               class="details-cover"
               [class.is-square]="isSquareCover"
-              [style.background-image]="'url(' + covArt + ')'"
-            ></div>
+              [src]="covArt"
+              alt="Cover"
+            />
           } @else {
             <div
               class="details-cover details-cover-missing"
@@ -78,62 +96,102 @@
             }
           </div>
 
-          <div class="details-section meta-grid">
-            <div class="meta-item">
-              <span class="meta-label">Title</span>
-              <span
-                class="meta-value"
-                [class.meta-placeholder]="!displayTitle"
-                >{{ displayTitle || "—" }}</span
-              >
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Rating</span>
-              <span class="meta-value stars">
-                @for (filled of ratingStars; track $index) {
-                  <i-lucide
-                    name="star"
-                    size="18"
-                    [attr.fill]="filled ? 'oklch(78% 0.18 80)' : 'transparent'"
-                    [color]="
-                      filled
-                        ? 'oklch(78% 0.18 80)'
-                        : 'oklch(40% 0.04 260 / 0.4)'
+          <div class="details-section">
+            <div class="meta-grid">
+              @if (!isElfApp) {
+                <div class="meta-item meta-item-icons">
+                  <span class="meta-label">Score</span>
+                  <span class="meta-value stars">
+                    @for (filled of ratingStars; track $index) {
+                      <i-lucide
+                        name="star"
+                        size="18"
+                        [attr.fill]="
+                          filled ? 'oklch(78% 0.18 80)' : 'transparent'
+                        "
+                        [color]="
+                          filled
+                            ? 'oklch(78% 0.18 80)'
+                            : 'oklch(40% 0.04 260 / 0.4)'
+                        "
+                        [strokeWidth]="filled ? 0 : 2"
+                      ></i-lucide>
+                    }
+                  </span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Rating</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="
+                      !parentalType && !parentalDisplayValue
                     "
-                    [strokeWidth]="filled ? 0 : 2"
-                  ></i-lucide>
-                }
-              </span>
-            </div>
-            @if (!isElfApp) {
-              <div class="meta-item">
-                <span class="meta-label">Release</span>
-                <span class="meta-value" [class.meta-placeholder]="!release">{{
-                  release || "—"
-                }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Developer</span>
+                    >{{
+                      parentalType
+                        ? (parentalType | uppercase) +
+                          " - " +
+                          parentalDisplayValue
+                        : parentalDisplayValue || "—"
+                    }}</span
+                  >
+                </div>
+                <div class="meta-item meta-item-icons">
+                  <span class="meta-label">Players</span>
+                  <span
+                    class="meta-value stars"
+                    [class.meta-placeholder]="!players"
+                  >
+                    @for (p of [1, 2, 3, 4]; track p) {
+                      <i-lucide
+                        name="user"
+                        size="16"
+                        [color]="
+                          p <= playersCount
+                            ? 'oklch(78% 0.1 212)'
+                            : 'oklch(40% 0.04 260 / 0.3)'
+                        "
+                        [attr.fill]="
+                          p <= playersCount
+                            ? 'oklch(78% 0.1 212)'
+                            : 'transparent'
+                        "
+                      ></i-lucide>
+                    }
+                  </span>
+                </div>
+              }
+              @if (!isElfApp) {
+                <div class="meta-item">
+                  <span class="meta-label">Release</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="!release"
+                    >{{ release || "—" }}</span
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Developer</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="!developer"
+                    >{{ developer || "—" }}</span
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Genre</span>
+                  <span class="meta-value" [class.meta-placeholder]="!genre">{{
+                    genre || "—"
+                  }}</span>
+                </div>
+              }
+              <div class="meta-item meta-item-desc">
+                <span class="meta-label">Description</span>
                 <span
                   class="meta-value"
-                  [class.meta-placeholder]="!developer"
-                  >{{ developer || "—" }}</span
+                  [class.meta-placeholder]="!description"
+                  >{{ description || "—" }}</span
                 >
               </div>
-              <div class="meta-item">
-                <span class="meta-label">Genre</span>
-                <span class="meta-value" [class.meta-placeholder]="!genre">{{
-                  genre || "—"
-                }}</span>
-              </div>
-            }
-            <div class="meta-item meta-item-desc">
-              <span class="meta-label">Description</span>
-              <span
-                class="meta-value"
-                [class.meta-placeholder]="!description"
-                >{{ description || "—" }}</span
-              >
             </div>
           </div>
 
