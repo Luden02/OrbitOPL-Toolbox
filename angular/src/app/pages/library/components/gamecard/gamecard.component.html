@@ -1,135 +1,217 @@
-@if(viewMode() === 'list') {
-<!-- ── List row ──────────────────────────────────────────────── -->
-<div class="game-row row-item">
-  <figure class="row-art">
-      @if(displayArt()) {
-      <img [src]="artSrc()" alt="" />
+@if (viewMode() === "list") {
+  <!-- ── List row ──────────────────────────────────────────────── -->
+  <div
+    class="game-row row-item"
+    (click)="viewDetails.emit(game()!)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="viewDetails.emit(game()!)"
+  >
+    <figure class="row-art">
+      @if (displayArt()) {
+        <img [src]="artSrc()" alt="" loading="lazy" />
       } @else {
-    <div class="row-no-art">
-      <i-lucide name="image-off" size="18"></i-lucide>
+        <div class="row-no-art">
+          <i-lucide name="image-off" size="18"></i-lucide>
+        </div>
+      }
+    </figure>
+    <div class="row-title" [title]="game()?.title || game()?.gameId || ''">
+      {{ game()?.title || game()?.gameId }}
     </div>
-    }
-  </figure>
-  <div class="row-title" [title]="game()?.title || game()?.gameId || ''">
-    {{ game()?.title || game()?.gameId }}
-  </div>
-  <span class="row-meta font-mono">{{ game()?.gameId }}</span>
-  <span class="chip chip-region font-mono" [style.visibility]="isApp() ? 'hidden' : 'visible'">{{ game()?.region }}</span>
-  <span class="row-meta font-mono">{{ game()?.size }}</span>
-  <span class="chip font-mono">{{ formatLabel() }}</span>
-  <div class="dropdown dropdown-end row-actions">
-    <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
-      <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
-    </div>
-    <ul tabindex="-1" class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl">
-      @if(!isApp() || isPs1LauncherApp()) {
-      <li>
-        <a (click)="fetchArtwork()"><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a>
-      </li>
-      <li>
-        <a (click)="openCfg()"><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a>
-      </li>
-      }
-      @if(canCompressZso()) {
-      <li>
-        <a (click)="convertToZso()"><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a>
-      </li>
-      }
-      @if(canRenameConvention()) {
-      <li>
-        <a (click)="openRename()"><i-lucide name="text-cursor-input" [size]="16"></i-lucide>{{ game()?.isPs1Launcher ?
-          'Rename game…' : 'Rename to convention…' }}</a>
-      </li>
-      }
-      <li>
-        <a class="text-error" (click)="confirmDelete()"><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a>
-      </li>
-    </ul>
-  </div>
-</div>
-} @else {
-<!-- ── Grid poster ───────────────────────────────────────────── -->
-<div class="tile poster">
-  <div class="poster-art" [class.is-square]="game()?.system === 'APPS'">
-    <div class="poster-art-clip">
-      @if(displayArt()) {
-      <img [src]="artSrc()" alt="cover art" />
-      } @else {
-      <div class="poster-no-art">
-        <i-lucide name="image-off" size="40"></i-lucide>
-        <span class="font-mono text-xs">{{ game()?.gameId || game()?.title }}</span>
+    <span class="row-meta font-mono">{{ game()?.gameId }}</span>
+    <span
+      class="chip chip-region font-mono"
+      [style.visibility]="isApp() ? 'hidden' : 'visible'"
+      >{{ game()?.region }}</span
+    >
+    <span class="row-meta font-mono">{{ game()?.size }}</span>
+    <span class="chip font-mono">{{ formatLabel() }}</span>
+    <div
+      class="dropdown dropdown-end row-actions"
+      (click)="$event.stopPropagation()"
+    >
+      <div tabindex="0" role="button" class="btn btn-sm btn-ghost btn-square">
+        <i-lucide name="ellipsis-vertical" size="16"></i-lucide>
       </div>
-      }
-    </div>
-
-    <!-- top overlays -->
-    <span class="poster-system" [class.is-ps1]="game()?.system === 'PS1'" [class.is-ps1-app]="game()?.system === 'APPS'">{{
-      displaySystemLabel()
-      }}</span>
-
-    <div class="dropdown dropdown-end poster-menu">
-      <div tabindex="0" role="button" class="btn btn-xs btn-square glass-strong">
-        <i-lucide name="ellipsis" size="15"></i-lucide>
-      </div>
-      <ul tabindex="-1" class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl">
-        @if(!isApp() || isPs1LauncherApp()) {
-        <li>
-          <a (click)="fetchArtwork()"><i-lucide name="image-down" [size]="16"></i-lucide>Fetch artwork</a>
-        </li>
-        <li>
-          <a (click)="openCfg()"><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game settings</a>
-        </li>
+      <ul
+        tabindex="-1"
+        class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
+      >
+        @if (!isApp() || isPs1LauncherApp()) {
+          <li>
+            <a (click)="fetchArtwork()"
+              ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch
+              artwork</a
+            >
+          </li>
+          <li>
+            <a (click)="openCfg()"
+              ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game
+              settings</a
+            >
+          </li>
         }
-        @if(canCompressZso()) {
-        <li>
-          <a (click)="convertToZso()"><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to ZSO</a>
-        </li>
+        @if (canCompressZso()) {
+          <li>
+            <a (click)="convertToZso()"
+              ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to
+              ZSO</a
+            >
+          </li>
         }
-        @if(canRenameConvention()) {
-        <li>
-          <a (click)="openRename()"><i-lucide name="text-cursor-input" [size]="16"></i-lucide>{{ game()?.isPs1Launcher ?
-            'Rename game…' : 'Rename to convention…' }}</a>
-        </li>
+        @if (canRenameConvention()) {
+          <li>
+            <a (click)="openRename()"
+              ><i-lucide name="text-cursor-input" [size]="16"></i-lucide
+              >{{
+                game()?.isPs1Launcher ? "Rename game…" : "Rename to convention…"
+              }}</a
+            >
+          </li>
         }
         <li>
-          <a class="text-error" (click)="confirmDelete()"><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a>
+          <a class="text-error" (click)="confirmDelete()"
+            ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
+          >
         </li>
       </ul>
     </div>
-
-    <!-- bottom gradient + title -->
-    <div class="poster-overlay">
-      <div class="poster-title" [title]="game()?.title || game()?.gameId || ''">
-        {{ game()?.title || game()?.gameId }}
-      </div>
-      <div class="poster-meta">
-        @if(!isApp()) {
-        <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+  </div>
+} @else {
+  <!-- ── Grid poster ───────────────────────────────────────────── -->
+  <div
+    class="tile poster"
+    (click)="viewDetails.emit(game()!)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="viewDetails.emit(game()!)"
+  >
+    <div class="poster-art" [class.is-square]="game()?.system === 'APPS'">
+      <div class="poster-art-clip">
+        @if (displayArt()) {
+          <img [src]="artSrc()" alt="cover art" loading="lazy" />
+        } @else {
+          <div class="poster-no-art">
+            <i-lucide name="image-off" size="40"></i-lucide>
+            <span class="font-mono text-xs">{{
+              game()?.gameId || game()?.title
+            }}</span>
+          </div>
         }
-        <span class="chip font-mono">{{ formatLabel() }}</span>
-        <span class="poster-size font-mono">{{ game()?.size }}</span>
+      </div>
+
+      <!-- top overlays -->
+      <span
+        class="poster-system"
+        [class.is-ps1]="game()?.system === 'PS1'"
+        [class.is-ps1-app]="game()?.system === 'APPS'"
+        >{{ displaySystemLabel() }}</span
+      >
+
+      <div
+        class="dropdown dropdown-end poster-menu"
+        (click)="$event.stopPropagation()"
+      >
+        <div
+          tabindex="0"
+          role="button"
+          class="btn btn-xs btn-square glass-strong"
+        >
+          <i-lucide name="ellipsis" size="15"></i-lucide>
+        </div>
+        <ul
+          tabindex="-1"
+          class="dropdown-content menu glass-strong rounded-box z-10 w-48 p-2 shadow-xl"
+        >
+          @if (!isApp() || isPs1LauncherApp()) {
+            <li>
+              <a (click)="fetchArtwork()"
+                ><i-lucide name="image-down" [size]="16"></i-lucide>Fetch
+                artwork</a
+              >
+            </li>
+            <li>
+              <a (click)="openCfg()"
+                ><i-lucide name="sliders-horizontal" [size]="16"></i-lucide>Game
+                settings</a
+              >
+            </li>
+          }
+          @if (canCompressZso()) {
+            <li>
+              <a (click)="convertToZso()"
+                ><i-lucide name="file-archive" [size]="16"></i-lucide>Convert to
+                ZSO</a
+              >
+            </li>
+          }
+          @if (canRenameConvention()) {
+            <li>
+              <a (click)="openRename()"
+                ><i-lucide name="text-cursor-input" [size]="16"></i-lucide
+                >{{
+                  game()?.isPs1Launcher
+                    ? "Rename game…"
+                    : "Rename to convention…"
+                }}</a
+              >
+            </li>
+          }
+          <li>
+            <a class="text-error" (click)="confirmDelete()"
+              ><i-lucide name="trash-2" [size]="16"></i-lucide>Delete</a
+            >
+          </li>
+        </ul>
+      </div>
+
+      <!-- bottom gradient + title -->
+      <div class="poster-overlay">
+        <div
+          class="poster-title"
+          [title]="game()?.title || game()?.gameId || ''"
+        >
+          {{ game()?.title || game()?.gameId }}
+        </div>
+        <div class="poster-meta">
+          @if (!isApp()) {
+            <span class="chip chip-region font-mono">{{ game()?.region }}</span>
+          }
+          <span class="chip font-mono">{{ formatLabel() }}</span>
+          <span class="poster-size font-mono">{{ game()?.size }}</span>
+        </div>
       </div>
     </div>
   </div>
-</div>
 }
 
-@if(showCfg && game()) {
-<app-game-cfg-dialog [game]="game()!"
-  (closed)="showCfg = false; _libraryService.refreshGamesFiles()"></app-game-cfg-dialog>
+@if (showCfg && game()) {
+  <app-game-cfg-dialog
+    [game]="game()!"
+    (closed)="showCfg = false; _libraryService.refreshGamesFiles()"
+  ></app-game-cfg-dialog>
 }
 
-@if(showRename && game()) {
-<app-library-rename-dialog [game]="game()!"
-  (closed)="showRename = false; _libraryService.refreshGamesFiles()"></app-library-rename-dialog>
+@if (showRename && game()) {
+  <app-library-rename-dialog
+    [game]="game()!"
+    (closed)="showRename = false; _libraryService.refreshGamesFiles()"
+  ></app-library-rename-dialog>
 }
 
-@if(showDeleteDialog && game()) {
-<app-ps1-delete-dialog [game]="game()!" [deleteArtwork]="deleteArtwork"
-  (closed)="showDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-ps1-delete-dialog>
+@if (showDeleteDialog && game()) {
+  <app-ps1-delete-dialog
+    [game]="game()!"
+    [deleteArtwork]="deleteArtwork"
+    (closed)="showDeleteDialog = false; _libraryService.refreshGamesFiles()"
+  ></app-ps1-delete-dialog>
 }
 
-@if(showAppDeleteDialog && game()) {
-<app-app-delete-dialog [game]="game()!" [deleteArtwork]="deleteArtwork"
-  (closed)="showAppDeleteDialog = false; _libraryService.refreshGamesFiles()"></app-app-delete-dialog>
+@if (showAppDeleteDialog && game()) {
+  <app-app-delete-dialog
+    [game]="game()!"
+    [deleteArtwork]="deleteArtwork"
+    (closed)="showAppDeleteDialog = false; _libraryService.refreshGamesFiles()"
+  ></app-app-delete-dialog>
 }

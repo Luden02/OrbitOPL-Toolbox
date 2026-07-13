@@ -39,8 +39,23 @@ function sanitizeAppName(name: string): string {
   );
 }
 
-function parseTitleCfg(raw: string): { title?: string; boot?: string; gameId?: string } {
-  const out: { title?: string; boot?: string; gameId?: string } = {};
+export interface TitleCfgData {
+  title?: string;
+  boot?: string;
+  gameId?: string;
+  developer?: string;
+  genre?: string;
+  release?: string;
+  ratingText?: string;
+  rating?: string;
+  description?: string;
+  parentalText?: string;
+  parental?: string;
+  playersText?: string;
+}
+
+function parseTitleCfg(raw: string): TitleCfgData {
+  const out: TitleCfgData = {};
   for (const line of raw.split(/\r?\n/)) {
     const eq = line.indexOf("=");
     if (eq <= 0) continue;
@@ -49,6 +64,15 @@ function parseTitleCfg(raw: string): { title?: string; boot?: string; gameId?: s
     if (key === "title") out.title = val;
     else if (key === "boot") out.boot = val;
     else if (key === "gameid") out.gameId = val;
+    else if (key === "developer") out.developer = val;
+    else if (key === "genre") out.genre = val;
+    else if (key === "release") out.release = val;
+    else if (key === "ratingtext") out.ratingText = val;
+    else if (key === "rating") out.rating = val;
+    else if (key === "description") out.description = val;
+    else if (key === "parentaltext") out.parentalText = val;
+    else if (key === "parental") out.parental = val;
+    else if (key === "playerstext") out.playersText = val;
   }
   return out;
 }
@@ -174,6 +198,25 @@ export async function importApp(
     return { success: true, folder: folderName };
   } catch (err: any) {
     log.error(`Failed to import app from ${elfPath}:`, err?.message || err);
+    return { success: false, message: err?.message || String(err) };
+  }
+}
+
+/**
+ * Reads the title.cfg from an APPS subfolder and returns its parsed values.
+ */
+export async function readAppTitleCfg(
+  oplRoot: string,
+  folder: string
+): Promise<{ success: boolean } & TitleCfgData & { message?: string }> {
+  try {
+    const cfgPath = path.join(appsDir(oplRoot), folder, "title.cfg");
+    const raw = await fs.readFile(cfgPath, "utf-8");
+    return { success: true, ...parseTitleCfg(raw) };
+  } catch (err: any) {
+    if (err?.code === "ENOENT") {
+      return { success: false, message: "title.cfg not found" };
+    }
     return { success: false, message: err?.message || String(err) };
   }
 }

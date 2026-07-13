@@ -166,6 +166,8 @@ contextBridge.exposeInMainWorld("libraryAPI", {
     ipcRenderer.invoke("create-vmc", oplRoot, name, sizeMb),
   deleteVmc: (oplRoot: string, name: string) =>
     ipcRenderer.invoke("delete-vmc", oplRoot, name),
+  readAppTitleCfg: (oplRoot: string, folder: string) =>
+    ipcRenderer.invoke("read-app-title-cfg", oplRoot, folder),
   readGameCfg: (oplRoot: string, gameId: string) =>
     ipcRenderer.invoke("read-game-cfg", oplRoot, gameId),
   writeGameCfg: (

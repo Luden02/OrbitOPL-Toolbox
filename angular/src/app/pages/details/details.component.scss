@@ -1,0 +1,351 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.details-page {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.details-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(4px);
+  transform: scale(1.1);
+}
+
+.details-bg-fallback {
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 30% 20%,
+      oklch(42% 0.19 255 / 0.25),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 70% 80%,
+      oklch(30% 0.15 260 / 0.15),
+      transparent
+    ),
+    linear-gradient(160deg, oklch(14% 0.06 260), oklch(7% 0.04 258));
+}
+
+.details-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(6% 0.04 260 / 0.93) 0%,
+    oklch(10% 0.05 258 / 0.85) 50%,
+    oklch(7% 0.04 262 / 0.92) 100%
+  );
+}
+
+.details-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  backdrop-filter: blur(12px);
+  background: oklch(0% 0 0 / 0.25);
+  border-bottom: 1px solid oklch(100% 0 0 / 0.06);
+}
+
+.details-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  gap: 2.5rem;
+  padding: 2rem 1.5rem;
+  scrollbar-gutter: stable;
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+.details-body::-webkit-scrollbar-thumb {
+  background: oklch(60% 0.08 250 / 0.25);
+  border-radius: 99px;
+}
+
+.details-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Art column ───────────────────────────────────────────── */
+
+.details-art-col {
+  flex-shrink: 0;
+  width: 220px;
+}
+
+.details-cover {
+  width: 220px;
+  border-radius: 0.5rem;
+  display: block;
+  box-shadow:
+    0 8px 32px oklch(0% 0 0 / 0.5),
+    0 0 0 1px oklch(100% 0 0 / 0.08);
+  transition: box-shadow 0.2s ease;
+}
+
+.details-cover-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  background: oklch(25% 0.06 258 / 0.6);
+  color: oklch(70% 0.06 240 / 0.4);
+}
+
+.details-cover.is-square {
+  width: 220px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  object-position: center;
+  background: oklch(25% 0.06 258 / 0.6);
+}
+
+.details-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Info column ──────────────────────────────────────────── */
+
+.details-info-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.details-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+  font-family: "Chakra Petch", sans-serif;
+  letter-spacing: 0.01em;
+  color: oklch(97% 0.02 250);
+  line-height: 1.2;
+  text-shadow: 0 2px 12px oklch(0% 0 0 / 0.4);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Sections ─────────────────────────────────────────────── */
+
+.details-section {
+  margin-bottom: 1.5rem;
+}
+
+.details-section-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: oklch(75% 0.05 250 / 0.5);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid oklch(100% 0 0 / 0.06);
+}
+
+/* ── Meta grid ────────────────────────────────────────────── */
+
+.meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
+  background: oklch(100% 0 0 / 0.03);
+}
+
+.meta-item {
+  display: flex;
+  align-items: baseline;
+  padding: 0.35rem 0.6rem;
+}
+
+.meta-item-icons {
+  align-items: center;
+}
+
+.meta-item-desc {
+  align-items: flex-start;
+}
+
+.meta-item-desc .meta-value {
+  line-height: 1.5;
+  font-size: 0.82rem;
+  color: oklch(85% 0.02 250 / 0.8);
+}
+
+.meta-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: "Chakra Petch", sans-serif;
+  color: oklch(70% 0.1 212 / 0.7);
+  width: 15ch;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.meta-value {
+  font-size: 0.85rem;
+  color: oklch(93% 0.02 250 / 0.9);
+  word-break: break-word;
+}
+
+.meta-value.mono {
+  font-family: "Chakra Petch", monospace;
+  font-size: 0.78rem;
+  color: oklch(80% 0.04 250 / 0.7);
+}
+
+.meta-placeholder {
+  color: oklch(60% 0.03 255 / 0.35);
+  letter-spacing: 0.1em;
+}
+
+/* ── Stars ────────────────────────────────────────────────── */
+
+.meta-value.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* ── Screenshots grid ─────────────────────────────────────── */
+
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  gap: 1rem;
+}
+
+.screenshot-item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid oklch(100% 0 0 / 0.06);
+  background: oklch(15% 0.04 260);
+}
+
+.screenshot-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.screenshot-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(18% 0.04 260);
+  color: oklch(40% 0.04 260 / 0.35);
+}
+
+/* ── Chips ────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: oklch(50% 0.06 250 / 0.3);
+  color: oklch(88% 0.03 250 / 0.85);
+  border: 1px solid oklch(60% 0.08 250 / 0.18);
+  white-space: nowrap;
+}
+
+.chip-region {
+  background: oklch(82% 0.13 212 / 0.16);
+  color: oklch(85% 0.1 212);
+  border-color: oklch(82% 0.13 212 / 0.3);
+}
+
+/* ── Alt layout ────────────────────────────────────────────── */
+
+.alt-layout .details-section {
+  border: 1px solid oklch(100% 0 0 / 0.06);
+  border-radius: 0.5rem;
+  background: oklch(100% 0 0 / 0.03);
+  padding: 1rem;
+}
+
+.alt-layout .details-section-title {
+  margin-bottom: 0.75rem;
+}
+
+.alt-layout .meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 1.5rem;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.alt-layout .meta-item {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.35rem;
+  background: oklch(100% 0 0 / 0.02);
+}
+
+.alt-layout .meta-item-desc {
+  grid-column: 1 / -1;
+}
+
+.alt-layout .meta-label {
+  width: 13ch;
+}
+
+.alt-layout .screenshots-grid {
+  justify-content: center;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .details-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .details-art-col {
+    width: 160px;
+  }
+
+  .details-cover {
+    width: 160px;
+  }
+
+  .details-cover.is-square {
+    width: 160px;
+  }
+
+  .screenshots-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   GamecardComponent,
   GamecardViewMode,
@@ -30,8 +31,19 @@ export class LibraryComponent {
 
   constructor(
     public readonly _libraryService: LibraryService,
-    private readonly _jobs: JobsService
-  ) {}
+    private readonly _jobs: JobsService,
+    private readonly _router: Router,
+  ) { }
+
+  private gameSystemToTab(system: string | undefined): SystemTab {
+    return (system ?? 'PS2') === 'PS2' ? 'PS2' : system === 'PS1' ? 'PS1' : 'APPS';
+  }
+
+  viewGameDetails(game: Game) {
+    this._libraryService.selectGame(game);
+    this._libraryService.returnTab = this.gameSystemToTab(game.system);
+    this._router.navigate(['/library/details']);
+  }
 
   openRenameDialog() {
     this.showRenameDialog = true;
@@ -72,7 +84,7 @@ export class LibraryComponent {
     }
     const confirmed = window.confirm(
       `Compress ${candidates.length} PS2 ISO game(s) to ZSO?\n\n` +
-        `Each .iso will be replaced with a smaller .zso once its job succeeds.`
+      `Each .iso will be replaced with a smaller .zso once its job succeeds.`
     );
     if (!confirmed) return;
     this._jobs.enqueue(
@@ -108,6 +120,9 @@ export class LibraryComponent {
 
   ngOnInit() {
     const library$ = this._libraryService.library$;
+
+    this.activeTabSubject.next(this._libraryService.returnTab);
+    this._libraryService.returnTab = 'PS2';
 
     const sortByTitle = (games: Game[]) =>
       [...games].sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''));

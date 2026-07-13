@@ -1,0 +1,277 @@
+@if (loading) {
+  <div class="flex h-full items-center justify-center">
+    <span class="loading loading-spinner text-accent loading-lg"></span>
+  </div>
+} @else if (!game) {
+  <div class="flex h-full flex-col items-center justify-center gap-4">
+    <i-lucide name="search-x" size="48" class="text-base-content/30"></i-lucide>
+    <p class="text-base-content/50">No game selected</p>
+    <button class="btn btn-primary btn-sm" (click)="back()">
+      <i-lucide name="arrow-left" size="16"></i-lucide> Back to Library
+    </button>
+  </div>
+} @else {
+  <div class="details-page fade-in">
+    @if (bgArt) {
+      <div
+        class="details-bg"
+        [style.background-image]="'url(' + bgArt + ')'"
+      ></div>
+    } @else {
+      <div class="details-bg details-bg-fallback"></div>
+    }
+
+    <div class="details-scrim"></div>
+
+    <div class="details-content">
+      <header class="details-header">
+        <button
+          class="btn btn-ghost btn-sm btn-square glass-strong"
+          (click)="back()"
+          title="Back"
+        >
+          <i-lucide name="arrow-left" size="20"></i-lucide>
+        </button>
+        <div class="join ml-auto">
+          <button
+            class="btn btn-sm btn-square join-item"
+            [class.btn-primary]="layoutVariant === 'default'"
+            [class.btn-ghost]="layoutVariant !== 'default'"
+            (click)="layoutVariant = 'default'"
+            title="Stacked layout"
+          >
+            <i-lucide name="stretch-horizontal" size="16"></i-lucide>
+          </button>
+          <button
+            class="btn btn-sm btn-square join-item"
+            [class.btn-primary]="layoutVariant === 'alt'"
+            [class.btn-ghost]="layoutVariant !== 'alt'"
+            (click)="layoutVariant = 'alt'"
+            title="Compact layout"
+          >
+            <i-lucide name="rows-2" size="16"></i-lucide>
+          </button>
+        </div>
+      </header>
+
+      <div class="details-body" [class.alt-layout]="layoutVariant === 'alt'">
+        <div class="details-art-col">
+          @if (covArt) {
+            <img
+              class="details-cover"
+              [class.is-square]="isSquareCover"
+              [src]="covArt"
+              alt="Cover"
+            />
+          } @else {
+            <div
+              class="details-cover details-cover-missing"
+              [class.is-square]="isSquareCover"
+            >
+              <i-lucide name="image-off" size="32"></i-lucide>
+            </div>
+          }
+        </div>
+
+        <div class="details-info-col">
+          <h1 class="details-title">{{ displayTitle }}</h1>
+
+          <div class="details-meta-chips">
+            @if (game.gameId) {
+              <span class="chip chip-region font-mono">{{ game.gameId }}</span>
+            }
+            @if (
+              game.region && (game.system !== "APPS" || game.isPs1Launcher)
+            ) {
+              <span class="chip chip-region font-mono">{{ game.region }}</span>
+            }
+            <span class="chip font-mono">{{ game.system || "PS2" }}</span>
+            <span class="chip font-mono">{{
+              isElfApp
+                ? game.extension || game.format
+                : game.format || game.extension
+            }}</span>
+            @if (game.size) {
+              <span class="chip font-mono">{{ game.size }}</span>
+            }
+          </div>
+
+          <div class="details-section">
+            <div class="meta-grid">
+              @if (!isElfApp) {
+                <div class="meta-item meta-item-icons">
+                  <span class="meta-label">Score</span>
+                  <span class="meta-value stars">
+                    @for (filled of ratingStars; track $index) {
+                      <i-lucide
+                        name="star"
+                        size="18"
+                        [attr.fill]="
+                          filled ? 'oklch(78% 0.18 80)' : 'transparent'
+                        "
+                        [color]="
+                          filled
+                            ? 'oklch(78% 0.18 80)'
+                            : 'oklch(40% 0.04 260 / 0.4)'
+                        "
+                        [strokeWidth]="filled ? 0 : 2"
+                      ></i-lucide>
+                    }
+                  </span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Rating</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="
+                      !parentalType && !parentalDisplayValue
+                    "
+                    >{{ parentalLabel || "—" }}</span
+                  >
+                </div>
+                <div class="meta-item meta-item-icons">
+                  <span class="meta-label">Players</span>
+                  <span
+                    class="meta-value stars"
+                    [class.meta-placeholder]="!players"
+                  >
+                    @for (p of [1, 2, 3, 4]; track p) {
+                      <i-lucide
+                        name="user"
+                        size="16"
+                        [color]="
+                          p <= playersCount
+                            ? 'oklch(78% 0.1 212)'
+                            : 'oklch(40% 0.04 260 / 0.3)'
+                        "
+                        [attr.fill]="
+                          p <= playersCount
+                            ? 'oklch(78% 0.1 212)'
+                            : 'transparent'
+                        "
+                      ></i-lucide>
+                    }
+                  </span>
+                </div>
+              }
+              @if (!isElfApp) {
+                <div class="meta-item">
+                  <span class="meta-label">Release</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="!release"
+                    >{{ release || "—" }}</span
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Developer</span>
+                  <span
+                    class="meta-value"
+                    [class.meta-placeholder]="!developer"
+                    >{{ developer || "—" }}</span
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Genre</span>
+                  <span class="meta-value" [class.meta-placeholder]="!genre">{{
+                    genre || "—"
+                  }}</span>
+                </div>
+              }
+              <div class="meta-item meta-item-desc">
+                <span class="meta-label">Description</span>
+                <span
+                  class="meta-value"
+                  [class.meta-placeholder]="!description"
+                  >{{ description || "—" }}</span
+                >
+              </div>
+            </div>
+          </div>
+
+          @if (game.isPs1Launcher || game.system === "APPS") {
+            <div class="details-section">
+              <h3 class="details-section-title">App Details</h3>
+              <div class="meta-grid">
+                @if (game.filename) {
+                  <div class="meta-item">
+                    <span class="meta-label">Boot</span>
+                    <span class="meta-value mono">{{ game.filename }}</span>
+                  </div>
+                }
+                @if (isElfApp && game.path) {
+                  <div class="meta-item">
+                    <span class="meta-label">Path</span>
+                    <span class="meta-value mono">{{ game.path }}</span>
+                  </div>
+                }
+                @if (!isElfApp && game.appFolder) {
+                  <div class="meta-item">
+                    <span class="meta-label">Folder</span>
+                    <span class="meta-value mono">{{ game.appFolder }}</span>
+                  </div>
+                }
+                @if (launcherFullPath) {
+                  <div class="meta-item">
+                    <span class="meta-label">Launcher</span>
+                    <span class="meta-value mono">{{ launcherFullPath }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (!game.isPs1Launcher && game.system !== "APPS") {
+            <div class="details-section">
+              <h3 class="details-section-title">File Info</h3>
+              <div class="meta-grid">
+                <div class="meta-item">
+                  <span class="meta-label">Filename</span>
+                  <span class="meta-value mono">{{ game.filename }}</span>
+                </div>
+                @if (game.path) {
+                  <div class="meta-item">
+                    <span class="meta-label">Path</span>
+                    <span class="meta-value mono">{{ game.path }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="details-section">
+            <h3 class="details-section-title">Screenshots</h3>
+            <div class="screenshots-grid">
+              @if (screenshots[0]; as scr) {
+                <div class="screenshot-item">
+                  <img
+                    [src]="'data:image/png;base64,' + scr.base64"
+                    alt="Screenshot"
+                    loading="lazy"
+                  />
+                </div>
+              } @else {
+                <div class="screenshot-item screenshot-placeholder">
+                  <i-lucide name="image-off" size="28"></i-lucide>
+                </div>
+              }
+              @if (screenshots[1]; as scr) {
+                <div class="screenshot-item">
+                  <img
+                    [src]="'data:image/png;base64,' + scr.base64"
+                    alt="Screenshot"
+                    loading="lazy"
+                  />
+                </div>
+              } @else {
+                <div class="screenshot-item screenshot-placeholder">
+                  <i-lucide name="image-off" size="28"></i-lucide>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
