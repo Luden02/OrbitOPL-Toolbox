@@ -7,6 +7,7 @@ import { InfoComponent } from './pages/info/info.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { VmcComponent } from './pages/vmc/vmc.component';
 import { DetailsComponent } from './pages/details/details.component';
+import { HddComponent } from './pages/hdd/hdd.component';
 import { loadingGuard } from './shared/guards/loading.guard';
 
 export const routes: Routes = [
@@ -43,6 +44,11 @@ export const routes: Routes = [
   {
     path: 'memory-cards',
     component: VmcComponent,
+    canActivate: [loadingGuard],
+  },
+  {
+    path: 'hdd',
+    component: HddComponent,
     canActivate: [loadingGuard],
   },
   {

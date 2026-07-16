@@ -14,11 +14,14 @@ export interface AppSettings {
   lastDirectory?: string;
   /** Re-mount the last directory automatically on launch. */
   autoReconnect: boolean;
+  /** Last host used to connect to an OPL NBD server. */
+  lastNbdHost?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   lastDirectory: undefined,
   autoReconnect: true,
+  lastNbdHost: undefined,
 };
 
 function settingsFilePath(): string {

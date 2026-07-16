@@ -224,6 +224,14 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
 });
 
+contextBridge.exposeInMainWorld("hddAPI", {
+  connect: (target: { kind: "nbd"; host: string; port?: number } | { kind: "local"; devicePath: string }) =>
+    ipcRenderer.invoke("hdd-connect", target),
+  disconnect: () => ipcRenderer.invoke("hdd-disconnect"),
+  status: () => ipcRenderer.invoke("hdd-status"),
+  listGames: () => ipcRenderer.invoke("hdd-list-games"),
+});
+
 contextBridge.exposeInMainWorld("windowAPI", {
   platform: () => ipcRenderer.invoke("window-platform"),
   minimize: () => ipcRenderer.send("window-minimize"),

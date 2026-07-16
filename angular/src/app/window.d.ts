@@ -365,6 +365,30 @@ declare interface Window {
     openExternal: (url: string) => Promise<boolean>;
   };
 
+  hddAPI: {
+    /** Connect to a PS2 HDD (OPL NBD server or, later, a local drive). */
+    connect: (target: HddTarget) => Promise<{
+      success: boolean;
+      info?: HddInfo;
+      message?: string;
+    }>;
+
+    /** Close the active HDD connection. */
+    disconnect: () => Promise<{ success: boolean; message?: string }>;
+
+    /** Current connection/busy state. */
+    status: () => Promise<HddStatus>;
+
+    /** List the HDL games installed on the connected disk. */
+    listGames: () => Promise<{
+      success: boolean;
+      games?: HdlGame[];
+      skipped?: { partitionId: string; reason: string }[];
+      info?: HddInfo;
+      message?: string;
+    }>;
+  };
+
   windowAPI: {
     /** Node's `process.platform` for the main process (e.g. 'win32', 'linux', 'darwin'). */
     platform: () => Promise<NodeJS.Platform>;
@@ -411,5 +435,53 @@ declare interface AppSettings {
   lastDirectory?: string;
   /** Whether to auto-reconnect to the last directory on startup. */
   autoReconnect: boolean;
+  /** Last host used to connect to an OPL NBD server. */
+  lastNbdHost?: string;
+}
+
+/** Where a PS2 HDD connection points. */
+declare type HddTarget =
+  | { kind: 'nbd'; host: string; port?: number }
+  | { kind: 'local'; devicePath: string };
+
+/** Summary of the connected PS2 disk. */
+declare interface HddInfo {
+  /** Human-readable target, e.g. "192.168.1.42:10809 (OPL NBD)". */
+  label: string;
+  sizeBytes: number;
+  freeBytes: number;
+  readOnly: boolean;
+  /** Present when the connection was degraded to read-only. */
+  readOnlyReason?: string;
+  /** Partition-table anomalies found while reading the disk. */
+  problems: string[];
+}
+
+declare interface HddStatus {
+  connected: boolean;
+  target?: HddTarget;
+  info?: HddInfo;
+  /** Name of the operation currently holding the disk mutex, if any. */
+  busy: string | null;
+}
+
+/** One HDL game installed on the APA disk. */
+declare interface HdlGame {
+  title: string;
+  /** Startup id, e.g. "SLUS_123.45". */
+  startupId: string;
+  /** Raw ISO size in bytes. */
+  sizeBytes: number;
+  /** Total allocated partition space in bytes (main + subs). */
+  allocBytes: number;
+  compatFlags: number;
+  dmaMode: number;
+  /** 0x14 DVD, 0x12 CD, 0x10 PSX CD. */
+  mediaType: number;
+  /** Main partition start sector — stable handle for mutations. */
+  mainStart: number;
+  partitionId: string;
+  /** True when hidden from HDD-OSD ("__" prefix). */
+  hidden: boolean;
 }
 

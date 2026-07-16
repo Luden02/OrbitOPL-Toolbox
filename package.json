@@ -21,7 +21,8 @@
     "package:linux": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && PATH=\"$(brew --prefix binutils 2>/dev/null)/bin:$PATH\" electron-builder --linux",
     "package:all": "npm run remove && npm run build:info && cd angular && npm run build --omit=dev && cd .. && npm run build && PATH=\"$(brew --prefix binutils 2>/dev/null)/bin:$PATH\" electron-builder --win --mac --linux && node scripts/collect-distributables.js",
     "remove": "rimraf -rf ./dist && rimraf -rf ./build",
-    "electron": "electron"
+    "electron": "electron",
+    "test": "vitest run"
   },
   "devDependencies": {
     "7zip-bin": "^5.2.0",
@@ -31,6 +32,7 @@
     "electron-rebuild": "^3.2.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
+    "vitest": "^4.1.10",
     "wait-on": "^8.0.4"
   },
   "dependencies": {

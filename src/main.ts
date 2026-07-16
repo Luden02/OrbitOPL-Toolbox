@@ -44,6 +44,14 @@ import { compressIsoToZso } from "./zso.service";
 import { GameCfg, readGameCfg, writeGameCfg } from "./cfg.service";
 import { checkPopsVmc, createVmc, deleteVmc, listVmc } from "./vmc.service";
 import { deleteApp, deleteAppWithProgress, getApps, getPs1Launchers, importApp, readAppTitleCfg, updatePs1TitleCfg } from "./apps.service";
+import {
+  HddTarget,
+  hddConnect,
+  hddDisconnect,
+  hddListGames,
+  hddShutdown,
+  hddStatus,
+} from "./hdd.service";
 import { createLogger, setLogWindow } from "./logger";
 
 const log = createLogger("main");
@@ -188,6 +196,11 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("before-quit", () => {
+  // Release the PS2's single NBD connection slot if one is held.
+  void hddShutdown();
 });
 
 app.on("activate", () => {
@@ -550,3 +563,21 @@ ipcMain.handle(
     });
   }
 );
+
+// PS2 HDD (APA/HDL over NBD or local device)
+
+ipcMain.handle("hdd-connect", async (_event, target: HddTarget) => {
+  return hddConnect(target);
+});
+
+ipcMain.handle("hdd-disconnect", async () => {
+  return hddDisconnect();
+});
+
+ipcMain.handle("hdd-status", async () => {
+  return hddStatus();
+});
+
+ipcMain.handle("hdd-list-games", async () => {
+  return hddListGames();
+});

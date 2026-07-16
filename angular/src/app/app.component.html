@@ -81,6 +81,15 @@
           <i-lucide name="hard-drive" size="19"></i-lucide>
           <span>Memory Cards</span>
         </a>
+        <a
+          routerLink="/hdd"
+          routerLinkActive="active"
+          class="nav-item"
+          [class.disabled]="this._libraryService.loading$ | async"
+        >
+          <i-lucide name="database" size="19"></i-lucide>
+          <span>PS2 HDD</span>
+        </a>
 
         <div class="accent-line mx-4 my-3 h-px opacity-60"></div>
 

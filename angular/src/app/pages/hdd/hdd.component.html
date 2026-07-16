@@ -1,0 +1,199 @@
+<div class="page flex h-full flex-col fade-in">
+  <header class="page-header glass flex items-center gap-3 px-6">
+    <i-lucide name="database" size="26" class="text-accent"></i-lucide>
+    <div>
+      <h1 class="section-title text-2xl">PS2 HDD</h1>
+      <p class="text-xs text-base-content/45">HDL games on an APA-formatted PS2 hard drive</p>
+    </div>
+    @if (_hdd.connection$ | async) {
+    <button
+      class="btn btn-ghost btn-sm ml-auto"
+      (click)="refresh()"
+      [disabled]="_hdd.busy$ | async"
+      title="Re-read the disk"
+    >
+      <i-lucide name="refresh-cw" size="16"></i-lucide> Refresh
+    </button>
+    }
+  </header>
+
+  @if ((_hdd.connection$ | async); as conn) {
+  <!-- ── Connected ─────────────────────────────────────────────── -->
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    <div class="mx-auto flex max-w-4xl flex-col gap-5">
+      <section class="glass rounded-box p-5">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-success opacity-60"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+          </span>
+          <span class="font-mono text-sm">{{ conn.label }}</span>
+          @if (conn.readOnly) {
+          <span class="badge badge-warning badge-sm" [title]="conn.readOnlyReason || ''">
+            <i-lucide name="lock" size="12"></i-lucide> read-only
+          </span>
+          }
+          <button
+            class="btn btn-outline btn-error btn-sm ml-auto"
+            (click)="disconnect()"
+            [disabled]="_hdd.busy$ | async"
+          >
+            <i-lucide name="unplug" size="15"></i-lucide> Disconnect
+          </button>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex justify-between text-xs text-base-content/55">
+            <span>{{ formatBytes(conn.sizeBytes - conn.freeBytes) }} used</span>
+            <span>{{ formatBytes(conn.freeBytes) }} free of {{ formatBytes(conn.sizeBytes) }}</span>
+          </div>
+          <progress
+            class="progress progress-accent mt-1 w-full"
+            [value]="usedPercent(conn)"
+            max="100"
+          ></progress>
+        </div>
+
+        @if (conn.readOnlyReason) {
+        <div class="alert alert-warning mt-4 py-2 text-sm">
+          <i-lucide name="triangle-alert" size="16"></i-lucide>
+          <span>{{ conn.readOnlyReason }}</span>
+        </div>
+        }
+        @if (conn.problems.length > 0) {
+        <details class="mt-3 text-xs text-base-content/60">
+          <summary class="cursor-pointer">
+            {{ conn.problems.length }} partition-table problem(s) found
+          </summary>
+          <ul class="mt-1 list-disc pl-5">
+            @for (p of conn.problems; track p) {
+            <li class="font-mono">{{ p }}</li>
+            }
+          </ul>
+        </details>
+        }
+      </section>
+
+      <section class="glass rounded-box p-5">
+        <h2 class="mb-3 font-display text-sm font-semibold tracking-wide">
+          Installed games
+        </h2>
+        @if ((_hdd.games$ | async); as games) {
+        @if (games.length === 0) {
+        <div class="flex flex-col items-center gap-2 py-8 text-center text-base-content/40">
+          <i-lucide name="disc-3" size="28"></i-lucide>
+          <p class="text-sm">No HDL games installed on this disk.</p>
+        </div>
+        } @else {
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr class="text-base-content/50">
+                <th>Title</th>
+                <th>Game ID</th>
+                <th>Size</th>
+                <th>Media</th>
+                <th>Modes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (game of games; track game.mainStart) {
+              <tr class="hover">
+                <td class="max-w-72">
+                  <div class="flex items-center gap-2">
+                    <span class="truncate" [title]="game.partitionId">{{ game.title }}</span>
+                    @if (game.hidden) {
+                    <span class="badge badge-ghost badge-xs" title="Hidden from HDD-OSD">hidden</span>
+                    }
+                  </div>
+                </td>
+                <td class="font-mono text-xs">{{ game.startupId }}</td>
+                <td class="whitespace-nowrap text-xs">
+                  {{ formatBytes(game.sizeBytes) }}
+                  <span class="text-base-content/40" title="Allocated on disk">
+                    / {{ formatBytes(game.allocBytes) }}
+                  </span>
+                </td>
+                <td class="text-xs">{{ mediaLabel(game.mediaType) }}</td>
+                <td class="font-mono text-xs">{{ compatLabel(game.compatFlags) }}</td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+        }
+        @if ((_hdd.skipped$ | async); as skipped) {
+        @if (skipped.length > 0) {
+        <div class="alert alert-warning mt-3 py-2 text-xs">
+          <i-lucide name="triangle-alert" size="14"></i-lucide>
+          <span>
+            {{ skipped.length }} HDL partition(s) could not be read and are not listed.
+          </span>
+        </div>
+        }
+        }
+      </section>
+    </div>
+  </div>
+  } @else {
+  <!-- ── Disconnected: connect panel ───────────────────────────── -->
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+    <div class="mx-auto flex max-w-3xl flex-col gap-5">
+      <section class="glass rounded-box p-5">
+        <h2 class="mb-1 font-display text-sm font-semibold tracking-wide">
+          Connect over the network (OPL NBD)
+        </h2>
+        <p class="mb-4 text-xs text-base-content/45">
+          On the PS2, open OPL v1.1.0 or newer and choose
+          <span class="font-mono">Settings → Start NBD Server</span>. Enter the
+          IP address the console shows below.
+        </p>
+        <div class="flex flex-wrap items-end gap-3">
+          <fieldset class="fieldset min-w-52 flex-1">
+            <legend class="fieldset-legend">PS2 IP address</legend>
+            <input
+              type="text"
+              class="input w-full font-mono"
+              placeholder="192.168.1.42"
+              [value]="host"
+              (input)="host = $any($event.target).value"
+              (keyup.enter)="connect()"
+            />
+          </fieldset>
+          <button
+            class="btn btn-primary"
+            (click)="connect()"
+            [disabled]="connecting || (_hdd.busy$ | async)"
+          >
+            @if (connecting) {
+            <span class="loading loading-spinner loading-sm"></span>
+            } @else {
+            <i-lucide name="plug-zap" size="18"></i-lucide>
+            }
+            Connect
+          </button>
+        </div>
+        @if (error) {
+        <p class="mt-2 text-sm text-error">{{ error }}</p>
+        }
+        <p class="mt-3 flex items-center gap-2 text-xs text-base-content/45">
+          <i-lucide name="info" size="13"></i-lucide>
+          The PS2 accepts a single connection — close other NBD clients first.
+          Transfers run at the console's network speed (roughly 2–4 MB/s).
+        </p>
+      </section>
+
+      <section class="glass rounded-box p-5 opacity-60">
+        <h2 class="mb-1 font-display text-sm font-semibold tracking-wide">
+          Locally attached drive
+        </h2>
+        <p class="text-xs text-base-content/45">
+          Support for PS2 drives connected directly to this computer (USB
+          adapter or internal) is coming in a future update.
+        </p>
+      </section>
+    </div>
+  </div>
+  }
+</div>
