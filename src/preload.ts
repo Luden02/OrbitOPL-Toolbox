@@ -223,3 +223,19 @@ contextBridge.exposeInMainWorld("libraryAPI", {
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
 });
+
+contextBridge.exposeInMainWorld("windowAPI", {
+  platform: () => ipcRenderer.invoke("window-platform"),
+  minimize: () => ipcRenderer.send("window-minimize"),
+  maximizeToggle: () => ipcRenderer.send("window-maximize-toggle"),
+  close: () => ipcRenderer.send("window-close"),
+  isMaximized: () => ipcRenderer.invoke("window-is-maximized"),
+  onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
+    ipcRenderer.on("window-maximized-change", (_event, isMaximized) =>
+      callback(isMaximized)
+    );
+  },
+  removeAllMaximizedChangeListeners: () => {
+    ipcRenderer.removeAllListeners("window-maximized-change");
+  },
+});

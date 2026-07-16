@@ -1,0 +1,38 @@
+@if (visible) {
+<div class="title-bar glass-strong flex h-9 items-center relative z-40 select-none">
+  <div class="drag-region flex flex-1 items-center gap-2 px-3 h-full" (dblclick)="maximizeToggle()">
+    <img src="icon.svg" alt="" class="h-4 w-4" />
+    <span class="font-display text-xs font-semibold tracking-wide text-base-content/70"
+      >OrbitOPL Toolbox <span class="text-base-content/35">v{{ version }}</span></span
+    >
+  </div>
+
+  <div class="window-controls flex h-full items-stretch">
+    <button
+      class="win-btn"
+      title="Minimize"
+      (click)="minimize()"
+    >
+      <i-lucide name="minus" size="15"></i-lucide>
+    </button>
+    <button
+      class="win-btn"
+      [title]="maximized ? 'Restore' : 'Maximize'"
+      (click)="maximizeToggle()"
+    >
+      @if (maximized) {
+      <i-lucide name="copy" size="13" class="-scale-x-100"></i-lucide>
+      } @else {
+      <i-lucide name="square" size="13"></i-lucide>
+      }
+    </button>
+    <button
+      class="win-btn win-btn-close"
+      title="Close"
+      (click)="close()"
+    >
+      <i-lucide name="x" size="15"></i-lucide>
+    </button>
+  </div>
+</div>
+}

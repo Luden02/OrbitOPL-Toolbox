@@ -6,6 +6,7 @@ import { LibraryService } from './shared/services/library.service';
 import { AsyncPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { JobsPanelComponent } from './shared/components/jobs-panel/jobs-panel.component';
+import { TitleBarComponent } from './shared/components/title-bar/title-bar.component';
 import { UpdateService } from './shared/services/update.service';
 
 @Component({
@@ -17,6 +18,7 @@ import { UpdateService } from './shared/services/update.service';
     AsyncPipe,
     LucideAngularModule,
     JobsPanelComponent,
+    TitleBarComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

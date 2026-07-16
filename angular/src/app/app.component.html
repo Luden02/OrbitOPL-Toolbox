@@ -1,4 +1,6 @@
 <div class="flex h-full flex-col">
+  <app-title-bar></app-title-bar>
+
   <!-- ── Update banner ─────────────────────────────────────────── -->
   @if ((_updateService.result$ | async)?.updateAvailable && !(_updateService.dismissed$ | async)) {
   @if ((_updateService.result$ | async); as update) {

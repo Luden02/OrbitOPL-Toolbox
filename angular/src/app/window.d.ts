@@ -364,6 +364,29 @@ declare interface Window {
     /** Open a URL in the default system browser. */
     openExternal: (url: string) => Promise<boolean>;
   };
+
+  windowAPI: {
+    /** Node's `process.platform` for the main process (e.g. 'win32', 'linux', 'darwin'). */
+    platform: () => Promise<NodeJS.Platform>;
+
+    /** Minimize the current window. */
+    minimize: () => void;
+
+    /** Toggle the current window between maximized and restored. */
+    maximizeToggle: () => void;
+
+    /** Close the current window. */
+    close: () => void;
+
+    /** Whether the current window is currently maximized. */
+    isMaximized: () => Promise<boolean>;
+
+    /** Listen for maximize/unmaximize state changes. */
+    onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
+
+    /** Remove all maximized-change listeners. */
+    removeAllMaximizedChangeListeners: () => void;
+  };
 }
 
 /** Result of an update check against the release server. */
