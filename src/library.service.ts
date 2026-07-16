@@ -5,6 +5,7 @@ import path from "path";
 import https from "https";
 import { getCachedGameId, setCachedGameId } from "./iso-cache.service";
 import { createLogger, formatBytes } from "./logger";
+import { isDirectoryEntry } from "./fs-entry";
 
 const log = createLogger("library");
 
@@ -210,8 +211,17 @@ export const STANDARD_OPL_DIRS = [
 export async function checkOplStructure(dirPath: string) {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    const dirNames = new Set(
-      entries.filter((e) => e.isDirectory()).map((e) => e.name)
+    // Resolve the real type of each standard-named entry — symlinked folders
+    // (retronas) and network shares (SMB/NFS) don't report a usable d_type,
+    // so we can't rely on Dirent.isDirectory() alone.
+    const standard = new Set<string>(STANDARD_OPL_DIRS);
+    const dirNames = new Set<string>();
+    await Promise.all(
+      entries.map(async (e) => {
+        if (standard.has(e.name) && (await isDirectoryEntry(e, dirPath))) {
+          dirNames.add(e.name);
+        }
+      })
     );
     const existing = STANDARD_OPL_DIRS.filter((d) => dirNames.has(d));
     const missing = STANDARD_OPL_DIRS.filter((d) => !dirNames.has(d));
@@ -258,7 +268,11 @@ export async function getGamesFiles(dirPath: string) {
       `Raw directory entries — CD: ${items_cd.length}, DVD: ${items_dvd.length}, ` +
         `VCD: ${items_vcd.length}, POPS: ${items_pops.length}`
     );
-    // Only include files, skip directories
+    // Match candidates by name/extension first (cheap), then confirm each is a
+    // real file via stat. We can't trust Dirent.isFile() here: symlinked images
+    // and network shares (SMB/NFS) report no usable type, which would drop every
+    // game. stat follows symlinks and queries the real inode, so it works for
+    // both. The stat we need for size/mtime doubles as the file-type check.
     const items = [
       ...items_cd.map((item) =>
         Object.assign(item, { parentDir: path.join(dirPath, "CD") })
@@ -273,7 +287,7 @@ export async function getGamesFiles(dirPath: string) {
         Object.assign(item, { parentDir: path.join(dirPath, "POPS") })
       ),
     ].filter((item) => {
-      if (!item.isFile() || item.name.startsWith(".")) return false;
+      if (item.name.startsWith(".")) return false;
       const lower = item.name.toLowerCase();
       return (
         lower.endsWith(".iso") ||
@@ -286,7 +300,15 @@ export async function getGamesFiles(dirPath: string) {
 
     for (const item of items) {
       const fullPath = path.join(item.parentDir, item.name);
-      const stats = await fs.stat(fullPath);
+      let stats;
+      try {
+        stats = await fs.stat(fullPath);
+      } catch (err) {
+        log.verbose(`Skipping unreadable entry ${fullPath}: ${(err as Error)?.message || err}`);
+        continue;
+      }
+      // Skip real subdirectories that happen to match the extension filter.
+      if (!stats.isFile()) continue;
 
       const itemInfo = {
         extension: path.extname(item.name),
@@ -358,9 +380,10 @@ export async function getULGames(dirPath: string) {
     const rootFiles = await fs
       .readdir(dirPath, { withFileTypes: true })
       .catch(() => []);
-    const ulFiles = rootFiles.filter(
-      (f) => f.isFile() && f.name.startsWith("ul.")
-    );
+    // Match by name only — Dirent.isFile() is unreliable on symlinks and
+    // network shares (SMB/NFS). Each matched fragment is stat'd below anyway,
+    // which is what actually gates it into the size total.
+    const ulFiles = rootFiles.filter((f) => f.name.startsWith("ul."));
 
     for (let i = 0; i < recordCount; i++) {
       const offset = i * RECORD_SIZE;
@@ -448,36 +471,46 @@ export async function getArtFolder(dirpath: string) {
   try {
     const artDir = path.join(dirpath, "ART");
     const items = await fs.readdir(artDir, { withFileTypes: true });
-    const artFiles = await Promise.all(
-      items
-        .filter(
-          (item) =>
-            item.isFile() &&
-            !item.name.startsWith(".") &&
-            (item.name.toLowerCase().endsWith(".jpg") ||
-              item.name.toLowerCase().endsWith(".png"))
-        )
-        .map(async (item) => {
-          const filePath = path.join(artDir, item.name);
-          const fileBuffer = await fs.readFile(filePath);
-          const baseName = path.parse(item.name).name;
-          // Art type (COV/ICO/SCR) is always the last _-separated segment
-          const lastUnderscoreIdx = baseName.lastIndexOf("_");
-          const type = lastUnderscoreIdx >= 0 ? baseName.slice(lastUnderscoreIdx + 1) : "";
-          const nameBeforeType = lastUnderscoreIdx >= 0 ? baseName.slice(0, lastUnderscoreIdx) : baseName;
-          // Extract gameId (XXXX_###.##) from the start of the filename
-          const idMatch = nameBeforeType.match(/([A-Z]{4}_\d{3}\.\d{2})/i);
-          const gameId = idMatch ? idMatch[1] : nameBeforeType;
-          return {
-            name: baseName,
-            extension: path.extname(item.name),
-            path: filePath,
-            gameId,
-            type,
-            base64: fileBuffer.toString("base64"),
-          };
-        })
-    );
+    // Filter by name/extension only — Dirent.isFile() is unreliable on symlinks
+    // and network shares (SMB/NFS). readFile below follows symlinks and rejects
+    // directories (EISDIR), so a non-file that slips through resolves to null.
+    const artFiles = (
+      await Promise.all(
+        items
+          .filter(
+            (item) =>
+              !item.name.startsWith(".") &&
+              (item.name.toLowerCase().endsWith(".jpg") ||
+                item.name.toLowerCase().endsWith(".png"))
+          )
+          .map(async (item) => {
+            const filePath = path.join(artDir, item.name);
+            let fileBuffer;
+            try {
+              fileBuffer = await fs.readFile(filePath);
+            } catch (err) {
+              log.verbose(`Skipping unreadable artwork ${filePath}: ${(err as Error)?.message || err}`);
+              return null;
+            }
+            const baseName = path.parse(item.name).name;
+            // Art type (COV/ICO/SCR) is always the last _-separated segment
+            const lastUnderscoreIdx = baseName.lastIndexOf("_");
+            const type = lastUnderscoreIdx >= 0 ? baseName.slice(lastUnderscoreIdx + 1) : "";
+            const nameBeforeType = lastUnderscoreIdx >= 0 ? baseName.slice(0, lastUnderscoreIdx) : baseName;
+            // Extract gameId (XXXX_###.##) from the start of the filename
+            const idMatch = nameBeforeType.match(/([A-Z]{4}_\d{3}\.\d{2})/i);
+            const gameId = idMatch ? idMatch[1] : nameBeforeType;
+            return {
+              name: baseName,
+              extension: path.extname(item.name),
+              path: filePath,
+              gameId,
+              type,
+              base64: fileBuffer.toString("base64"),
+            };
+          })
+      )
+    ).filter((f): f is NonNullable<typeof f> => f !== null);
     log.verbose(`Loaded ${artFiles.length} artwork file(s) from ${artDir}`);
     return { success: true, data: artFiles };
   } catch (err) {

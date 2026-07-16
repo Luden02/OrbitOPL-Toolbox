@@ -1,6 +1,7 @@
 import * as fs from "fs/promises";
 import path from "path";
 import { createLogger } from "./logger";
+import { isDirectoryEntry, resolveEntryType } from "./fs-entry";
 
 const log = createLogger("apps");
 
@@ -90,8 +91,9 @@ async function enumerateApps(
   const apps: AppInfo[] = [];
 
   for (const item of items) {
-    if (!item.isDirectory()) continue;
     if (!match(item.name)) continue;
+    // Resolve symlinked / DT_UNKNOWN (SMB, NFS) entries via stat, not d_type.
+    if (!(await isDirectoryEntry(item, dir))) continue;
     const folderPath = path.join(dir, item.name);
 
     let title = item.name;
@@ -344,7 +346,9 @@ export async function deleteAppWithProgress(
       const items = await fs.readdir(dir, { withFileTypes: true });
       for (const item of items) {
         const fullPath = path.join(dir, item.name);
-        if (item.isDirectory()) {
+        // follow:false — a symlink must be removed as a leaf, never descended
+        // into. lstat also classifies DT_UNKNOWN entries on SMB/NFS shares.
+        if ((await resolveEntryType(item, dir, { follow: false })) === "directory") {
           allDirs.push(fullPath);
           await collect(fullPath);
         } else {

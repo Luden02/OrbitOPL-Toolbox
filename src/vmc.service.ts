@@ -68,11 +68,14 @@ export async function listVmc(
     const items = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
     const cards: VmcInfo[] = [];
     for (const item of items) {
-      if (!item.isFile() || !/\.bin$/i.test(item.name)) continue;
+      if (!/\.bin$/i.test(item.name)) continue;
       // Skip macOS AppleDouble sidecars (`._name.bin`) created when writing to
       // FAT/exFAT cards, plus any other hidden files — they aren't real VMCs.
       if (item.name.startsWith(".")) continue;
+      // stat (not Dirent.isFile()) so symlinked cards and network shares
+      // (SMB/NFS, which report no d_type) are handled; it follows symlinks.
       const stat = await fs.stat(path.join(dir, item.name));
+      if (!stat.isFile()) continue;
       cards.push({
         name: item.name.replace(/\.bin$/i, ""),
         sizeBytes: stat.size,
