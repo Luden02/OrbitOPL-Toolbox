@@ -58,7 +58,13 @@
       "icon": "assets/applogo/icon_256x256.ico",
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "x64"
           ]
