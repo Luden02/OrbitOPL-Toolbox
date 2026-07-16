@@ -1,11 +1,136 @@
 <!doctype html>
 <html lang="en" data-theme="ps2">
   <head>
-    <base href="/" />
+    <base href="./" />
     <meta charset="utf-8" />
     <title>OrbitOPL Toolbox</title>
+    <style>
+      /* Boot splash — painted before Angular bootstraps, removed once it renders. */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+      }
+      #app-splash.splash-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.2rem;
+        text-align: center;
+        transform: translateY(-4%);
+      }
+      .splash-logo {
+        width: 92px;
+        height: 92px;
+        filter: drop-shadow(0 0 18px rgba(80, 180, 255, 0.45));
+        animation: splash-float 3.2s ease-in-out infinite;
+      }
+      @keyframes splash-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      .splash-title {
+        font-family: Inter, Roboto, Arial, sans-serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: #eaf3fb;
+      }
+      .splash-spinner {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 3px solid rgba(120, 180, 240, 0.18);
+        border-top-color: #58b4ff;
+        animation: splash-spin 0.85s linear infinite;
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+      .splash-msg {
+        min-height: 1.2em;
+        font-family: Inter, Roboto, Arial, sans-serif;
+        font-size: 0.88rem;
+        color: #9db6cf;
+        transition: opacity 0.3s ease;
+      }
+    </style>
   </head>
   <body>
+    <div id="app-splash">
+      <div class="splash-inner">
+        <img src="icon.svg" alt="" class="splash-logo" />
+        <div class="splash-title">OrbitOPL Toolbox</div>
+        <div class="splash-spinner"></div>
+        <div class="splash-msg" id="splash-msg">Warming up the Emotion Engine…</div>
+      </div>
+    </div>
     <app-root></app-root>
+    <script>
+      (function () {
+        var messages = [
+          "Powering on…",
+          "Warming up the Emotion Engine…",
+          "Reticulating splines…",
+          "Aligning the orbital rings…",
+          "Plotting a course through the stars…",
+          "Untangling the controller cables…",
+          "Polishing the pixels…",
+          "Calibrating the controllers…",
+          "Almost there…",
+        ];
+        var msgEl = document.getElementById("splash-msg");
+        var idx = Math.floor(Math.random() * messages.length);
+        if (msgEl) msgEl.textContent = messages[idx];
+
+        var rotate = setInterval(function () {
+          if (!msgEl) return;
+          idx = (idx + 1) % messages.length;
+          msgEl.style.opacity = "0";
+          setTimeout(function () {
+            msgEl.textContent = messages[idx];
+            msgEl.style.opacity = "1";
+          }, 300);
+        }, 2400);
+
+        function hideSplash() {
+          clearInterval(rotate);
+          var splash = document.getElementById("app-splash");
+          if (!splash) return;
+          splash.classList.add("splash-hidden");
+          setTimeout(function () {
+            splash.remove();
+          }, 600);
+        }
+
+        function appReady() {
+          var root = document.querySelector("app-root");
+          return !!root && root.children.length > 0;
+        }
+
+        if (appReady()) {
+          hideSplash();
+        } else {
+          var observer = new MutationObserver(function () {
+            if (appReady()) {
+              observer.disconnect();
+              hideSplash();
+            }
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+          // Safety net: never let the splash linger if bootstrap stalls.
+          setTimeout(hideSplash, 20000);
+        }
+      })();
+    </script>
   </body>
 </html>
